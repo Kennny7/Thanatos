@@ -124,35 +124,35 @@ The system is orchestrated through **strict I/O contracts**, making it ideal for
 ```bash
 thanatos/
 │
-├── client/                  # Flutter App
+├── client/                  
 │   ├── lib/
 │   │   ├── main.dart
 │   │   ├── providers/
 │   │   └── services/
 │
-├── backend/                 # FastAPI Core
+├── backend/                 
 │   ├── app/
 │   │   ├── main.py
 │   │   ├── websocket/
 │   │   ├── agent_loop/
 │   │   └── schemas/
 │
-├── plugins/                 # Execution Layer
+├── plugins/                 
 │   ├── os_automation/
 │   ├── web_scraper/
 │   ├── memory/
 │   └── speech/
 │
-├── llm/                     # DeepSeek Planner
+├── llm/                     
 │   └── planner.py
 │
-├── mcp_server/              # MCP Integration
+├── mcp_server/              
 │   └── server.py
 │
-├── shared/                  # Shared Models / Contracts
+├── shared/                  
 │   └── schemas.py
 │
-├── docker/                  # Dev & Deployment configs
+├── docker/                  
 │
 └── README.md
 ```
