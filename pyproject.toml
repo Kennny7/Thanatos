@@ -1,0 +1,22 @@
+[project]
+name = "thanatos"
+version = "0.1.0"
+dependencies = [
+    "openai>=2.32.0",
+    "pytest>=9.0.3"
+]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = [
+    "shared*",
+    "services*",
+    "plugins*",
+    "sandbox*",
+    "audit*",
+    "apps.api_server*"
+]

@@ -1,0 +1,31 @@
+services:
+  ollama:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  local-llm:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.local_llm
+    depends_on:
+      ollama:
+        condition: service_healthy
+    ports:
+      - "8001:8001"
+    restart: unless-stopped
+    environment:
+      - LLM_BASE_URL=http://ollama:11434/v1
+
+volumes:
+  ollama_data:
