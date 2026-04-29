@@ -1,6 +1,4 @@
-# Thanatos/shared/deepseek_planner.py
-
-import os
+# Thanatos\shared\deepseek_planner.py
 import json
 import logging
 from typing import List, Dict, Any, Optional
@@ -8,74 +6,67 @@ from typing import List, Dict, Any, Optional
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionMessageToolCall
 
-from .constants import (
-    DEEPSEEK_API_BASE_URL,
-    DEEPSEEK_CHAT_MODEL,
-    DEFAULT_MAX_RETRIES,
-    DEFAULT_RETRY_DELAY,
-    DEFAULT_PROVIDER,
-    DEEPSEEK_API_KEY
-)
+from .settings import Settings
+from .constants import DEFAULT_MAX_RETRIES, DEFAULT_RETRY_DELAY
 from .utils import retry_async
+from .logging_setup import ensure_logging
+
+ensure_logging()
 
 logger = logging.getLogger(__name__)
 
 
 class DeepSeekPlanner:
     """
-    Async planner that uses DeepSeek API to decide between responding directly
-    or calling a tool based on conversation history and available tools.
+    Async planner that uses an OpenAI-compatible API to decide between
+    responding directly or calling a tool.
     """
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        base_url: Optional[str] = None,
-        model: Optional[str] = None,
+        settings: Optional[Settings] = None,
         max_retries: int = DEFAULT_MAX_RETRIES,
         retry_delay: float = DEFAULT_RETRY_DELAY,
-        provider: Optional[str] = None
     ):
         """
         Initialize the planner.
 
         Args:
-            api_key: DeepSeek API key. If None, reads from env DEEPSEEK_API_KEY.
-            base_url: API base URL.
-            model: Model name to use.
+            settings: Pre-configured Settings object. If None, loaded from env.
             max_retries: Maximum number of retry attempts on API/parsing errors.
             retry_delay: Base delay between retries in seconds.
         """
-        # Resolve defaults first
-        provider = provider or DEFAULT_PROVIDER
-        base_url = base_url or DEEPSEEK_API_BASE_URL
-        model = model or DEEPSEEK_CHAT_MODEL
+        logger.debug("Initializing DeepSeekPlanner")
 
-        # Store provider state
-        self.is_local = provider in ["ollama", "local-llm"]
-        self.provider = provider
+        resolved_settings = settings or Settings.load()
 
-        # Auth logic
-        if self.is_local:
-            self.api_key = "ollama"  # dummy
-        else:
-            self.api_key = api_key or DEEPSEEK_API_KEY
-            if not self.api_key:
-                raise ValueError(
-                    "API key required for cloud provider. "
-                    "Set DEEPSEEK_API_KEY or pass explicitly."
-                )
+        # Store settings for capability checks (NEW)
+        self.settings = resolved_settings
+
+        # Validate cloud API key
+        if (not resolved_settings.is_local) and not resolved_settings.api_key:
+            logger.critical("Missing API key for cloud provider")
+            raise ValueError(
+                "API key required for cloud provider. "
+                "Set DEEPSEEK_API_KEY or pass explicitly."
+            )
 
         # OpenAI-compatible client
         self.client = AsyncOpenAI(
-            api_key=self.api_key,
-            base_url=base_url
+            api_key=resolved_settings.api_key,
+            base_url=resolved_settings.base_url,
         )
 
-        # Config
-        self.model = model
+        self.model = resolved_settings.model
         self.max_retries = max_retries
         self.retry_delay = retry_delay
+
+        logger.info(
+            "DeepSeekPlanner initialised | model=%s | base_url=%s | retries=%d",
+            self.model,
+            resolved_settings.base_url,
+            self.max_retries
+        )
 
     async def plan(
         self,
@@ -85,42 +76,73 @@ class DeepSeekPlanner:
         """
         Generate a plan: either respond directly or call a tool.
 
-        Args:
-            history: List of message dicts with 'role' and 'content'.
-            tools_schema: List of tool definitions in OpenAI function calling format.
-
         Returns:
             Dict with keys:
-                - 'action': 'respond' or 'tool_call'
-                - If 'respond': 'text' contains the response.
-                - If 'tool_call': 'tool_name' and 'args' (dict).
+                - 'action': 'respond' | 'tool_call'
+                - 'text' (if respond)
+                - 'tool_name', 'args' (if tool_call)
         """
+        logger.debug(
+            "Planning started | history_len=%d | tools_available=%d",
+            len(history),
+            len(tools_schema)
+        )
+
         async def _make_request():
-            response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=history,
-                tools=tools_schema,
-                temperature=0.0,  # deterministic planning
+            logger.debug(
+                "Sending request to LLM | model=%s | supports_tools=%s",
+                self.model,
+                self.settings.supports_tools
             )
+
+            # Build request dynamically based on capability (NEW)
+            kwargs = {
+                "model": self.model,
+                "messages": history,
+                "temperature": 0.0,  # deterministic planning
+            }
+
+            if self.settings.supports_tools:
+                kwargs["tools"] = tools_schema
+                logger.debug("Attaching tools to request")
+            else:
+                logger.debug("Skipping tools (model does not support tools)")
+
+            response = await self.client.chat.completions.create(**kwargs)
+
+            logger.debug("Received response from LLM")
             return response
 
-        # Retry the API call on any exception (network, timeout, etc.)
-        response = await retry_async(
-            _make_request,
-            max_retries=self.max_retries,
-            delay=self.retry_delay,
-            exceptions=(Exception,)
-        )
+        try:
+            response = await retry_async(
+                _make_request,
+                max_retries=self.max_retries,
+                delay=self.retry_delay,
+                exceptions=(Exception,)
+            )
+        except Exception:
+            logger.exception("LLM request failed after retries")
+            raise
 
         message = response.choices[0].message
 
-        # Check for tool calls
         if message.tool_calls:
             tool_call: ChatCompletionMessageToolCall = message.tool_calls[0]
             tool_name = tool_call.function.name
 
-            # Parse arguments JSON with retry logic if parsing fails
-            args = await self._parse_tool_arguments(tool_call.function.arguments)
+            logger.info("LLM decided to call tool | tool_name=%s", tool_name)
+
+            try:
+                args = await self._parse_tool_arguments(tool_call.function.arguments)
+            except Exception:
+                logger.exception("Tool argument parsing failed | tool_name=%s", tool_name)
+                raise
+
+            logger.debug(
+                "Tool call parsed successfully | tool_name=%s | args_keys=%s",
+                tool_name,
+                list(args.keys()) if isinstance(args, dict) else "non-dict"
+            )
 
             return {
                 "action": "tool_call",
@@ -128,29 +150,37 @@ class DeepSeekPlanner:
                 "args": args
             }
         else:
-            # Plain text response
+            response_text = message.content or ""
+
+            logger.info("LLM returned direct response | length=%d", len(response_text))
+            logger.debug("Response preview: %s", response_text[:200])
+
             return {
                 "action": "respond",
-                "text": message.content or ""
+                "text": response_text
             }
 
     async def _parse_tool_arguments(self, arguments_str: str) -> Dict[str, Any]:
-        """
-        Parse the JSON arguments string from the tool call.
-        Includes retry logic for malformed JSON by re-fetching (optional).
-        In a real scenario, you might want to re-prompt the model.
-        Here we simply retry parsing; if it fails after retries, we raise.
-        """
+        """Parse JSON arguments with retry on malformed JSON."""
+        logger.debug("Parsing tool arguments")
+
         async def _parse():
             return json.loads(arguments_str)
 
         try:
-            return await retry_async(
+            parsed = await retry_async(
                 _parse,
                 max_retries=self.max_retries,
                 delay=self.retry_delay,
                 exceptions=(json.JSONDecodeError,)
             )
+
+            logger.debug("Tool arguments parsed successfully")
+            return parsed
+
         except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse tool arguments after retries: {arguments_str}")
+            logger.error(
+                "Failed to parse tool arguments after retries | raw=%s",
+                arguments_str
+            )
             raise ValueError(f"Invalid JSON in tool arguments: {arguments_str}") from e

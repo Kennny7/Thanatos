@@ -2,8 +2,10 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY services/local_llm /app
+# COPY services/local_llm /app
+COPY . /app
 
 RUN pip install fastapi uvicorn httpx
 
-CMD ["uvicorn", "adapter_server:app", "--host", "0.0.0.0", "--port", "8001"]
+# CMD ["uvicorn", "adapter_server:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["uvicorn", "services.local_llm.adapter_server:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]

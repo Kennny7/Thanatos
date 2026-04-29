@@ -13,6 +13,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    networks:
+      - thanatos_net
 
   local-llm:
     build:
@@ -25,7 +27,15 @@ services:
       - "8001:8001"
     restart: unless-stopped
     environment:
-      - LLM_BASE_URL=http://ollama:11434/v1
+      - LLM_BASE_URL=http://ollama:11434
+    volumes:
+      - .:/app
+    networks:
+      - thanatos_net
 
 volumes:
   ollama_data:
+
+networks:
+  thanatos_net:
+    driver: bridge
