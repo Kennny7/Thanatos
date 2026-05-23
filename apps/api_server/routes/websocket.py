@@ -1,3 +1,5 @@
+# Thanatos\apps\api_server\routes\websocket.py
+
 import asyncio
 import logging
 from typing import Any
