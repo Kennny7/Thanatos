@@ -1,3 +1,5 @@
+# Thanatos\apps\api_server\schemas\tool_models.py
+
 """Schemas for tool definitions, calls, and results."""
 from __future__ import annotations
 
