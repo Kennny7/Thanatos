@@ -1,13 +1,13 @@
-# 🚀 **Thanatos**
+# **Thanatos**
 
 ### *Modular AI Orchestration Engine for Autonomous Assistants*
 
-> ⚠️ **Status: In Progress (Actively Building & Expanding)**
+> [!] **Status: In Progress (Actively Building & Expanding)**
 > This project is under active development. Core architecture is defined, modules are being implemented iteratively.
 
 ---
 
-## 🌌 Overview
+## [+] Overview
 
 **Thanatos** is a next-generation, modular AI system designed to function as a **fully autonomous assistant**, capable of:
 
@@ -21,19 +21,19 @@ This is not just a chatbot — it’s an **agentic system** with reasoning, exec
 
 ---
 
-## ✨ Key Highlights
+## [+] Key Highlights
 
-* 🧠 **Agentic AI Loop** (Plan → Act → Observe → Iterate)
-* 🔌 **Plugin-Based Architecture** (OS, Web, Memory, Speech)
-* 📡 **Real-time Streaming via WebSockets**
-* 🧩 **Cross-platform Client (Flutter)**
-* 🗃️ **Vector Memory (Long-term Recall)**
-* 🌍 **MCP Server Integration (External AI Tooling)**
-* ⚡ **DeepSeek-powered reasoning engine**
+* **Agentic AI Loop** (Plan → Act → Observe → Iterate)
+* **Plugin-Based Architecture** (OS, Web, Memory, Speech)
+* **Real-time Streaming via WebSockets**
+* **Cross-platform Client (Flutter)**
+* **Vector Memory (Long-term Recall)**
+* **MCP Server Integration (External AI Tooling)**
+* **DeepSeek-powered reasoning engine**
 
 ---
 
-## 🏗️ Architecture
+## [+] Architecture
 
 ```mermaid
 flowchart TD
@@ -54,7 +54,7 @@ flowchart TD
 
 ---
 
-## 🧠 System Design Philosophy
+## [+] System Design Philosophy
 
 > **"Loose coupling, strong contracts."**
 
@@ -72,45 +72,45 @@ The system is orchestrated through **strict I/O contracts**, making it ideal for
 
 ---
 
-## ⚙️ Tech Stack
+## [+] Tech Stack
 
 <details>
-<summary>🧩 Expand to view technologies</summary>
+<summary>Expand to view technologies</summary>
 
-### 🖥️ Client
+### Client
 
 * **Flutter (Dart)** → Cross-platform UI
 * Speech-to-Text integration
 
-### ⚡ Backend
+### Backend
 
 * **FastAPI + Uvicorn** → Async API + WebSockets
 * Python (core orchestration)
 
-### 🧠 AI / LLM
+### AI / LLM
 
 * **DeepSeek API** → Planning & reasoning
 * HuggingFace → Embeddings (BGE / MiniLM)
 
-### 🗃️ Memory
+### Memory
 
 * **ChromaDB / LanceDB** → Vector storage
 
-### 🌐 Web Automation
+### Web Automation
 
 * **Playwright** → JS-heavy scraping
 * BeautifulSoup → Lightweight parsing
 
-### 💻 OS Automation
+### OS Automation
 
 * `pyautogui`, `psutil`, `subprocess`
 
-### 🎙️ Speech
+### Speech
 
 * Faster-Whisper → STT
 * Edge-TTS / Coqui → TTS
 
-### 🔗 Protocols
+### Protocols
 
 * WebSockets → real-time streaming
 * MCP → external AI interoperability
@@ -119,42 +119,195 @@ The system is orchestrated through **strict I/O contracts**, making it ideal for
 
 ---
 
-## 📂 Project Structure
+## [+] Project Structure
 
 ```bash
-thanatos/
+Thanatos/
 │
-├── client/                  
-│   ├── lib/
-│   │   ├── main.dart
-│   │   ├── providers/
-│   │   └── services/
+├── README.md
+├── LICENSE
+├── pyproject.toml
+├── docker-compose.yml
+├── .env.example
 │
-├── backend/                 
-│   ├── app/
+├── apps/                           # Entry points (user-facing + API)
+│   │
+│   ├── client_flutter/             # Cross-platform Flutter app
+│   │   ├── lib/
+│   │   │   ├── main.dart
+│   │   │   ├── ui/
+│   │   │   │   ├── screens/
+│   │   │   │   │   └── chat_screen.dart
+│   │   │   │   └── widgets/
+│   │   │   │       ├── chat_bubble.dart
+│   │   │   │       └── action_card.dart
+│   │   │   │
+│   │   │   ├── state/
+│   │   │   │   └── chat_provider.dart
+│   │   │   │
+│   │   │   ├── services/
+│   │   │   │   ├── websocket_service.dart
+│   │   │   │   ├── speech_service.dart
+│   │   │   │   └── api_service.dart
+│   │   │   │
+│   │   │   └── models/
+│   │   │       └── message_model.dart
+│   │   │
+│   │   ├── pubspec.yaml
+│   │   └── test/
+│   │
+│   ├── api_server/                 # FastAPI orchestration layer
 │   │   ├── main.py
-│   │   ├── websocket/
-│   │   ├── agent_loop/
-│   │   └── schemas/
+│   │   ├── routes/
+│   │   │   ├── websocket.py
+│   │   │   ├── health.py
+│   │   │   └── speech.py
+│   │   │
+│   │   ├── core/
+│   │   │   ├── session_manager.py
+│   │   │   ├── agent_loop.py
+│   │   │   ├── dispatcher.py
+│   │   │   └── config.py
+│   │   │
+│   │   ├── schemas/
+│   │   │   ├── websocket_models.py
+│   │   │   ├── agent_models.py
+│   │   │   └── tool_models.py
+│   │   │
+│   │   └── dependencies.py
+│   │
+│   └── mcp_server/                 # External tool exposure (MCP)
+│       ├── server.py
+│       └── tools/
+│           ├── system_tools.py
+│           └── app_tools.py
 │
-├── plugins/                 
-│   ├── os_automation/
-│   ├── web_scraper/
+├── services/                       # Independent execution modules
+│   │
+│   ├── llm_brain/
+│   │   ├── deepseek_planner.py
+│   │   ├── tool_router.py
+│   │   └── prompt_templates/
+│   │       ├── system_prompt.txt
+│   │       └── tool_schema.json
+│   │
+│   ├── local_llm/
+│   │   ├── adapter_server.py
+│   │   ├── ollama_client.py
+│   │   ├── prompt_builder.py
+│   │   └── tool_parser.py
+│   │
 │   ├── memory/
-│   └── speech/
+│   │   ├── memory_manager.py
+│   │   ├── vector_store.py
+│   │   └── embeddings.py
+│   │
+│   ├── speech/
+│   │   ├── stt.py
+│   │   ├── tts.py
+│   │   └── audio_utils.py
+│   │
+│   ├── web/
+│   │   ├── scraper.py
+│   │   ├── search.py
+│   │   └── parser.py
+│   │
+│   └── os_automation/
+│       ├── __init__.py
+│       ├── router.py
+│       ├── exceptions.py
+│       ├── system_control.py
+│       ├── process_manager.py
+│       └── input_controller.py
 │
-├── llm/                     
-│   └── planner.py
+├── plugins/                        # Skill-based modular extensions
+│   │
+│   ├── base/
+│   │   ├── skill_interface.py
+│   │   └── registry.py
+│   │
+│   ├── system_skills/
+│   │   ├── file_manager/
+│   │   ├── process_control/
+│   │   └── resource_monitor/
+│   │
+│   ├── security_skills/
+│   │   ├── network_scanner/
+│   │   ├── vulnerability_analysis/
+│   │   ├── phishing_detector/
+│   │   └── malware_sandbox/
+│   │
+│   ├── web_tools/
+│   │   └── scraping_tools/
+│   │
+│   └── custom_skills/
 │
-├── mcp_server/              
-│   └── server.py
+├── sandbox/                        # Isolated execution layer
+│   ├── docker_manager.py
+│   ├── wsl_adapter.py
+│   ├── resource_limiter.py
+│   └── security_profiles/
+│       ├── apparmor/
+│       └── selinux/
 │
-├── shared/                  
-│   └── schemas.py
+├── audit/                          # Security & forensic logging
+│   ├── audit_logger.py
+│   ├── crypto_utils.py
+│   ├── chain_manager.py
+│   └── storage/
+│       └── audit.db
 │
-├── docker/                  
+├── config/
+│   ├── permissions.yaml            # RBAC policies
+│   ├── logging.conf
+│   ├── settings.py
+│   └── secrets.env
 │
-└── README.md
+├── shared/                         # Cross-service contracts
+│   ├── models/
+│   │   ├── agent_event.py
+│   │   ├── tool_definition.py
+│   │   └── tool_result.py
+│   ├── deepseek_planner.py
+│   ├── constants.py
+│   ├── settings.py
+│   └── utils.py
+│
+├── tests/
+│   ├── unit/
+│   │   ├── test_agent.py
+│   │   ├── test_plugins.py
+│   │   └── test_memory.py
+│   │
+│   ├── integration/
+│   │   ├── test_api.py
+│   │   ├── test_workflow.py
+│   │	└── test_planner.py
+│   └── security/
+│       ├── test_sandbox.py
+│       └── test_audit_integrity.py
+│
+├── infra/                          # Deployment & DevOps
+│   ├── docker/
+│   │   ├── Dockerfile.api
+│   │   ├── Dockerfile.worker
+│	│	├── Dockerfile.ollama
+│	│	├── Dockerfile.local_llm
+│   │   └── Dockerfile.playwright
+│   │
+│   ├── k8s/
+│   │   ├── deployment.yaml
+│   │   ├── service.yaml
+│   │   └── secrets.yaml
+│   │
+│   └── ci_cd/
+│       └── github_actions.yml
+│
+└── docs/
+    ├── architecture.md
+    ├── api_spec.md
+    ├── plugin_dev_guide.md
+    └── security_model.md
 ```
 
 ---
@@ -181,7 +334,7 @@ sequenceDiagram
 
 ---
 
-## 🧩 Core Modules
+## [+] Core Modules
 
 ### 1. Client Layer (Flutter)
 
@@ -224,7 +377,7 @@ sequenceDiagram
 
 ---
 
-## 🧪 Development Roadmap
+## [+] Development Roadmap
 
 ```mermaid
 gantt
@@ -250,7 +403,7 @@ gantt
 
 ---
 
-## 🚀 Getting Started (Planned)
+## [+] Getting Started (Planned)
 
 ```bash
 # Clone repo
@@ -269,7 +422,7 @@ flutter run
 
 ---
 
-## 🔐 Design Principles
+## [+] Design Principles
 
 * **Modularity First**
 * **Async Everywhere**
@@ -279,7 +432,7 @@ flutter run
 
 ---
 
-## 🤖 Vision
+## [+] Vision
 
 > Build a **true personal AI system** that can:
 
@@ -290,23 +443,23 @@ flutter run
 
 ---
 
-## 🧑‍💻 Contribution
+## [+] Contribution
 
 This project is evolving rapidly. Contributions, ideas, and critiques are welcome.
 
 ---
 
-## ⭐ Support
+## [+] Support
 
 If you like this project:
 
-* ⭐ Star the repo
-* 🍴 Fork it
-* 🧠 Build your own plugins
+* Star the repo
+* Fork it
+* Build your own plugins
 
 ---
 
-## 📌 Status
+## [+] Status
 
 ```diff
 + Core architecture defined
@@ -316,17 +469,6 @@ If you like this project:
 
 ---
 
-## 🔥 Tagline
+## [+] Tagline
 
 > **"Not just AI that talks — AI that acts."**
-
----
-
-If you want, I can also:
-
-* Generate **actual repo folder boilerplate**
-* Create **badges (build, license, tech stack)**
-* Add **screenshots/UI mockups**
-* Or convert this into a **landing page / portfolio showcase**
-
-Just tell me 👍
