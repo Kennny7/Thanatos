@@ -1,4 +1,5 @@
 # Thanatos/apps/api_server/core/dispatcher.py
+
 """
 Placeholder dispatcher that routes tool calls to actual implementations.
 In production this would invoke the MCP server, sandbox, or local tools.
