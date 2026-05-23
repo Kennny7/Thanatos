@@ -1,0 +1,148 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "launch_application",
+      "description": "Launch a desktop application by its name or path.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "app_name": {
+            "type": "string",
+            "description": "Name or full path of the application (e.g., 'Calculator', 'C:\\Program Files\\App\\app.exe')."
+          },
+          "arguments": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Optional command-line arguments."
+          }
+        },
+        "required": ["app_name"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "search_web",
+      "description": "Perform a web search and return the top results with snippets.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "The search query string."
+          },
+          "num_results": {
+            "type": "integer",
+            "description": "Number of search results to return (1-10).",
+            "default": 5
+          }
+        },
+        "required": ["query"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_system_info",
+      "description": "Retrieve real‑time system information (CPU, memory, disk, battery, etc.).",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "info_type": {
+            "type": "string",
+            "enum": ["cpu", "memory", "disk", "battery", "os", "network"],
+            "description": "Type of system information to retrieve."
+          }
+        },
+        "required": ["info_type"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "execute_command",
+      "description": "Execute a shell command on the local OS (with sandbox restrictions).",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "description": "The shell command to execute (e.g., 'ls -la', 'dir')."
+          },
+          "working_directory": {
+            "type": "string",
+            "description": "Optional working directory for the command."
+          }
+        },
+        "required": ["command"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "remember_fact",
+      "description": "Store a fact or piece of information in long‑term memory for later retrieval.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "A label or key for the fact."
+          },
+          "value": {
+            "type": "string",
+            "description": "The information to store."
+          },
+          "category": {
+            "type": "string",
+            "description": "Optional category for grouping facts."
+          }
+        },
+        "required": ["key", "value"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "recall_fact",
+      "description": "Retrieve a previously stored fact from memory by key or query.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Exact key to look up."
+          },
+          "semantic_query": {
+            "type": "string",
+            "description": "Natural language query to find semantically similar memories."
+          }
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "open_url",
+      "description": "Open a URL in the default web browser on the user's machine.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "The full URL to open (e.g., https://example.com)."
+          }
+        },
+        "required": ["url"]
+      }
+    }
+  }
+]
