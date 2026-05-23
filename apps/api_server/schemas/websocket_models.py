@@ -22,8 +22,16 @@ class ToolCallRequest(BaseModel):
     type: Literal["tool_call_request"] = "tool_call_request"
     tool_name: str = Field(..., description="Name of the tool to invoke")
     arguments: Dict[str, Any] = Field(default_factory=dict, description="Tool arguments")
+    call_id: str = Field(..., description="Unique ID linking to the ToolResult")
 
-
+class ToolResultMessage(BaseModel):
+    """Incoming tool execution result from the client."""
+    type: Literal["tool_result"] = "tool_result"
+    call_id: str
+    success: bool
+    result: Any | None = None
+    error: str | None = None
+    
 class HeartbeatMessage(BaseModel):
     """Periodic heartbeat to keep the connection alive."""
     type: Literal["heartbeat"] = "heartbeat"
