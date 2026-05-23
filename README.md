@@ -411,11 +411,23 @@ git clone https://github.com/Kennny7/Thanatos.git
 
 # Backend
 cd backend
+
+# Create environment file
+cp .env.example .env
+
+# Install dependencies
+pip install -e .
+# OR
 pip install -r requirements.txt
+
+# Install Playwright browser
+playwright install chromium
+
+# Start API
 uvicorn app.main:app --reload
 
 # Client
-cd client
+cd ../client
 flutter pub get
 flutter run
 ```
