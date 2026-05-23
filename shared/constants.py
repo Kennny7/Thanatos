@@ -1,3 +1,5 @@
+# Thanatos\shared\constants.py
+
 # Static defaults – no environment reads
 DEFAULT_MAX_RETRIES = 3
 DEFAULT_RETRY_DELAY = 1.0
