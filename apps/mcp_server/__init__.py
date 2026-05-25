@@ -1,0 +1,1 @@
+"""Thanatos MCP Server – Exposes OS automation tools via Model Context Protocol."""

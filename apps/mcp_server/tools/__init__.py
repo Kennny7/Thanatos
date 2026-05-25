@@ -1,0 +1,1 @@
+"""Tool implementations for the Thanatos MCP server."""
