@@ -5,8 +5,6 @@ __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
-*.pyc
-*.pyd
 
 *.egg-info/
 dist/
@@ -21,6 +19,10 @@ env/
 .venv/
 ENV/
 
+# Any custom venv name
+venv*/
+.venv*/
+
 # =========================
 # Environment variables
 # =========================
@@ -33,7 +35,9 @@ ENV/
 # =========================
 .pytest_cache/
 .mypy_cache/
+.ruff_cache/
 .coverage
+.coverage.*
 htmlcov/
 
 # =========================
@@ -56,6 +60,66 @@ Thumbs.db
 *.log
 
 # =========================
-# Docker (optional local artifacts)
+# Databases
+# =========================
+*.db
+*.sqlite
+*.sqlite3
+
+# =========================
+# Docker / runtime
 # =========================
 *.pid
+
+# =========================
+# Flutter / Dart
+# =========================
+
+# Dart
+.dart_tool/
+.packages
+.pub/
+.pub-cache/
+
+# Flutter build outputs
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.flutter-versions
+
+# Generated files
+**/generated_plugin_registrant.dart
+
+# Coverage
+coverage/
+
+# Android
+**/android/.gradle/
+**/android/local.properties
+**/android/app/debug/
+**/android/app/profile/
+**/android/app/release/
+
+# iOS
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+
+# macOS
+**/macos/Pods/
+
+# Linux
+**/linux/flutter/ephemeral/
+
+# Windows
+**/windows/flutter/ephemeral/
+
+# Fuchsia
+**/fuchsia/.packages
+
+# Project-specific secrets
+config/secrets.env
+
+# Local audit database
+audit/storage/*.db
