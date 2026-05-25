@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "thanatos-tools": {
+      "command": "python",
+      "args": [
+        "-u",
+        "path/to/thanatos/apps/mcp_server/server.py"
+      ]
+    }
+  }
+}
+
