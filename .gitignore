@@ -81,14 +81,36 @@ Thumbs.db
 .pub/
 .pub-cache/
 
-# Flutter build outputs
+# Dart
+.dart_tool/
+.packages
+.pub/
+.pub-cache/
+
+# Flutter
 build/
+**/pubspec.lock
 .flutter-plugins
 .flutter-plugins-dependencies
 .flutter-versions
 
+# Build outputs
+build/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Crash logs
+flutter_*.log
+
 # Generated files
 **/generated_plugin_registrant.dart
+**/.dart_tool/
 
 # Coverage
 coverage/
