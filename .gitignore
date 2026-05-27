@@ -81,12 +81,6 @@ Thumbs.db
 .pub/
 .pub-cache/
 
-# Dart
-.dart_tool/
-.packages
-.pub/
-.pub-cache/
-
 # Flutter
 build/
 **/pubspec.lock
@@ -145,3 +139,56 @@ config/secrets.env
 
 # Local audit database
 audit/storage/*.db
+
+
+.metadata
+.env
+.flutter-plugins-dependencies
+analysis_options.yaml
+settings.gradle.kts
+gradle.properties
+gradle.kts
+MainActivity.kt
+AndroidManifest.xml
+launch_background.xml
+ic_launcher.png
+styles.xml
+graddle-wrapper.properties
+AppFrameworkInfo.plist
+Debug.xcconfig
+Release.xcconfig
+AppDelegate.swift
+Info.plist
+Runner-Bridging-Header.h
+SceneDelegate.swift
+Contents.json
+Icon-App-20x20*
+Icon-App-29x29*
+Icon-App-40x40*
+Icon-App-60x60*
+Icon-App-76x76*
+Icon-App-83.5x83.5*
+Icon-App-1024x1024* 
+LaunchImage*
+LaunchScreen*
+project.pbxproj*
+contents.xcworkspacedata
+IDE*
+Runner*
+Workspace*
+message_model.freezed.dart
+message_model.g.dart
+CMakeLists.txt
+generated_plugin_registrant.*
+main.cc
+my_application.*
+Flutter-*
+Generated*
+App*
+Debug*
+MainFlutter*
+app_icon_*
+Release*
+utils.h
+utils.cpp
+win32*
