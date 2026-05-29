@@ -184,6 +184,10 @@ main.cc
 my_application.*
 Flutter-*
 Generated*
+apps/client_flutter/android/app/
+apps/client_flutter/android/build.gradle.kts
+apps/client_flutter/android/gradle/
+apps/client_flutter/web/	
 
 Debug*
 MainFlutter*
