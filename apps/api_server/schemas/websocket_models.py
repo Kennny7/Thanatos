@@ -1,8 +1,10 @@
 # Thanatos/apps/api_server/schemas/websocket_models.py
 
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Dict, Literal, Optional, Union
 
 from pydantic import BaseModel, Field
+
+from shared.models import ToolCall, ToolResult
 
 
 class UserMessage(BaseModel):
@@ -17,21 +19,56 @@ class AssistantChunk(BaseModel):
     content: str = Field(..., description="Partial or complete assistant text")
 
 
-class ToolCallRequest(BaseModel):
-    """Request to execute a tool on the client side."""
-    type: Literal["tool_call_request"] = "tool_call_request"
-    tool_name: str = Field(..., description="Name of the tool to invoke")
-    arguments: Dict[str, Any] = Field(default_factory=dict, description="Tool arguments")
-    call_id: str = Field(..., description="Unique ID linking to the ToolResult")
+class ToolCallRequestWS(BaseModel):
+    """
+    WebSocket envelope for a tool call request.
 
-class ToolResultMessage(BaseModel):
-    """Incoming tool execution result from the client."""
+    This flat structure is used for serialization over the WebSocket.
+    Core logic operates on the shared `ToolCall` model; use `from_tool_call()`
+    to create instances from the shared representation.
+    """
+    type: Literal["tool_call_request"] = "tool_call_request"
+    call_id: str
+    tool_name: str
+    arguments: Dict[str, Any] = {}
+
+    @classmethod
+    def from_tool_call(cls, tool_call: ToolCall) -> "ToolCallRequestWS":
+        """Create a WS envelope from the shared ToolCall model."""
+        return cls(
+            call_id=tool_call.call_id,
+            tool_name=tool_call.tool_name,
+            arguments=tool_call.arguments,
+        )
+
+
+class ToolResultMessageWS(BaseModel):
+    """
+    WebSocket envelope for a tool execution result.
+
+    Serialized over the WebSocket; core logic uses the shared `ToolResult` model.
+    Use `from_tool_result()` to convert from the shared representation, providing
+    the associated `call_id` explicitly.
+    """
     type: Literal["tool_result"] = "tool_result"
     call_id: str
     success: bool
-    result: Any | None = None
-    error: str | None = None
-    
+    content: Any = None
+    error: Optional[str] = None
+
+    @classmethod
+    def from_tool_result(
+        cls, tool_result: ToolResult, call_id: str
+    ) -> "ToolResultMessageWS":
+        """Create a WS envelope from a ToolResult and its call identifier."""
+        return cls(
+            call_id=call_id,
+            success=tool_result.success,
+            content=tool_result.content,
+            error=tool_result.error,
+        )
+
+
 class HeartbeatMessage(BaseModel):
     """Periodic heartbeat to keep the connection alive."""
     type: Literal["heartbeat"] = "heartbeat"
@@ -41,3 +78,14 @@ class ErrorMessage(BaseModel):
     """Error message sent to the client."""
     type: Literal["error"] = "error"
     detail: str = Field(..., description="Human-readable error description")
+
+
+# Union of all possible WebSocket messages (outgoing and incoming)
+AnyMessage = Union[
+    UserMessage,
+    AssistantChunk,
+    ToolCallRequestWS,
+    ToolResultMessageWS,
+    HeartbeatMessage,
+    ErrorMessage,
+]
