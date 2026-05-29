@@ -1,3 +1,5 @@
+# Thanatos\apps\api_server\main.py
+
 from fastapi import FastAPI
 
 from .routes.websocket import router as ws_router
