@@ -1,133 +1,86 @@
 # Thanatos/apps/api_server/routes/speech.py
 
-"""
-Speech-to-Text and Text-to-Speech endpoints.
-Uses the services/speech/ module for real processing.
-"""
-
-import base64
 import logging
 import os
 import tempfile
-from typing import Optional
+from typing import Any, Dict, Optional
+from fastapi import APIRouter, File, Form, HTTPException, Response, UploadFile
+from pydantic import BaseModel
 
-from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import Response
-from pydantic import BaseModel, Field
-
-from services.speech import SpeechService
+from services.speech.speech_service import speech_service
 
 logger = logging.getLogger(__name__)
-
-router = APIRouter(prefix="/speech", tags=["speech"])
-
-# ---------- Models (preserved from original) ----------
-class STTRequest(BaseModel):
-    audio_data: str = Field(..., description="Base64 encoded audio bytes")
+router = APIRouter(prefix="/speech", tags=["Speech & Voice"])
 
 
-class STTResponse(BaseModel):
+class SynthesizeRequest(BaseModel):
     text: str
+    voice: Optional[str] = None
 
 
-class TTSRequest(BaseModel):
-    text: str = Field(..., description="Text to synthesise")
-    voice: str = Field(default="default", description="Voice profile name")
-
-
-class TTSResponse(BaseModel):
-    audio_data: str = Field(
-        ..., description="Base64 encoded MP3 audio data"
-    )
-
-# ---------- Service instance ----------
-speech_service = SpeechService(
-    stt_model_size="base",          # adjust for your hardware
-    stt_device="cpu",
-    tts_voice="en-US-AriaNeural",   # default voice
-)
-
-
-# ---------- Endpoints ----------
-@router.post("/stt", response_model=STTResponse)
-async def speech_to_text(request: STTRequest) -> STTResponse:
+@router.post("/transcribe")
+async def transcribe_audio(
+    file: UploadFile = File(...),
+    diarize: bool = Form(True),
+) -> Dict[str, Any]:
     """
-    Convert base64-encoded audio to text.
+    Transcribe uploaded audio with AEC filtering and multi-speaker diarization.
     """
+    suffix = os.path.splitext(file.filename)[1] or ".wav"
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+        tmp_path = tmp.name
+        content = await file.read()
+        tmp.write(content)
+
     try:
-        # Decode base64 data
-        try:
-            audio_bytes = base64.b64decode(request.audio_data)
-        except Exception:
-            raise HTTPException(status_code=400, detail="Invalid base64 audio data")
-
-        # Write to a temporary file – faster-whisper needs a file path
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-            tmp.write(audio_bytes)
-            temp_path = tmp.name
-
-        try:
-            transcript = speech_service.transcribe(temp_path)
-        finally:
-            # Always clean up the temp file
-            if os.path.exists(temp_path):
-                os.unlink(temp_path)
-
-        return STTResponse(text=transcript)
-
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except RuntimeError as e:
-        logger.exception("STT processing failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        if diarize:
+            res = speech_service.process_voice_input(tmp_path)
+        else:
+            text = speech_service.transcribe(tmp_path)
+            res = {"transcript": text, "primary_speaker": "User", "segments": []}
+        return res
     except Exception as e:
-        logger.exception("Unexpected error during STT")
-        raise HTTPException(status_code=500, detail="Internal server error during STT")
-
-
-@router.post("/tts", response_model=TTSResponse)
-async def text_to_speech(request: TTSRequest) -> TTSResponse:
-    """
-    Convert text to spoken MP3 audio.
-    The result is base64-encoded MP3 data.
-    """
-    try:
-        # Determine voice (use provided or fall back to default)
-        voice = None if request.voice == "default" else request.voice
-        audio_bytes = await speech_service.synthesize(request.text, voice=voice)
-        encoded = base64.b64encode(audio_bytes).decode("utf-8")
-        return TTSResponse(audio_data=encoded)
-
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except RuntimeError as e:
-        logger.exception("TTS synthesis failed")
+        logger.exception("Transcription endpoint failed: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
-    except Exception as e:
-        logger.exception("Unexpected error during TTS")
-        raise HTTPException(status_code=500, detail="Internal server error during TTS")
+    finally:
+        if os.path.exists(tmp_path):
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
 
 
 @router.post("/synthesize")
-async def synthesize_speech(
-    text: str = Query(..., min_length=1, description="Text to speak"),
-    voice: Optional[str] = Query(None, description="Voice profile override"),
-):
-    """
-    Convenience endpoint that returns raw MP3 audio bytes.
-    The Flutter client can play this directly without base64 decoding.
-    """
+async def synthesize_speech(payload: SynthesizeRequest):
+    """Convert text to MP3 audio stream."""
     try:
-        audio_bytes = await speech_service.synthesize(text, voice=voice)
-        return Response(
-            content=audio_bytes,
-            media_type="audio/mpeg",
-            headers={"Content-Disposition": "inline; filename=speech.mp3"},
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except RuntimeError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        mp3_bytes = await speech_service.synthesize(payload.text, voice=payload.voice)
+        return Response(content=mp3_bytes, media_type="audio/mpeg")
     except Exception as e:
-        logger.exception("Unexpected error during TTS (synthesize)")
-        raise HTTPException(status_code=500, detail="Internal server error during TTS")
+        logger.exception("TTS synthesis error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/enroll-voice")
+async def enroll_owner_voice(file: UploadFile = File(...)):
+    """Enroll the primary user's voice profile for speaker diarization."""
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+        tmp_path = tmp.name
+        content = await file.read()
+        tmp.write(content)
+
+    try:
+        result = speech_service.enroll_voice(tmp_path)
+        return result
+    finally:
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
+
+
+@router.get("/voice-status")
+async def get_voice_status() -> Dict[str, Any]:
+    """Check if owner voice profile is enrolled."""
+    return {
+        "is_enrolled": speech_service.speaker_id.is_enrolled(),
+        "profile_path": speech_service.speaker_id.owner_profile_path,
+    }
