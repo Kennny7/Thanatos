@@ -1,38 +1,40 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:uuid/uuid.dart';
+// Thanatos/apps/client_flutter/lib/models/message_model.dart
 
-part 'message_model.freezed.dart';
-part 'message_model.g.dart';
+enum MessageSender { user, assistant, system }
 
-const _uuid = Uuid();
+class ChatMessage {
+  final String id;
+  final String content;
+  final MessageSender sender;
+  final DateTime timestamp;
+  final String? thought;
+  final String? speakerTag; // e.g. "Owner (You)", "Guest Speaker"
+  final String? activeAgent;
 
-enum MessageRole { user, assistant }
+  ChatMessage({
+    required this.id,
+    required this.content,
+    required this.sender,
+    required this.timestamp,
+    this.thought,
+    this.speakerTag,
+    this.activeAgent,
+  });
 
-@freezed
-class ChatMessage with _$ChatMessage {
-  const factory ChatMessage({
-    required String id,
-    required String text,
-    required MessageRole role,
-    required DateTime timestamp,
-    @Default(false) bool isPartial, // true while assistant is streaming
-  }) = _ChatMessage;
-
-  factory ChatMessage.fromJson(Map<String, dynamic> json) =>
-      _$ChatMessageFromJson(json);
-
-  factory ChatMessage.userMessage(String text) => ChatMessage(
-        id: _uuid.v4(),
-        text: text,
-        role: MessageRole.user,
-        timestamp: DateTime.now(),
-      );
-
-  factory ChatMessage.assistantPlaceholder() => ChatMessage(
-        id: _uuid.v4(),
-        text: '',
-        role: MessageRole.assistant,
-        timestamp: DateTime.now(),
-        isPartial: true,
-      );
+  ChatMessage copyWith({
+    String? content,
+    String? thought,
+    String? speakerTag,
+    String? activeAgent,
+  }) {
+    return ChatMessage(
+      id: id,
+      content: content ?? this.content,
+      sender: sender,
+      timestamp: timestamp,
+      thought: thought ?? this.thought,
+      speakerTag: speakerTag ?? this.speakerTag,
+      activeAgent: activeAgent ?? this.activeAgent,
+    );
+  }
 }
