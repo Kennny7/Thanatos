@@ -1,4 +1,4 @@
-// Main chat screen combining the chat list, input field, mic button, and AI indicator.
+// Thanatos/apps/client_flutter/lib/ui/screens/chat_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +7,9 @@ import '../../state/chat_provider.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/action_card_snackbar.dart';
 import '../widgets/ai_speaking_indicator.dart';
+import '../widgets/agent_status_tracker.dart';
+import '../widgets/voice_overlay.dart';
+import 'settings_screen.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
@@ -22,9 +25,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    // Listen to tool updates and show snackbar
-    ref.listenManual(chatProvider.select((s) => s.toolUpdateMessage),
-        (prev, next) {
+    ref.listenManual(chatProvider.select((s) => s.toolUpdateMessage), (prev, next) {
       if (next != null) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           showActionSnackbar(context, next, () {
@@ -50,6 +51,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _scrollToBottom();
   }
 
+  void _openVoiceOverlay() {
+    showDialog(
+      context: context,
+      builder: (ctx) => VoiceOverlayDialog(
+        onTranscriptionComplete: (transcript, speakerTag) {
+          ref.read(chatProvider.notifier).sendTextMessage(transcript, speakerTag: speakerTag);
+          _scrollToBottom();
+        },
+      ),
+    );
+  }
+
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
@@ -65,144 +78,98 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(chatProvider);
-    final notifier = ref.read(chatProvider.notifier);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Thanatos AI'),
+        title: const Text('Thanatos AI Assistant'),
         centerTitle: true,
         actions: [
-          if (state.isAiResponding)
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: AISpeakingIndicator(size: 40),
-            ),
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Model & System Settings',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
+            },
+          ),
         ],
       ),
       body: Column(
         children: [
+          if (state.activeAgent != null && state.agentStatusText != null)
+            AgentStatusTracker(
+              agentName: state.activeAgent!,
+              statusText: state.agentStatusText!,
+              progress: state.agentProgress,
+            ),
           Expanded(
             child: state.messages.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        AISpeakingIndicator(size: 150),
+                        AISpeakingIndicator(size: 110),
                         const SizedBox(height: 16),
-                        Text(
-                          'Ask me anything...',
-                          style: Theme.of(context).textTheme.headlineSmall,
+                        const Text(
+                          'Thanatos Autonomous Engine',
+                          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Ask to search jobs, tailor resumes, edit novels, or control tasks.',
+                          style: TextStyle(color: Colors.white60, fontSize: 13),
                         ),
                       ],
                     ),
                   )
                 : ListView.builder(
                     controller: _scrollController,
-                    padding: const EdgeInsets.only(top: 8, bottom: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     itemCount: state.messages.length,
-                    itemBuilder: (context, index) {
-                      final msg = state.messages[index];
-                      final isLast =
-                          index == state.messages.length - 1;
-                      return ChatBubble(
-                        message: msg,
-                        showStreamingIndicator:
-                            isLast && msg.isPartial,
-                      );
+                    itemBuilder: (context, idx) {
+                      return ChatBubble(message: state.messages[idx]);
                     },
                   ),
           ),
-          _buildInputBar(state, notifier),
+          _buildInputBar(),
         ],
       ),
     );
   }
 
-  Widget _buildInputBar(ChatState state, ChatNotifier notifier) {
+  Widget _buildInputBar() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, -2),
-          ),
-        ],
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: const BoxDecoration(
+        color: Color(0xFF1E1E2E),
+        border: Border(top: BorderSide(color: Colors.white10, width: 0.8)),
       ),
       child: SafeArea(
         child: Row(
           children: [
+            IconButton(
+              icon: const Icon(Icons.mic, color: Color(0xFF6C63FF)),
+              tooltip: 'Voice Input with AEC & Diarization',
+              onPressed: _openVoiceOverlay,
+            ),
             Expanded(
               child: TextField(
                 controller: _textController,
-                onSubmitted: (_) => _sendMessage(),
-                decoration: InputDecoration(
-                  hintText: 'Type a message...',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide: BorderSide.none,
-                  ),
-                  filled: true,
-                  fillColor:
-                      Theme.of(context).colorScheme.surfaceVariant,
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 12),
+                decoration: const InputDecoration(
+                  hintText: 'Ask Thanatos anything...',
+                  border: InputBorder.none,
+                  hintStyle: TextStyle(color: Colors.white38),
                 ),
+                style: const TextStyle(color: Colors.white),
+                onSubmitted: (_) => _sendMessage(),
               ),
             ),
-            const SizedBox(width: 8),
-            _MicButton(
-              isListening: state.isListening,
-              onPressed: () => notifier.toggleListening(),
-            ),
-            const SizedBox(width: 8),
-            FloatingActionButton.small(
+            IconButton(
+              icon: const Icon(Icons.send, color: Color(0xFF6C63FF)),
               onPressed: _sendMessage,
-              child: const Icon(Icons.send_rounded),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MicButton extends StatelessWidget {
-  final bool isListening;
-  final VoidCallback onPressed;
-
-  const _MicButton({required this.isListening, required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: 48,
-        height: 48,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: isListening
-              ? Theme.of(context).colorScheme.error
-              : Theme.of(context).colorScheme.primaryContainer,
-          boxShadow: isListening
-              ? [
-                  BoxShadow(
-                    color: Theme.of(context).colorScheme.error.withOpacity(0.4),
-                    blurRadius: 12,
-                    spreadRadius: 2,
-                  )
-                ]
-              : [],
-        ),
-        child: Icon(
-          isListening ? Icons.mic : Icons.mic_none,
-          color: isListening
-              ? Theme.of(context).colorScheme.onError
-              : Theme.of(context).colorScheme.onPrimaryContainer,
         ),
       ),
     );
