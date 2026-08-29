@@ -77,7 +77,23 @@ class HeartbeatMessage(BaseModel):
 class ErrorMessage(BaseModel):
     """Error message sent to the client."""
     type: Literal["error"] = "error"
-    detail: str = Field(..., description="Human-readable error description")
+class AgentStatusMessage(BaseModel):
+    """Live status update from coordinator or active sub-agent."""
+    type: Literal["agent_status"] = "agent_status"
+    agent: str
+    status: str
+    progress: float = 0.0
+
+
+class ThoughtMessage(BaseModel):
+    """Deep reasoning thought chunk."""
+    type: Literal["thought"] = "thought"
+    content: str
+
+
+# Aliases for backward compatibility
+ToolCallRequest = ToolCallRequestWS
+ToolResultMessage = ToolResultMessageWS
 
 
 # Union of all possible WebSocket messages (outgoing and incoming)
@@ -86,6 +102,8 @@ AnyMessage = Union[
     AssistantChunk,
     ToolCallRequestWS,
     ToolResultMessageWS,
+    AgentStatusMessage,
+    ThoughtMessage,
     HeartbeatMessage,
     ErrorMessage,
-]
+]
