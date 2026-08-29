@@ -11,8 +11,6 @@ import os
 import tempfile
 from typing import Optional
 
-import edge_tts
-
 logger = logging.getLogger(__name__)
 
 # Common high‑quality voices. You can extend this list.
@@ -54,7 +52,7 @@ class TTSEngine:
         selected_voice = voice if voice else self.default_voice
 
         try:
-            # communicate = edge_tts.Communicate(text, self.voice)
+            import edge_tts
             communicate = edge_tts.Communicate(text, selected_voice)
 
             # Stream audio chunks into a temporary file, then read the bytes.
