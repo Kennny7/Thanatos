@@ -1,4 +1,4 @@
-// A Material 3 chat bubble with user / assistant styling and streaming indication.
+// Thanatos/apps/client_flutter/lib/ui/widgets/chat_bubble.dart
 
 import 'package:flutter/material.dart';
 import '../../models/message_model.dart';
@@ -15,88 +15,89 @@ class ChatBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isUser = message.role == MessageRole.user;
-    final colorScheme = Theme.of(context).colorScheme;
-    final backgroundColor =
-        isUser ? colorScheme.primaryContainer : colorScheme.surfaceVariant;
-    final textColor =
-        isUser ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant;
+    final isUser = message.sender == MessageSender.user;
+    final backgroundColor = isUser ? const Color(0xFF6C63FF) : const Color(0xFF2E2E3E);
+    final textColor = Colors.white;
 
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
+          maxWidth: MediaQuery.of(context).size.width * 0.82,
         ),
-        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: backgroundColor,
           borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(20),
-            topRight: const Radius.circular(20),
-            bottomLeft: isUser
-                ? const Radius.circular(20)
-                : const Radius.circular(4),
-            bottomRight: isUser
-                ? const Radius.circular(4)
-                : const Radius.circular(20),
+            topLeft: const Radius.circular(16),
+            topRight: const Radius.circular(16),
+            bottomLeft: isUser ? const Radius.circular(16) : const Radius.circular(4),
+            bottomRight: isUser ? const Radius.circular(4) : const Radius.circular(16),
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.12),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            )
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (message.isPartial && showStreamingIndicator)
+            if (message.speakerTag != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 4),
-                child: _StreamingDot(),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isUser ? Icons.person : Icons.record_voice_over,
+                      size: 13,
+                      color: Colors.white70,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      message.speakerTag!,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            Text(
-              message.text,
-              style: TextStyle(color: textColor),
+            if (message.thought != null && message.thought!.isNotEmpty)
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.black26,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.white12),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.psychology, size: 14, color: Colors.amberAccent),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        message.thought!,
+                        style: const TextStyle(color: Colors.amberAccent, fontSize: 11, fontStyle: FontStyle.italic),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            SelectableText(
+              message.content,
+              style: TextStyle(color: textColor, fontSize: 14, height: 1.4),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StreamingDot extends StatefulWidget {
-  @override
-  State<_StreamingDot> createState() => _StreamingDotState();
-}
-
-class _StreamingDotState extends State<_StreamingDot>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _controller,
-      child: Container(
-        width: 8,
-        height: 8,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primary,
-          shape: BoxShape.circle,
         ),
       ),
     );
