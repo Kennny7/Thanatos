@@ -349,7 +349,7 @@ class TestDispatcher:
 
     @patch("api_server.core.dispatcher.registry")
     def test_dispatcher_catches_exception(self, mock_registry):
-        from api_server.core.dispatcher import dispatch_tool_call
+        from apps.api_server.core.dispatcher import dispatch_tool_call
         from shared.models.tool_call import ToolCall
 
         mock_registry.dispatch = AsyncMock(side_effect=RuntimeError("Boom"))
