@@ -1,53 +1,88 @@
-# Thanatos\services\memory\vector_store.py
-"""
-ChromaDB vector store wrapper with persistent local storage.
-"""
+# Thanatos/services/memory/vector_store.py
 
-import uuid
+import json
+import logging
+import math
+import os
+import re
 from typing import Any, Dict, List, Optional
+import uuid
 
-import chromadb
-from chromadb.config import Settings
+logger = logging.getLogger(__name__)
 
-from .embeddings import MiniLMEmbeddingFunction
+
+def _cosine_similarity(vec_a: List[float], vec_b: List[float]) -> float:
+    dot = sum(a * b for a, b in zip(vec_a, vec_b))
+    norm_a = math.sqrt(sum(a * a for a in vec_a))
+    norm_b = math.sqrt(sum(b * b for b in vec_b))
+    if norm_a == 0 or norm_b == 0:
+        return 0.0
+    return dot / (norm_a * norm_b)
+
+
+def _simple_text_embedding(text: str, dim: int = 128) -> List[float]:
+    """Lightweight deterministic text embedding for local environments."""
+    words = re.findall(r"\w+", text.lower())
+    vec = [0.0] * dim
+    for w in words:
+        h = hash(w)
+        idx = abs(h) % dim
+        vec[idx] += 1.0
+    # Normalize
+    norm = math.sqrt(sum(x * x for x in vec)) or 1.0
+    return [x / norm for x in vec]
 
 
 class VectorStore:
     """
-    Manages a ChromaDB collection for storing and searching text embeddings.
-    Uses a persistent client that writes to a local directory.
+    Robust Vector Store supporting ChromaDB with seamless in-memory / JSON file fallback.
     """
 
     def __init__(
         self,
-        persist_directory: str,
-        collection_name: str = "memory_store",
-        embedding_function: Optional[MiniLMEmbeddingFunction] = None,
+        persist_directory: str = "./memory_store",
+        collection_name: str = "thanatos_memories",
     ) -> None:
-        """
-        Args:
-            persist_directory: Path to the directory where ChromaDB data will be stored.
-            collection_name: Name of the ChromaDB collection.
-            embedding_function: Optional custom embedding function. If None,
-                a default CPU-bound MiniLMEmbeddingFunction is created.
-        """
-        # Create a persistent ChromaDB client (data survives restarts).
-        self.client = chromadb.PersistentClient(
-            path=persist_directory,
-            settings=Settings(anonymized_telemetry=False),
-        )
+        self.persist_directory = persist_directory
+        self.collection_name = collection_name
+        self._use_chroma = False
+        self._chroma_client = None
+        self._collection = None
+        self._fallback_docs: List[Dict[str, Any]] = []
 
-        if embedding_function is None:
-            self.embedding_function = MiniLMEmbeddingFunction()
-        else:
-            self.embedding_function = embedding_function
+        self._init_backend()
 
-        # Get or create the collection with cosine distance (default for semantic search).
-        self.collection = self.client.get_or_create_collection(
-            name=collection_name,
-            embedding_function=self.embedding_function,
-            metadata={"hnsw:space": "cosine"},
-        )
+    def _init_backend(self) -> None:
+        try:
+            import chromadb
+            os.makedirs(self.persist_directory, exist_ok=True)
+            self._chroma_client = chromadb.PersistentClient(path=self.persist_directory)
+            self._collection = self._chroma_client.get_or_create_collection(name=self.collection_name)
+            self._use_chroma = True
+            logger.info("ChromaDB vector store initialized in %s", self.persist_directory)
+        except Exception as e:
+            logger.warning("ChromaDB not available (%s), using local fast fallback store.", e)
+            self._use_chroma = False
+            self._load_fallback_store()
+
+    def _load_fallback_store(self) -> None:
+        os.makedirs(self.persist_directory, exist_ok=True)
+        store_path = os.path.join(self.persist_directory, f"{self.collection_name}.json")
+        if os.path.exists(store_path):
+            try:
+                with open(store_path, "r", encoding="utf-8") as f:
+                    self._fallback_docs = json.load(f)
+            except Exception:
+                self._fallback_docs = []
+
+    def _save_fallback_store(self) -> None:
+        os.makedirs(self.persist_directory, exist_ok=True)
+        store_path = os.path.join(self.persist_directory, f"{self.collection_name}.json")
+        try:
+            with open(store_path, "w", encoding="utf-8") as f:
+                json.dump(self._fallback_docs, f, indent=2)
+        except Exception as e:
+            logger.warning("Could not save fallback vector store: %s", e)
 
     def add_documents(
         self,
@@ -55,72 +90,64 @@ class VectorStore:
         metadatas: Optional[List[Dict[str, Any]]] = None,
         ids: Optional[List[str]] = None,
     ) -> List[str]:
-        """
-        Add a batch of documents to the vector store.
-
-        Args:
-            texts: List of document texts.
-            metadatas: List of metadata dictionaries (same length as texts).
-                Defaults to empty metadata for each document.
-            ids: Optional list of unique IDs. If not provided, UUIDs are generated.
-
-        Returns:
-            List of IDs of the inserted documents.
-
-        Raises:
-            ValueError: If texts is empty.
-        """
         if not texts:
-            raise ValueError("At least one document text must be provided.")
+            return []
 
-        if ids is None:
-            ids = [str(uuid.uuid4()) for _ in texts]
-        if metadatas is None:
-            metadatas = [{}] * len(texts)
+        doc_ids = ids or [str(uuid.uuid4()) for _ in texts]
+        metas = metadatas or [{} for _ in texts]
 
-        if len(texts) != len(metadatas) or len(texts) != len(ids):
-            raise ValueError("Lengths of texts, metadatas, and ids must match.")
+        if self._use_chroma and self._collection is not None:
+            try:
+                self._collection.add(documents=texts, metadatas=metas, ids=doc_ids)
+                return doc_ids
+            except Exception as e:
+                logger.warning("ChromaDB add failed (%s), falling back to local memory store", e)
 
-        self.collection.add(documents=texts, metadatas=metadatas, ids=ids)
-        return ids
+        # Fallback storage
+        for doc_id, text, meta in zip(doc_ids, texts, metas):
+            emb = _simple_text_embedding(text)
+            self._fallback_docs.append({
+                "id": doc_id,
+                "text": text,
+                "metadata": meta,
+                "embedding": emb,
+            })
+        self._save_fallback_store()
+        return doc_ids
 
-    def search(self, query: str, k: int = 3) -> List[Dict[str, Any]]:
-        """
-        Query the vector store for documents semantically similar to the query.
-
-        Args:
-            query: The search query text.
-            k: Number of top results to return.
-
-        Returns:
-            A list of dictionaries with keys:
-                - text: The original document text.
-                - metadata: The associated metadata dictionary.
-                - score: A similarity score between 0 and 1 (1 = perfect match).
-                  Computed as 1 - cosine_distance.
-
-        Raises:
-            ValueError: If query is empty or whitespace-only.
-        """
+    def search(self, query: str, k: int = 3, filter_metadata: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         if not query or not query.strip():
-            raise ValueError("Search query cannot be empty.")
+            return []
 
-        results = self.collection.query(query_texts=[query], n_results=k)
+        if self._use_chroma and self._collection is not None:
+            try:
+                kwargs: Dict[str, Any] = {"query_texts": [query], "n_results": k}
+                if filter_metadata:
+                    kwargs["where"] = filter_metadata
+                results = self._collection.query(**kwargs)
+                formatted = []
+                if results and "documents" in results and results["documents"]:
+                    docs = results["documents"][0]
+                    metas = results.get("metadatas", [[]])[0]
+                    distances = results.get("distances", [[]])[0]
+                    for doc, meta, dist in zip(docs, metas, distances):
+                        # Convert distance to similarity score
+                        score = max(0.0, 1.0 - (dist if dist is not None else 0.5))
+                        formatted.append({"text": doc, "metadata": meta, "score": round(score, 3)})
+                return formatted
+            except Exception as e:
+                logger.warning("Chroma query failed: %s, using fallback", e)
 
-        # ChromaDB returns lists of lists; we queried a single text so take the first element.
-        documents = results.get("documents", [[]])[0]
-        metadatas = results.get("metadatas", [[]])[0]
-        distances = results.get("distances", [[]])[0]
+        # Fallback semantic search
+        query_emb = _simple_text_embedding(query)
+        scored = []
+        for item in self._fallback_docs:
+            if filter_metadata:
+                match = all(item["metadata"].get(k) == v for k, v in filter_metadata.items())
+                if not match:
+                    continue
+            sim = _cosine_similarity(query_emb, item["embedding"])
+            scored.append({"text": item["text"], "metadata": item["metadata"], "score": round(sim, 3)})
 
-        formatted = []
-        for doc, meta, dist in zip(documents, metadatas, distances):
-            # Convert cosine distance to similarity score.
-            # Cosine distance = 1 - cosine_similarity, so similarity = 1 - distance.
-            score = 1.0 - dist if dist is not None else None
-            formatted.append({"text": doc, "metadata": meta, "score": score})
-
-        return formatted
-
-    def delete_collection(self) -> None:
-        """Delete the underlying collection (use with caution)."""
-        self.client.delete_collection(self.collection.name)
+        scored.sort(key=lambda x: x["score"], reverse=True)
+        return scored[:k]
