@@ -1,460 +1,205 @@
 # **Thanatos**
 
-### *Modular AI Orchestration Engine for Autonomous Assistants*
+### *Autonomous Multi-Agent AI Assistant Engine with Voice Intelligence & RAG*
 
-> [!] **Status: In Progress (Actively Building & Expanding)**
-> This project is under active development. Core architecture is defined, modules are being implemented iteratively.
-
----
-
-## [+] Overview
-
-**Thanatos** is a next-generation, modular AI system designed to function as a **fully autonomous assistant**, capable of:
-
-* Understanding natural language (voice/text)
-* Planning multi-step actions
-* Executing real-world tasks (OS, web, APIs)
-* Learning from interactions (memory)
-* Integrating with external AI ecosystems (MCP)
-
-This is not just a chatbot — it’s an **agentic system** with reasoning, execution, and extensibility at its core.
+[![Python](https://img.shields.io/badge/Python-3.12-3776AB.svg?style=flat&logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B.svg?style=flat&logo=flutter&logoColor=white)](https://flutter.dev)
+[![Ollama](https://img.shields.io/badge/Ollama-Local%20LLM-black.svg?style=flat)](https://ollama.com)
+[![Tests](https://img.shields.io/badge/Tests-48%20Passed-brightgreen.svg?style=flat)](./tests)
 
 ---
 
-## [+] Key Highlights
+## 🌟 Overview
 
-* **Agentic AI Loop** (Plan → Act → Observe → Iterate)
-* **Plugin-Based Architecture** (OS, Web, Memory, Speech)
-* **Real-time Streaming via WebSockets**
-* **Cross-platform Client (Flutter)**
-* **Vector Memory (Long-term Recall)**
-* **MCP Server Integration (External AI Tooling)**
-* **DeepSeek-powered reasoning engine**
+**Thanatos** is an autonomous, multi-agent AI assistant designed for seamless cross-platform personal and professional automation. Built with a local-first philosophy and scalable agent coordination, Thanatos combines:
+
+1. **Unified LLM Brain & Deep Thinking**: Local Ollama support (7B / 14B / 30B models such as `qwen2.5:7b`, `llama3.1:8b`, `deepseek-r1:7b/14b`, `phi3`) with dynamic model switching, native tool calling, and embedded XML/JSON `<tool_call>` & `<think>` extraction.
+2. **Scalable Multi-Agent Coordinator**: A supervisor architecture that orchestrates specialized sub-agents into end-to-end task pipelines.
+3. **Domain Agent Skills**:
+   - 🎯 **Job Hunter Agent**: Scrapes and analyzes tech openings (e.g. Pune fresher roles).
+   - 📄 **Resume Tailor Agent**: RAG-powered engine tailoring resumes and cover letters against user profile data.
+   - 📮 **Job Applicator Agent**: Stages and logs job application submissions.
+   - 📖 **Novel Translation & Editor Agent**: Translates web novel pages, maintaining style consistency and terminology glossaries.
+   - 🔧 **Self-Improvement Code Agent**: Analyzes the Thanatos codebase, runs sandbox tests, and safely validates code patches.
+4. **Speech Intelligence & Speaker Diarization**:
+   - **ASR & TTS**: Powered by Faster-Whisper and Edge-TTS.
+   - **Acoustic Echo Cancellation (AEC)**: Spectral gating and feedback suppression.
+   - **Speaker Identification & Diarization**: Enrolls the owner's voice and tags speakers in multi-person environments ("Owner (You)" vs "Guest Speaker").
+5. **Memory & RAG Subsystem**: ChromaDB vector store with semantic search fallback and candidate career profile manager.
+6. **Cross-Platform UI (Flutter)**: Responsive desktop and mobile UI with live agent progress tracking, thought streaming, voice overlay, and model switching.
 
 ---
 
-## [+] Architecture
+## 🏗️ System Architecture
 
 ```mermaid
-flowchart TD
-    A[Flutter Client] <--> B[FastAPI Backend]
-    B --> C[LLM Brain - DeepSeek]
-    B --> D[Plugin System]
+flowchart TB
+    subgraph ClientLayer ["Client Layer (Cross-Platform Flutter)"]
+        FlutterApp["Flutter App (Android, iOS, Web, Windows, macOS, Linux)"]
+        ChatUI["Chat UI & Deep Thinking Trace"]
+        VoiceUI["Voice Visualizer (AEC & Speaker Diarization)"]
+        SettingsUI["Model Configuration (Ollama 7B/14B/30B & Cloud)"]
+    end
 
-    D --> E[OS Automation]
-    D --> F[Web Scraper]
-    D --> G[Memory Store]
-    D --> H[Speech Services]
+    subgraph APILayer ["API Orchestration Gateway (FastAPI)"]
+        MainApp["FastAPI Main Server (:8000)"]
+        WSRoute["WebSocket Handler (/ws)"]
+        ConfigRoute["Model Config API (/api/config)"]
+        SpeechRoute["Speech Intelligence API (/speech)"]
+    end
 
-    G --> I[Vector DB]
-    C --> G
+    subgraph CoreEngine ["Agent & Orchestration Core"]
+        Coordinator["Agent Coordinator / Supervisor"]
+        UnifiedProvider["Unified LLM Brain Adapter"]
+        SkillRegistry["Skill & Tool Registry"]
+    end
 
-    B --> J[MCP Server]
+    subgraph SubAgents ["Autonomous Sub-Agents"]
+        JobHunter["Job Hunter (Pune & Remote)"]
+        ResumeTailor["Resume Tailor & RAG Matcher"]
+        JobApplicator["Application Packager & Auto-Apply"]
+        NovelAgent["Novel Translator & Glossary Editor"]
+        SelfImprovement["Self-Improvement & Sandbox Verifier"]
+    end
+
+    subgraph MemoryVoice ["Memory & Voice Intelligence"]
+        RAGMemory["Hybrid Vector Store & User Profile"]
+        SpeechService["AEC, ASR, TTS & Speaker Diarization"]
+    end
+
+    FlutterApp <-->|WebSocket / REST| MainApp
+    MainApp --> WSRoute & ConfigRoute & SpeechRoute
+    WSRoute --> Coordinator --> UnifiedProvider
+    Coordinator --> SkillRegistry --> SubAgents
+    Coordinator --> RAGMemory
+    SpeechRoute --> SpeechService
 ```
 
 ---
 
-## [+] System Design Philosophy
+## 🚀 Key Workflows
 
-> **"Loose coupling, strong contracts."**
+### 1. Autonomous Job Hunting & Tailored Application Pipeline
+When prompted (e.g., *"Search for freshers jobs in Pune and apply"*):
+```
+User Prompt ──► Agent Coordinator ──► JobHunter (finds matching Pune tech roles)
+                                  ──► ResumeTailor (queries UserProfile RAG & generates custom resume)
+                                  ──► JobApplicator (packages application & logs entry)
+                                  ──► Streams live progress to Flutter UI
+```
 
-Each module is:
+### 2. Web Novel Translation & Polishing Pipeline
+When translating foreign web novel chapters:
+```
+Chapter Raw Text ──► NovelAgent ──► Translates with glossary term enforcement
+                                ──► Polishes prose style & tone
+                                ──► Returns structured bilingual chapter output
+```
 
-* Independently developable
-* Replaceable
-* Scalable
+### 3. Self-Improvement Code Reflection Pipeline
+When tasked with code evolution:
+```
+Codebase Inspection ──► SelfImprovement Agent ──► Analyzes target file
+                                              ──► Proposes fix / refactor
+                                              ──► Runs tests inside Sandbox
+                                              ──► Commits verified patch
+```
 
-The system is orchestrated through **strict I/O contracts**, making it ideal for:
-
-* experimentation
-* scaling
-* distributed systems
-
----
-
-## [+] Tech Stack
-
-<details>
-<summary>Expand to view technologies</summary>
-
-### Client
-
-* **Flutter (Dart)** → Cross-platform UI
-* Speech-to-Text integration
-
-### Backend
-
-* **FastAPI + Uvicorn** → Async API + WebSockets
-* Python (core orchestration)
-
-### AI / LLM
-
-* **DeepSeek API** → Planning & reasoning
-* HuggingFace → Embeddings (BGE / MiniLM)
-
-### Memory
-
-* **ChromaDB / LanceDB** → Vector storage
-
-### Web Automation
-
-* **Playwright** → JS-heavy scraping
-* BeautifulSoup → Lightweight parsing
-
-### OS Automation
-
-* `pyautogui`, `psutil`, `subprocess`
-
-### Speech
-
-* Faster-Whisper → STT
-* Edge-TTS / Coqui → TTS
-
-### Protocols
-
-* WebSockets → real-time streaming
-* MCP → external AI interoperability
-
-</details>
+### 4. Multi-Speaker Voice Intelligence & Diarization
+```
+Microphone Audio ──► AEC Processor (removes acoustic echo & noise)
+                 ──► Speaker Identifier (extracts pitch/spectral features vs Owner profile)
+                 ──► Faster-Whisper ASR (transcribes multi-speaker audio with timestamps)
+                 ──► Agent Loop (handles directives like "listen to what others said")
+```
 
 ---
 
-## [+] Project Structure
+## 📂 Project Structure
 
+```text
+Thanatos
+├── apps/
+│   ├── api_server/               # FastAPI backend with WebSockets & REST routers
+│   │   ├── core/                 # Agent loop, dispatcher, and session manager
+│   │   ├── routes/               # WebSocket, config, speech, health, OS routes
+│   │   └── schemas/              # Pydantic v2 communication models
+│   └── client_flutter/           # Cross-platform Flutter application
+│       ├── lib/models/           # Message, thought, and active agent models
+│       ├── lib/state/            # Riverpod state management & WebSocket provider
+│       └── lib/ui/               # Chat screen, voice visualizer, settings & tracker
+├── services/
+│   ├── llm_brain/                # Unified LLM provider & multi-agent coordinator
+│   ├── local_llm/                # Ollama client with dynamic model discovery
+│   ├── memory/                   # VectorStore (ChromaDB), MemoryManager & UserProfile
+│   ├── speech/                   # STT, TTS, AEC processor & Speaker Diarization
+│   └── os_automation/            # System control & OS interaction
+├── plugins/
+│   ├── base/                     # BaseSkill interface & SkillRegistry
+│   └── system_skills/            # Job hunter, resume tailor, applicator, novel & self-improvement
+├── sandbox/                      # Isolated subprocess / Docker execution runner
+├── audit/                        # Tamper-evident cryptographic Merkle audit logger
+├── docs/                         # Canonical architecture & technical specifications
+└── tests/                        # Comprehensive unit and integration test suite (48 tests)
+```
+
+---
+
+## ⚡ Quick Start
+
+### 1. Prerequisites
+- Python 3.12+
+- Flutter SDK (for desktop/mobile client)
+- Ollama (optional for local LLM execution: `ollama run qwen2.5:7b` or `deepseek-r1:7b`)
+
+### 2. Backend Setup
 ```bash
-Thanatos/
-│
-├── README.md
-├── LICENSE
-├── pyproject.toml
-├── docker-compose.yml
-├── .env.example
-│
-├── apps/                           # Entry points (user-facing + API)
-│   │
-│   ├── client_flutter/             # Cross-platform Flutter app
-│   │   ├── lib/
-│   │   │   ├── main.dart
-│   │   │   ├── ui/
-│   │   │   │   ├── screens/
-│   │   │   │   │   └── chat_screen.dart
-│   │   │   │   └── widgets/
-│   │   │   │       ├── chat_bubble.dart
-│   │   │   │       └── action_card.dart
-│   │   │   │
-│   │   │   ├── state/
-│   │   │   │   └── chat_provider.dart
-│   │   │   │
-│   │   │   ├── services/
-│   │   │   │   ├── websocket_service.dart
-│   │   │   │   ├── speech_service.dart
-│   │   │   │   └── api_service.dart
-│   │   │   │
-│   │   │   └── models/
-│   │   │       └── message_model.dart
-│   │   │
-│   │   ├── pubspec.yaml
-│   │   └── test/
-│   │
-│   ├── api_server/                 # FastAPI orchestration layer
-│   │   ├── main.py
-│   │   ├── routes/
-│   │   │   ├── websocket.py
-│   │   │   ├── health.py
-│   │   │   └── speech.py
-│   │   │
-│   │   ├── core/
-│   │   │   ├── session_manager.py
-│   │   │   ├── agent_loop.py
-│   │   │   ├── dispatcher.py
-│   │   │   └── config.py
-│   │   │
-│   │   ├── schemas/
-│   │   │   ├── websocket_models.py
-│   │   │   ├── agent_models.py
-│   │   │   └── tool_models.py
-│   │   │
-│   │   └── dependencies.py
-│   │
-│   └── mcp_server/                 # External tool exposure (MCP)
-│       ├── server.py
-│       └── tools/
-│           ├── system_tools.py
-│           └── app_tools.py
-│
-├── services/                       # Independent execution modules
-│   │
-│   ├── llm_brain/
-│   │   ├── deepseek_planner.py
-│   │   ├── tool_router.py
-│   │   └── prompt_templates/
-│   │       ├── system_prompt.txt
-│   │       └── tool_schema.json
-│   │
-│   ├── local_llm/
-│   │   ├── adapter_server.py
-│   │   ├── ollama_client.py
-│   │   ├── prompt_builder.py
-│   │   └── tool_parser.py
-│   │
-│   ├── memory/
-│   │   ├── memory_manager.py
-│   │   ├── vector_store.py
-│   │   └── embeddings.py
-│   │
-│   ├── speech/
-│   │   ├── stt.py
-│   │   ├── tts.py
-│   │   └── audio_utils.py
-│   │
-│   ├── web/
-│   │   ├── scraper.py
-│   │   ├── search.py
-│   │   └── parser.py
-│   │
-│   └── os_automation/
-│       ├── __init__.py
-│       ├── router.py
-│       ├── exceptions.py
-│       ├── system_control.py
-│       ├── process_manager.py
-│       └── input_controller.py
-│
-├── plugins/                        # Skill-based modular extensions
-│   │
-│   ├── base/
-│   │   ├── skill_interface.py
-│   │   └── registry.py
-│   │
-│   ├── system_skills/
-│   │   ├── file_manager/
-│   │   ├── process_control/
-│   │   └── resource_monitor/
-│   │
-│   ├── security_skills/
-│   │   ├── network_scanner/
-│   │   ├── vulnerability_analysis/
-│   │   ├── phishing_detector/
-│   │   └── malware_sandbox/
-│   │
-│   ├── web_tools/
-│   │   └── scraping_tools/
-│   │
-│   └── custom_skills/
-│
-├── sandbox/                        # Isolated execution layer
-│   ├── docker_manager.py
-│   ├── wsl_adapter.py
-│   ├── resource_limiter.py
-│   └── security_profiles/
-│       ├── apparmor/
-│       └── selinux/
-│
-├── audit/                          # Security & forensic logging
-│   ├── audit_logger.py
-│   ├── crypto_utils.py
-│   ├── chain_manager.py
-│   └── storage/
-│       └── audit.db
-│
-├── config/
-│   ├── permissions.yaml            # RBAC policies
-│   ├── logging.conf
-│   ├── settings.py
-│   └── secrets.env
-│
-├── shared/                         # Cross-service contracts
-│   ├── models/
-│   │   ├── agent_event.py
-│   │   ├── tool_definition.py
-│   │   └── tool_result.py
-│   ├── deepseek_planner.py
-│   ├── constants.py
-│   ├── settings.py
-│   └── utils.py
-│
-├── tests/
-│   ├── unit/
-│   │   ├── test_agent.py
-│   │   ├── test_plugins.py
-│   │   └── test_memory.py
-│   │
-│   ├── integration/
-│   │   ├── test_api.py
-│   │   ├── test_workflow.py
-│   │	└── test_planner.py
-│   └── security/
-│       ├── test_sandbox.py
-│       └── test_audit_integrity.py
-│
-├── infra/                          # Deployment & DevOps
-│   ├── docker/
-│   │   ├── Dockerfile.api
-│   │   ├── Dockerfile.worker
-│	│	├── Dockerfile.ollama
-│	│	├── Dockerfile.local_llm
-│   │   └── Dockerfile.playwright
-│   │
-│   ├── k8s/
-│   │   ├── deployment.yaml
-│   │   ├── service.yaml
-│   │   └── secrets.yaml
-│   │
-│   └── ci_cd/
-│       └── github_actions.yml
-│
-└── docs/
-    ├── architecture.md
-    ├── api_spec.md
-    ├── plugin_dev_guide.md
-    └── security_model.md
-```
-
----
-
-## 🔄 Agent Workflow
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Client
-    participant Backend
-    participant LLM
-    participant Plugin
-
-    User->>Client: Input (voice/text)
-    Client->>Backend: WebSocket message
-    Backend->>LLM: Send context + tools
-    LLM->>Backend: Tool call OR response
-    Backend->>Plugin: Execute action
-    Plugin->>Backend: Result
-    Backend->>LLM: Feedback loop
-    Backend->>Client: Stream response
-```
-
----
-
-## [+] Core Modules
-
-### 1. Client Layer (Flutter)
-
-* Chat UI + Voice input
-* WebSocket streaming
-* Action feedback (Snackbars, Cards)
-
----
-
-### 2. Orchestration Layer (FastAPI)
-
-* Session management
-* Agent loop execution
-* Tool dispatching
-* Streaming responses
-
----
-
-### 3. Execution Layer (Plugins)
-
-| Plugin        | Capability                      |
-| ------------- | ------------------------------- |
-| OS Automation | Open apps, type, control system |
-| Web Scraper   | Fetch & summarize web content   |
-| Memory        | Store & retrieve knowledge      |
-| Speech        | STT + TTS                       |
-
----
-
-## 🔌 Planned Features
-
-* [ ] Multi-agent collaboration
-* [ ] Task scheduling (cron-like AI actions)
-* [ ] GUI automation (vision-based)
-* [ ] Browser extension integration
-* [ ] Mobile notifications + background tasks
-* [ ] Plugin marketplace
-* [ ] Fine-tuned local LLM fallback
-* [ ] Autonomous workflows (goal-based execution)
-
----
-
-## [+] Getting Started (Planned)
-
-```bash
-# Clone repo
+# Clone the repository
 git clone https://github.com/Kennny7/Thanatos.git
+cd Thanatos
 
-# Backend
-cd backend
-
-# Create environment file
-cp .env.example .env
+# Create and activate virtual environment
+python -m venv .venv
+.venv\Scripts\activate      # On Windows
+source .venv/bin/activate    # On Linux/macOS
 
 # Install dependencies
-pip install -e .
-# OR
 pip install -r requirements.txt
 
-# Install Playwright browser
-playwright install chromium
+# Start the FastAPI server
+uvicorn apps.api_server.main:app --host 0.0.0.0 --port 8000 --reload
+```
 
-# Start API
-uvicorn app.main:app --reload
+### 3. Flutter Client Setup
+```bash
+cd apps/client_flutter
 
-# Client
-cd ../client
+# Install Flutter packages
 flutter pub get
+
+# Run on your current platform (Windows, macOS, Linux, Chrome, Android, iOS)
 flutter run
 ```
 
----
-
-## [+] Design Principles
-
-* **Modularity First**
-* **Async Everywhere**
-* **Tool-Oriented AI**
-* **Local-first where possible**
-* **Scalable by design**
-
----
-
-## [+] Vision
-
-> Build a **true personal AI system** that can:
-
-* Understand intent
-* Execute complex tasks
-* Adapt over time
-* Integrate anywhere
-
----
-
-## [+] Contribution
-
-This project is evolving rapidly. Contributions, ideas, and critiques are welcome.
-
----
-
-## [+] Support
-
-If you like this project:
-
-* Star the repo
-* Fork it
-* Build your own plugins
-
----
-
-## [+] Status
-
-```diff
-+ Core architecture defined
-+ Development in progress
-- Not production ready yet
+### 4. Running the Test Suite
+```bash
+# Run all 48 unit and integration tests
+pytest tests -v
 ```
 
 ---
 
-## [+] Tagline
+## 📖 Documentation Index
 
-> **"Not just AI that talks — AI that acts."**
+| Document | Description |
+| :--- | :--- |
+| 📄 **[Master Architecture & Workflow Specification](./docs/system_architecture_and_workflow.md)** | Authoritative blueprint covering all 7 modules, sequence diagrams, and data flows. |
+| 📄 **[API Specification](./docs/api_spec.md)** | Detailed documentation for REST endpoints and WebSocket protocols. |
+| 📄 **[Plugin Development Guide](./docs/plugin_dev_guide.md)** | Guide for creating, registering, and testing new sub-agent skills. |
+| 📄 **[Security Model](./docs/security_model.md)** | Sandbox isolation boundaries and cryptographic audit logging. |
+
+---
+
+## 📄 License
+This project is licensed under the Apache 2.0 License.
