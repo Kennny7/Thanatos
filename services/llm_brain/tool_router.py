@@ -73,7 +73,10 @@ class ToolRouter:
         # 2. Delegate to the skill registry (handles all plugin tools)
         try:
             logger.debug("Dispatching to skill registry for tool: %s", tool_name)
-            return await self.registry.dispatch(tool_name, args)
+            res = await self.registry.dispatch(tool_name, args)
+            if not getattr(res, "success", True) and "not found" in str(getattr(res, "error", "")).lower():
+                raise ValueError(f"Unknown tool: {tool_name}")
+            return res
         except ValueError:
             raise ValueError(f"Unknown tool: {tool_name}")
 
