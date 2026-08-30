@@ -56,4 +56,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
             await heartbeat_task
         except asyncio.CancelledError:
             pass
-        await websocket.close()
+        try:
+            await websocket.close()
+        except Exception:
+            pass
