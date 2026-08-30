@@ -3,6 +3,7 @@
 """Abstract base class for Thanatos plugin skills."""
 
 from abc import ABC, abstractmethod
+from typing import List
 
 from shared.models.tool_definition import ToolDefinition
 from shared.models.tool_result import ToolResult
@@ -32,7 +33,7 @@ class BaseSkill(ABC):
         ...
 
     @abstractmethod
-    def get_tool_definitions(self) -> list[ToolDefinition]:
+    def get_tool_definitions(self) -> List[ToolDefinition]:
         """Return the tool definitions provided by this skill.
 
         Returns:
