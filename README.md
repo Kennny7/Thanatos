@@ -377,32 +377,6 @@ sequenceDiagram
 
 ---
 
-## [+] Development Roadmap
-
-```mermaid
-gantt
-    title Thanatos Development Timeline
-    dateFormat  YYYY-MM-DD
-
-    section Phase 1
-    Flutter UI           :done, 2026-04-01, 7d
-    WebSocket Backend    :active, 2026-04-08, 7d
-
-    section Phase 2
-    LLM Integration      :2026-04-15, 7d
-    OS Automation        :2026-04-22, 7d
-
-    section Phase 3
-    Web + Memory         :2026-04-29, 10d
-    Speech System        :2026-05-10, 5d
-
-    section Phase 4
-    Integration          :2026-05-15, 10d
-    MCP Server           :2026-05-25, 5d
-```
-
----
-
 ## [+] Getting Started (Planned)
 
 ```bash
