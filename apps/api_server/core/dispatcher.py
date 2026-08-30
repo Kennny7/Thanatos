@@ -1,4 +1,4 @@
-import asyncio
+import inspect
 import logging
 from typing import Any, Callable, Dict
 
@@ -27,25 +27,17 @@ async def dispatch_tool_call(tool_call: ToolCall) -> ToolResult:
     if tool_call.tool_name in _TOOL_REGISTRY:
         try:
             handler = _TOOL_REGISTRY[tool_call.tool_name]
-            result = handler(tool_call.arguments) if not asyncio.iscoroutinefunction(handler) else await handler(tool_call.arguments)
-            return ToolResult(call_id=tool_call.call_id, success=True, result=result)
+            result = handler(tool_call.arguments) if not inspect.iscoroutinefunction(handler) else await handler(tool_call.arguments)
+            return ToolResult.success_result(tool_name=tool_call.tool_name, content=result)
         except Exception as exc:
-            return ToolResult(call_id=tool_call.call_id, success=False, error=str(exc))
+            return ToolResult.error_result(tool_name=tool_call.tool_name, error=str(exc))
 
     # 2. Check SkillRegistry
     try:
         result = await registry.dispatch(tool_call.tool_name, tool_call.arguments)
-        return ToolResult(
-            call_id=tool_call.call_id,
-            success=result.success,
-            result=result.content,
-            error=result.error,
-        )
+        return result
     except Exception as exc:
         logger.exception("Error executing tool '%s': %s", tool_call.tool_name, exc)
-        return ToolResult(
-            call_id=tool_call.call_id,
-            success=False,
-            error=str(exc),
-        )
+        return ToolResult.error_result(tool_name=tool_call.tool_name, error=str(exc))
+
 
