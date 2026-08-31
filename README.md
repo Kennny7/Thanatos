@@ -7,60 +7,60 @@
 [![Python](https://img.shields.io/badge/Python-3.12%20%7C%203.14-3776AB.svg?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B.svg?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev)
-[![Ollama](https://img.shields.io/badge/Ollama-Local%20LLM-black.svg?style=for-the-badge&logo=ollama&logoColor=white)](https://ollama.com)
-[![Tests](https://img.shields.io/badge/Tests-48%20Passed-brightgreen.svg?style=for-the-badge&logo=pytest&logoColor=white)](./tests)
+[![Ollama](https://img.shields.io/badge/Ollama-Local%20LLM-black.svg?style=for-the-badge)](https://ollama.com)
+[![Tests](https://img.shields.io/badge/Tests-48%20Passed-brightgreen.svg?style=for-the-badge)](./tests)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=for-the-badge)](./LICENSE)
 
 <br/>
 
-[📖 Documentation Hub](#-documentation-hub) •
-[🚀 Quick Start](#-quick-start) •
-[🏗️ Architecture](#️-system-architecture) •
-[🧩 Plugins & Skills](#-sub-agent-skills--plugin-ecosystem) •
-[🤝 Contributing](#-contributing)
+[![Documentation Hub](https://img.shields.io/badge/Docs-Documentation%20Hub-007ACC?style=for-the-badge)](#documentation-hub)
+[![Quick Start](https://img.shields.io/badge/Guide-Quick%20Start-2EA44F?style=for-the-badge)](#quick-start)
+[![Architecture](https://img.shields.io/badge/Spec-Architecture-6F42C1?style=for-the-badge)](#system-architecture)
+[![Plugins & Skills](https://img.shields.io/badge/Ecosystem-Plugins%20%26%20Skills-F39C12?style=for-the-badge)](#sub-agent-skills--plugin-ecosystem)
+[![Contributing](https://img.shields.io/badge/Community-Contributing-E74C3C?style=for-the-badge)](#contributing)
 
 </div>
 
 ---
 
-## 🌟 Overview
+## Overview
 
-**Thanatos** is an autonomous, local-first multi-agent AI assistant engine designed for cross-platform automation and intelligent personal assistance. Combining local LLM execution via Ollama with multi-agent orchestration, Retrieval-Augmented Generation (RAG), and advanced speech intelligence, Thanatos runs with privacy and resilience.
+**Thanatos** is an autonomous, local-first multi-agent AI assistant engine designed for cross-platform automation and intelligent personal assistance. Combining local LLM execution via Ollama with multi-agent orchestration, Retrieval-Augmented Generation (RAG), and advanced speech intelligence, Thanatos runs with high privacy, low latency, and zero cloud dependency.
 
-### ✨ Core Highlights
+### Core Capabilities
 
-1. **🧠 Unified LLM Brain & Deep Thinking**: Local Ollama execution (`qwen2.5:7b`, `deepseek-r1:7b/14b`, `llama3.1:8b`, `phi3`) with real-time `<think>` reasoning streaming and robust tool parsing.
-2. **🤖 Multi-Agent Supervisor / Coordinator**: Decomposes high-level natural language goals into sub-agent Directed Acyclic Graphs (DAGs).
-3. **🎙️ Speech Intelligence & Speaker Diarization**:
+1. **Unified LLM Brain & Deep Thinking**: Local Ollama execution (`qwen2.5:7b`, `deepseek-r1:7b/14b`, `llama3.1:8b`, `phi3`) with real-time `<think>` reasoning streaming and robust tool parsing.
+2. **Multi-Agent Supervisor / Coordinator**: Decomposes high-level natural language goals into sub-agent Directed Acyclic Graphs (DAGs).
+3. **Speech Intelligence & Speaker Diarization**:
    - **ASR & TTS**: Powered by `faster-whisper` and neural `edge-tts`.
    - **Acoustic Echo Cancellation (AEC)**: Real-time spectral subtraction and noise suppression.
    - **Speaker Diarization**: Distinguishes between "Owner (You)" and "Guest Speaker" using pitch and spectral embeddings.
-4. **📚 Hybrid Memory & Career RAG**: ChromaDB vector search integrated with a structured candidate profile manager for context-aware workflows.
-5. **📱 Cross-Platform Flutter Client**: Responsive desktop (Windows, macOS, Linux) and mobile (Android, iOS) UI with deep thinking traces, animated voice visualizer, and live agent status tracking.
-6. **🔒 Zero-Trust Sandbox & Merkle Audit Trail**: Subprocess timeouts, isolated test runners, and SHA-256 tamper-evident cryptographic event logging.
+4. **Hybrid Memory & Career RAG**: ChromaDB vector search integrated with a structured candidate profile manager for context-aware workflows.
+5. **Cross-Platform Flutter Client**: Responsive desktop (Windows, macOS, Linux) and mobile (Android, iOS) UI with deep thinking traces, animated voice visualizer, and live agent status tracking.
+6. **Zero-Trust Sandbox & Merkle Audit Trail**: Subprocess timeouts, isolated test runners, and SHA-256 tamper-evident cryptographic event logging.
 
 ---
 
-## 📚 Documentation Hub
+## Documentation Hub
 
-Explore the comprehensive documentation suite in the [`docs/`](./docs) directory:
+Explore the comprehensive technical documentation suite in the [`docs/`](./docs) directory:
 
-| Document | Description | Direct Link |
+| Document | Description | Action |
 | :--- | :--- | :---: |
-| 🚀 **Getting Started Guide** | Step-by-step setup guide for Python backend, Ollama models, and Flutter client. | [Read Guide](./docs/getting_started.md) |
-| 🏗️ **System Architecture** | Component breakdown, supervisor-worker topology, and layer interactions. | [Read Spec](./docs/architecture.md) |
-| 📋 **Master Architecture & Workflows** | Authoritative 7-module blueprint with sequence diagrams and execution contracts. | [Read Spec](./docs/system_architecture_and_workflow.md) |
-| 🔌 **API Specification** | Full REST endpoints and WebSocket streaming protocol (`/ws`) reference. | [Read Spec](./docs/api_spec.md) |
-| 🧩 **Plugin Development Guide** | Tutorial on creating, registering, and testing custom sub-agent skills. | [Read Guide](./docs/plugin_dev_guide.md) |
-| 🎙️ **Speech Intelligence & AEC** | Voice pipeline, acoustic echo cancellation, and speaker diarization details. | [Read Guide](./docs/speech_intelligence.md) |
-| 🧠 **Memory & RAG Subsystem** | ChromaDB vector store, semantic embeddings, and career profile matching. | [Read Guide](./docs/memory_and_rag.md) |
-| 🛡️ **Security & Isolation Model** | Sandbox boundaries, OS safety confirmation gates, and Merkle audit logs. | [Read Model](./docs/security_model.md) |
-| 🌐 **Model Context Protocol (MCP)** | Exposing Thanatos OS tools to Claude Desktop, Cursor IDE, and MCP hosts. | [Read Guide](./docs/mcp_server.md) |
-| 🤝 **Contributor Guide** | Coding conventions, PR guidelines, and running the test suite. | [Read Guide](./docs/contributing.md) |
+| **Getting Started Guide** | Step-by-step setup guide for Python backend, Ollama models, and Flutter client. | [![Read Guide](https://img.shields.io/badge/Open-Guide-2EA44F?style=flat-square)](./docs/getting_started.md) |
+| **System Architecture** | Component breakdown, supervisor-worker topology, and layer interactions. | [![Read Spec](https://img.shields.io/badge/Open-Spec-6F42C1?style=flat-square)](./docs/architecture.md) |
+| **Master Architecture & Workflows** | Authoritative 7-module blueprint with sequence diagrams and execution contracts. | [![Read Blueprint](https://img.shields.io/badge/Open-Blueprint-007ACC?style=flat-square)](./docs/system_architecture_and_workflow.md) |
+| **API Specification** | Full REST endpoints and WebSocket streaming protocol (`/ws`) reference. | [![Read API Spec](https://img.shields.io/badge/Open-API%20Spec-009688?style=flat-square)](./docs/api_spec.md) |
+| **Plugin Development Guide** | Tutorial on creating, registering, and testing custom sub-agent skills. | [![Read Guide](https://img.shields.io/badge/Open-Dev%20Guide-F39C12?style=flat-square)](./docs/plugin_dev_guide.md) |
+| **Speech Intelligence & AEC** | Voice pipeline, acoustic echo cancellation, and speaker diarization details. | [![Read Voice Spec](https://img.shields.io/badge/Open-Voice%20Spec-3776AB?style=flat-square)](./docs/speech_intelligence.md) |
+| **Memory & RAG Subsystem** | ChromaDB vector store, semantic embeddings, and career profile matching. | [![Read RAG Guide](https://img.shields.io/badge/Open-RAG%20Guide-4B8BBE?style=flat-square)](./docs/memory_and_rag.md) |
+| **Security & Isolation Model** | Sandbox boundaries, OS safety confirmation gates, and Merkle audit logs. | [![Read Model](https://img.shields.io/badge/Open-Security%20Model-E74C3C?style=flat-square)](./docs/security_model.md) |
+| **Model Context Protocol (MCP)** | Exposing Thanatos OS tools to Claude Desktop, Cursor IDE, and MCP hosts. | [![Read MCP Guide](https://img.shields.io/badge/Open-MCP%20Guide-555555?style=flat-square)](./docs/mcp_server.md) |
+| **Contributor Guide** | Coding conventions, PR guidelines, and running the test suite. | [![Read Guide](https://img.shields.io/badge/Open-Contributing-24292E?style=flat-square)](./docs/contributing.md) |
 
 ---
 
-## 🏗️ System Architecture
+## System Architecture
 
 ```mermaid
 flowchart TB
@@ -110,10 +110,10 @@ flowchart TB
 
 ---
 
-## 🚀 Key Workflows
+## Key Workflows
 
 ### 1. Autonomous Job Hunting & Resume Tailoring Pipeline
-```
+```text
 User Prompt ──► Agent Coordinator ──► JobHunter (finds matching tech openings)
                                   ──► ResumeTailor (queries UserProfile RAG & generates custom resume)
                                   ──► JobApplicator (packages application & logs entry)
@@ -121,14 +121,14 @@ User Prompt ──► Agent Coordinator ──► JobHunter (finds matching tech
 ```
 
 ### 2. Web Novel Translation & Glossary Polish Pipeline
-```
+```text
 Chapter Raw Text ──► NovelAgent ──► Translates with glossary term enforcement
                                 ──► Polishes prose style & tone
                                 ──► Returns structured bilingual chapter output
 ```
 
 ### 3. Self-Improvement Code Reflection Pipeline
-```
+```text
 Codebase Inspection ──► SelfImprovement Agent ──► Analyzes target file
                                               ──► Proposes fix / refactor
                                               ──► Runs tests inside Sandbox
@@ -136,7 +136,7 @@ Codebase Inspection ──► SelfImprovement Agent ──► Analyzes target fi
 ```
 
 ### 4. Multi-Speaker Voice Intelligence & Diarization
-```
+```text
 Microphone Audio ──► AEC Processor (removes acoustic echo & noise)
                  ──► Speaker Identifier (extracts pitch/spectral features vs Owner profile)
                  ──► Faster-Whisper ASR (transcribes multi-speaker audio with timestamps)
@@ -145,23 +145,23 @@ Microphone Audio ──► AEC Processor (removes acoustic echo & noise)
 
 ---
 
-## 🧩 Sub-Agent Skills & Plugin Ecosystem
+## Sub-Agent Skills & Plugin Ecosystem
 
 Thanatos features a pluggable skill architecture where every domain agent implements `BaseSkill` and registers with `SkillRegistry`:
 
-| Skill | Tools Provided | Functionality |
+| Skill Identifier | Tools Provided | Functional Scope |
 | :--- | :--- | :--- |
-| 🎯 **`job_hunter`** | `search_jobs` | Scrapes tech openings by role and location (e.g. Pune freshers). |
-| 📄 **`resume_tailor`** | `tailor_resume` | Queries RAG career memory and generates tailored resumes and cover letters. |
-| 📮 **`job_applicator`**| `prepare_job_application` | Formulates application submission packages and logs history. |
-| 📖 **`novel_agent`** | `translate_and_edit_novel` | Translates raw novel chapters with glossary consistency. |
-| 🔧 **`self_improvement`**| `self_improve_code` | Inspects architecture, runs sandbox tests, and validates code improvements. |
+| `job_hunter` | `search_jobs` | Scrapes tech openings by role and location (e.g. Pune freshers). |
+| `resume_tailor` | `tailor_resume` | Queries RAG career memory and generates tailored resumes and cover letters. |
+| `job_applicator` | `prepare_job_application` | Formulates application submission packages and logs history. |
+| `novel_agent` | `translate_and_edit_novel` | Translates raw novel chapters with glossary consistency. |
+| `self_improvement` | `self_improve_code` | Inspects architecture, runs sandbox tests, and validates code improvements. |
 
-*Want to build a custom skill? Check out the [Plugin Development Guide](./docs/plugin_dev_guide.md).*
+*To build a custom skill, refer to the [Plugin Development Guide](./docs/plugin_dev_guide.md).*
 
 ---
 
-## ⚡ Quick Start
+## Quick Start
 
 ### 1. Prerequisites
 - **Python 3.12+**
@@ -217,43 +217,43 @@ pytest tests -v
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```text
 Thanatos
-├── apps/
-│   ├── api_server/               # FastAPI backend with WebSockets & REST routers
-│   │   ├── core/                 # Agent loop, dispatcher, session manager
-│   │   ├── routes/               # WebSocket, config, speech, health, OS routes
-│   │   └── schemas/              # Pydantic v2 communication models
-│   ├── client_flutter/           # Cross-platform Flutter application
-│   │   ├── lib/models/           # Message, thought, and agent models
-│   │   ├── lib/state/            # Riverpod state management & WebSocket provider
-│   │   └── lib/ui/               # Chat screen, voice visualizer, settings & tracker
-│   └── mcp_server/               # Model Context Protocol (MCP) server for Claude / Cursor
-├── services/
-│   ├── llm_brain/                # Unified LLM provider & multi-agent coordinator
-│   ├── local_llm/                # Ollama client with dynamic model discovery
-│   ├── memory/                   # VectorStore (ChromaDB), MemoryManager & UserProfile
-│   ├── speech/                   # STT, TTS, AEC processor & Speaker Diarization
-│   └── os_automation/            # System control & OS interaction
-├── plugins/
-│   ├── base/                     # BaseSkill interface & SkillRegistry
-│   └── system_skills/            # Domain skills (Job hunter, resume tailor, applicator, novel, self-improvement)
-├── sandbox/                      # Subprocess limiter & Docker container isolation
-├── audit/                        # Tamper-evident Merkle hash audit logger
-├── docs/                         # Comprehensive technical documentation suite
-└── tests/                        # Full test suite (48 tests passing)
+|-- apps/
+|   |-- api_server/               # FastAPI backend with WebSockets & REST routers
+|   |   |-- core/                 # Agent loop, dispatcher, session manager
+|   |   |-- routes/               # WebSocket, config, speech, health, OS routes
+|   |   `-- schemas/              # Pydantic v2 communication models
+|   |-- client_flutter/           # Cross-platform Flutter application
+|   |   |-- lib/models/           # Message, thought, and agent models
+|   |   |-- lib/state/            # Riverpod state management & WebSocket provider
+|   |   `-- lib/ui/               # Chat screen, voice visualizer, settings & tracker
+|   `-- mcp_server/               # Model Context Protocol (MCP) server for Claude / Cursor
+|-- services/
+|   |-- llm_brain/                # Unified LLM provider & multi-agent coordinator
+|   |-- local_llm/                # Ollama client with dynamic model discovery
+|   |-- memory/                   # VectorStore (ChromaDB), MemoryManager & UserProfile
+|   |-- speech/                   # STT, TTS, AEC processor & Speaker Diarization
+|   `-- os_automation/            # System control & OS interaction
+|-- plugins/
+|   |-- base/                     # BaseSkill interface & SkillRegistry
+|   `-- system_skills/            # Domain skills (Job hunter, resume tailor, applicator, novel, self-improvement)
+|-- sandbox/                      # Subprocess limiter & Docker container isolation
+|-- audit/                        # Tamper-evident Merkle hash audit logger
+|-- docs/                         # Comprehensive technical documentation suite
+`-- tests/                        # Full test suite (48 tests passing)
 ```
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
-We welcome contributions from the community! Please read our [Contributor Guide](./docs/contributing.md) to learn about our development process, coding standards, and how to submit pull requests.
+We welcome contributions from the community. Please read our [Contributor Guide](./docs/contributing.md) to learn about our development process, coding standards, and how to submit pull requests.
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the Apache 2.0 License. See the [LICENSE](./LICENSE) file for details.
