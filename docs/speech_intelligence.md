@@ -4,7 +4,7 @@ This document details the architecture, audio processing pipeline, Acoustic Echo
 
 ---
 
-## 📑 Table of Contents
+## Table of Contents
 
 - [1. Overview](#1-overview)
 - [2. Voice Pipeline Architecture](#2-voice-pipeline-architecture)
