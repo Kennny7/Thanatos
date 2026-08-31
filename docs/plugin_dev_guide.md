@@ -4,7 +4,7 @@ Welcome to the Thanatos Plugin Development Guide. This document provides a step-
 
 ---
 
-## 📑 Table of Contents
+## Table of Contents
 
 - [1. Architecture Overview](#1-architecture-overview)
 - [2. The `BaseSkill` Interface](#2-the-baseskill-interface)
