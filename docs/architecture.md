@@ -6,7 +6,7 @@ For the full detailed module-by-module reference, see the **[Master Architecture
 
 ---
 
-## 📑 Table of Contents
+## Table of Contents
 
 - [1. Architectural Overview](#1-architectural-overview)
 - [2. Multi-Layer System Topology](#2-multi-layer-system-topology)
@@ -58,7 +58,7 @@ flowchart TB
     subgraph CoreEngine ["3. Core Agent & Reasoning Engine"]
         AgentLoop["ReAct Reasoning Loop"]
         Coordinator["Multi-Agent Coordinator / Supervisor"]
-        UnifiedProvider["Unified LLM Provider Adapter"]
+        UnifiedProvider["Unified LLM Brain Adapter"]
         SkillRegistry["Singleton Skill Registry"]
     end
 
@@ -150,7 +150,7 @@ Located in `sandbox/` and `audit/`.
 
 ### Example: Multi-Agent Job Hunting & Resume Tailoring Flow
 
-```
+```text
 [User Prompt: "Find freshers jobs in Pune & tailor my resume"]
                       │
                       ▼
