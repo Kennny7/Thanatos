@@ -4,7 +4,7 @@ This document describes the long-term memory architecture, Retrieval-Augmented G
 
 ---
 
-## 📑 Table of Contents
+## Table of Contents
 
 - [1. Overview](#1-overview)
 - [2. Memory Subsystem Architecture](#2-memory-subsystem-architecture)
