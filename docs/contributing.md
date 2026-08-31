@@ -1,10 +1,10 @@
 # Contributing to Thanatos
 
-Thank you for your interest in contributing to **Thanatos**! We welcome contributions from developers of all skill levels, including bug fixes, documentation improvements, new sub-agent skills, and performance optimizations.
+Thank you for your interest in contributing to **Thanatos**. We welcome contributions from developers of all skill levels, including bug fixes, documentation improvements, new sub-agent skills, and performance optimizations.
 
 ---
 
-## 📑 Table of Contents
+## Table of Contents
 
 - [Code of Conduct](#code-of-conduct)
 - [How to Contribute](#how-to-contribute)
@@ -114,4 +114,4 @@ pytest tests -v
 pytest --cov=apps --cov=services --cov=plugins tests/
 ```
 
-Thank you for helping make Thanatos better for everyone! 🚀
+Thank you for helping make Thanatos better for everyone.
