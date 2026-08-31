@@ -4,7 +4,7 @@ This document provides the definitive specification for all REST endpoints, WebS
 
 ---
 
-## 📑 Table of Contents
+## Table of Contents
 
 - [Overview & Base URL](#overview--base-url)
 - [Authentication & Headers](#authentication--headers)
