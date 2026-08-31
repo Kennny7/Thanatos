@@ -4,7 +4,7 @@ This document explains how to use and configure the Thanatos Model Context Proto
 
 ---
 
-## 📑 Table of Contents
+## Table of Contents
 
 - [1. Overview](#1-overview)
 - [2. Available MCP Tools](#2-available-mcp-tools)
