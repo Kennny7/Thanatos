@@ -4,7 +4,7 @@ This document outlines the security architecture, sandboxing mechanisms, tamper-
 
 ---
 
-## 📑 Table of Contents
+## Table of Contents
 
 - [1. Security Philosophy](#1-security-philosophy)
 - [2. Multi-Layer Defense Architecture](#2-multi-layer-defense-architecture)
