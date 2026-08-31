@@ -1,10 +1,10 @@
 # Getting Started with Thanatos
 
-Welcome to **Thanatos**! This guide walks you through setting up, configuring, and running the Thanatos AI Assistant Engine and its cross-platform Flutter client on your local machine.
+Welcome to **Thanatos**. This guide walks you through setting up, configuring, and running the Thanatos AI Assistant Engine and its cross-platform Flutter client on your local machine.
 
 ---
 
-## 📑 Table of Contents
+## Table of Contents
 
 - [1. System Requirements](#1-system-requirements)
 - [2. Prerequisites](#2-prerequisites)
