@@ -107,6 +107,28 @@ Be insightful, articulate, and accurate. Call tools when external execution or a
                 "content": response.thought,
             }
 
+        # Handle LLM provider errors with proactive diagnostic guidance
+        if response.action == "error":
+            yield {
+                "type": "agent_status",
+                "agent": asst_name,
+                "status": "LLM connection issue detected — diagnosing...",
+                "progress": 0.0,
+            }
+            error_msg = response.text or "Unknown LLM error."
+            diagnostic = (
+                f"⚠ **System Diagnostic — LLM Connection Failure**\n\n"
+                f"{error_msg}\n\n"
+                f"**Recommended actions:**\n"
+                f"1. Verify Ollama is running: `ollama serve`\n"
+                f"2. Check installed models: `ollama list`\n"
+                f"3. Pull the configured model: `ollama pull {self.provider.settings.model}`\n"
+                f"4. Open **Settings > Recommend Model** to find the best model for your hardware\n"
+                f"5. If using a remote server, verify the endpoint URL in Settings\n"
+            )
+            yield {"type": "assistant_chunk", "content": diagnostic}
+            return
+
         if response.action == "tool_call" and response.tool_name:
             yield {
                 "type": "agent_status",
