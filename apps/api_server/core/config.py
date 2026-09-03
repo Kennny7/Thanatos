@@ -1,16 +1,13 @@
 # Thanatos/apps/api_server/core/config.py
-from pydantic_settings import BaseSettings
+
+from config.settings import app_config
 
 
-class Settings(BaseSettings):
-    """Application settings loaded from environment or .env file."""
-    app_name: str = "Thanatos API Server"
-    debug: bool = False
-    websocket_heartbeat_interval: int = 15
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+class Settings:
+    """Application settings loaded from the central AppConfig."""
+    app_name: str = app_config.app_name
+    debug: bool = app_config.debug
+    websocket_heartbeat_interval: int = app_config.websocket_heartbeat_interval
 
 
 settings = Settings()
