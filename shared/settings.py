@@ -5,12 +5,14 @@ import socket
 import logging
 from typing import Optional
 
+from config.settings import app_config
+
 logger = logging.getLogger(__name__)
 
 
 def _detect_base_url(
-    default_local: str = "http://localhost:11434",
-    default_docker: str = "http://ollama:11434"
+    default_local: str = app_config.llm_base_url,
+    default_docker: str = app_config.llm_base_url_docker,
 ) -> str:
     try:
         socket.gethostbyname("ollama")
@@ -41,14 +43,14 @@ class Settings:
     @classmethod
     def load(cls) -> "Settings":
         env_base_url = os.getenv("LLM_BASE_URL")
-        deepseek_key = os.getenv("DEEPSEEK_API_KEY")
-        openai_key = os.getenv("OPENAI_API_KEY")
-        model = os.getenv("LLM_MODEL", "qwen2.5:7b")
+        deepseek_key = app_config.deepseek_api_key or os.getenv("DEEPSEEK_API_KEY")
+        openai_key = app_config.openai_api_key or os.getenv("OPENAI_API_KEY")
+        model = os.getenv("LLM_MODEL", app_config.llm_model)
 
         if env_base_url:
             base_url = env_base_url
         elif deepseek_key:
-            base_url = "https://api.deepseek.com"
+            base_url = app_config.deepseek_api_base_url
         else:
             base_url = _detect_base_url()
 
@@ -71,7 +73,7 @@ class Settings:
             provider=provider,
             is_local=is_local,
             supports_tools=True,
-            temperature=float(os.getenv("LLM_TEMPERATURE", "0.1")),
+            temperature=float(os.getenv("LLM_TEMPERATURE", str(app_config.llm_temperature))),
         )
 
     def __repr__(self) -> str:
