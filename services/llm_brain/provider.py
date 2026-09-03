@@ -30,7 +30,7 @@ class UnifiedLLMProvider:
 
     def __init__(self, settings: Optional[Settings] = None) -> None:
         self.settings = settings or Settings.load()
-        self.timeout = httpx.Timeout(connect=1.5, read=120.0, write=10.0, pool=5.0)
+        self.timeout = httpx.Timeout(connect=10.0, read=120.0, write=10.0, pool=5.0)
 
     def update_settings(self, new_settings: Settings) -> None:
         self.settings = new_settings
@@ -173,11 +173,35 @@ class UnifiedLLMProvider:
                 thought, clean_text = self._extract_thought(content)
                 return LLMResponse(action="respond", text=clean_text or content, thought=thought)
 
-        except Exception as e:
-            logger.warning("Ollama call encountered error: %s", e)
+        except httpx.ConnectError as e:
+            logger.exception("Ollama connection refused at %s: %s", base_url, e)
             return LLMResponse(
-                action="respond",
-                text=f"I am ready to assist you. (Active model: {self.settings.model} on {base_url})",
+                action="error",
+                text=f"Cannot connect to Ollama at {base_url}. Please ensure Ollama is running (`ollama serve`) and accessible. Error: {e}",
+            )
+        except httpx.ConnectTimeout as e:
+            logger.exception("Ollama connection timed out at %s: %s", base_url, e)
+            return LLMResponse(
+                action="error",
+                text=f"Connection to Ollama at {base_url} timed out. The service may be starting up or overloaded. Try again in a moment.",
+            )
+        except httpx.HTTPStatusError as e:
+            status = e.response.status_code if e.response else "unknown"
+            logger.exception("Ollama HTTP error %s at %s: %s", status, base_url, e)
+            if status == 404:
+                return LLMResponse(
+                    action="error",
+                    text=f"Model '{self.settings.model}' not found on Ollama. Pull it with: `ollama pull {self.settings.model}` — or go to Settings > Recommend Model to find the best model for your hardware.",
+                )
+            return LLMResponse(
+                action="error",
+                text=f"Ollama returned HTTP {status}. Check Ollama logs for details. Error: {e}",
+            )
+        except Exception as e:
+            logger.exception("Unexpected Ollama call error at %s: %s", base_url, e)
+            return LLMResponse(
+                action="error",
+                text=f"Failed to communicate with the LLM engine: {e}. Check your model configuration in Settings.",
             )
 
     async def _call_openai_compatible(
