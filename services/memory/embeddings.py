@@ -10,6 +10,7 @@ from typing import List
 import chromadb
 from chromadb.api.types import EmbeddingFunction
 from sentence_transformers import SentenceTransformer
+from config.settings import app_config
 
 
 class MiniLMEmbeddingFunction(EmbeddingFunction):
@@ -18,7 +19,7 @@ class MiniLMEmbeddingFunction(EmbeddingFunction):
     from HuggingFace. Forces execution on the specified device (default: CPU).
     """
 
-    def __init__(self, model_name: str = "all-MiniLM-L6-v2", device: str = "cpu") -> None:
+    def __init__(self, model_name: str = app_config.embedding_model, device: str = app_config.embedding_device) -> None:
         """
         Args:
             model_name: HuggingFace sentence-transformers model identifier.
