@@ -185,16 +185,45 @@ pip install -r requirements.txt
 # Start the FastAPI server
 uvicorn apps.api_server.main:app --host 0.0.0.0 --port 8000 --reload
 ```
-*API docs will be live at `http://localhost:8000/docs`.*
+### 3. Environment & Variable Configuration
 
-### 3. Local Model Setup (Ollama)
+Copy `.env.example` to `.env` in the root directory to customize configuration settings:
+
+```bash
+cp .env.example .env
+```
+
+Key configuration parameters handled via `.env` file or environment variables:
+
+- LLM Settings:
+  - `LLM_PROVIDER`: LLM provider identifier (default: `ollama`).
+  - `LLM_MODEL`: Active model name (default: `qwen2.5:7b`).
+  - `LLM_BASE_URL`: Connection URL for local LLM service (default: `http://localhost:11434`).
+  - `DEEPSEEK_API_KEY`: API key for DeepSeek cloud service.
+  - `OPENAI_API_KEY`: API key for OpenAI API endpoint.
+- Memory & Vector Database (ChromaDB):
+  - `MEMORY_PERSIST_DIR`: Persistence storage path for ChromaDB vector database (default: `./memory_store`).
+  - `MEMORY_COLLECTION`: Vector database collection name (default: `thanatos_memories`).
+  - `EMBEDDING_MODEL`: Embedding model name for local RAG (default: `all-MiniLM-L6-v2`).
+  - `EMBEDDING_DEVICE`: Computing device for embedding generation (default: `cpu`).
+- User Profile & Personal Data Defaults:
+  - `USER_NAME`: User display name in system context (default: `User`).
+  - `USER_EMAIL`: User contact email address (default: `user@example.com`).
+  - `USER_LOCATION`: Location context for localized skills.
+  - `USER_TITLE`: Professional title context.
+- Speech & Voice Settings:
+  - `TTS_VOICE`: Voice identifier for Text-to-Speech (default: `en-US-AriaNeural`).
+  - `STT_MODEL`: Faster-Whisper model size for Speech-to-Text (default: `base`).
+  - `SPEAKER_ENROLLMENT_DIR`: Storage path for speaker enrollment profiles (default: `./voice_profiles`).
+
+### 4. Local Model Setup (Ollama)
 ```bash
 # Pull recommended models
 ollama pull qwen2.5:7b
 ollama pull deepseek-r1:7b
 ```
 
-### 4. Flutter Client Setup
+### 5. Flutter Client Setup
 ```bash
 cd apps/client_flutter
 
@@ -209,7 +238,7 @@ flutter run -d macos      # macOS Desktop
 flutter run -d chrome     # Web Browser
 ```
 
-### 5. Running the Test Suite
+### 6. Running the Test Suite
 ```bash
 # Run all 48 unit and integration tests
 pytest tests -v
