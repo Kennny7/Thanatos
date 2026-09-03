@@ -1,17 +1,19 @@
 # Thanatos\shared\constants.py
 
-# Static defaults – no environment reads
-DEFAULT_MAX_RETRIES = 3
-DEFAULT_RETRY_DELAY = 1.0
+from config.settings import app_config
 
-# Model default (static)
-DEFAULT_MODEL = "phi3:latest" #"mistral:7b-instruct"
+# Retry defaults
+DEFAULT_MAX_RETRIES = app_config.llm_max_retries
+DEFAULT_RETRY_DELAY = app_config.llm_retry_delay
 
-# Provider default (static, used only by existing code that imports it)
-DEFAULT_PROVIDER = "ollama"
+# Model default
+DEFAULT_MODEL = app_config.llm_model
 
-# Legacy names kept for backward compatibility (static)
-DEEPSEEK_API_BASE_URL = None #"http://ollama:11434/v1"
-DEEPSEEK_API_KEY = None
-LLM_BASE_URL = None
-DEEPSEEK_CHAT_MODEL = DEFAULT_MODEL
+# Provider default (used only by existing code that imports it)
+DEFAULT_PROVIDER = app_config.llm_provider
+
+# Legacy names kept for backward compatibility
+DEEPSEEK_API_BASE_URL = app_config.deepseek_api_base_url
+DEEPSEEK_API_KEY = app_config.deepseek_api_key
+LLM_BASE_URL = app_config.llm_base_url
+DEEPSEEK_CHAT_MODEL = app_config.deepseek_chat_model
