@@ -7,24 +7,29 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:client_flutter/main.dart';
+import 'package:thanatos_client/main.dart';
+import 'package:thanatos_client/services/websocket_service.dart';
+import 'package:thanatos_client/state/chat_provider.dart';
+
+class MockWebSocketService extends WebSocketService {
+  @override
+  Future<void> connect() async {
+    // No-op for testing to avoid actual network socket connections
+  }
+}
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
-
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  testWidgets('ThanatosApp smoke test', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          websocketServiceProvider.overrideWithValue(MockWebSocketService()),
+        ],
+        child: const ThanatosApp(),
+      ),
+    );
+    expect(find.byType(MaterialApp), findsOneWidget);
   });
 }
