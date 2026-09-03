@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 from plugins.base.registry import registry
 from services.llm_brain.provider import UnifiedLLMProvider, LLMResponse
-from services.memory.memory_manager import memory_service
+from services.memory.hybrid_memory_service import hybrid_memory
 from shared.models.tool_result import ToolResult
 
 logger = logging.getLogger(__name__)
@@ -24,9 +24,9 @@ class Subtask(BaseModel):
 class AgentCoordinator:
     """
     Multi-Agent Supervisor:
-    Analyzes complex user intents (e.g., job search + tailored resume + application),
-    decomposes them into subtask graphs, delegates to specialized agents/skills,
-    and streams live status updates to the client.
+    General-purpose autonomous assistant engine.
+    Decomposes tasks into subtask graphs, delegates to specialized skills,
+    learns user facts continuously, and streams live status updates.
     """
 
     def __init__(self, provider: Optional[UnifiedLLMProvider] = None) -> None:
@@ -42,20 +42,24 @@ class AgentCoordinator:
         """
         logger.info("AgentCoordinator received goal: %s", user_prompt)
 
-        # 1. Fetch RAG context
-        rag_context = memory_service.get_relevant_context(user_prompt)
+        # 1. Dynamically extract and store personal facts / preferences
+        hybrid_memory.extract_and_remember(user_prompt)
 
-        # 2. Check if this is a composite multi-agent workflow
+        # 2. Fetch Hybrid RAG & Knowledge Context
+        rag_context = hybrid_memory.get_context(user_prompt)
+        asst_name = hybrid_memory.profile.assistant_name or "Aegis"
+
+        # 3. Check if this is a composite multi-agent workflow
         lower_prompt = user_prompt.lower()
-        is_job_workflow = any(k in lower_prompt for k in ["job", "freshers", "pune", "apply", "resume", "hiring"])
-        is_novel_workflow = any(k in lower_prompt for k in ["novel", "translate novel", "chapter", "raw"])
-        is_code_workflow = any(k in lower_prompt for k in ["improve code", "fix bug", "refactor", "self-improve", "unit test"])
+        is_job_workflow = any(k in lower_prompt for k in ["job", "freshers", "apply for job", "tailor resume"])
+        is_novel_workflow = any(k in lower_prompt for k in ["novel", "translate novel", "raw chapter"])
+        is_code_workflow = any(k in lower_prompt for k in ["improve code", "fix bug in thanatos", "refactor thanatos", "self-improve"])
 
         # Yield status: Thinking & Planning
         yield {
             "type": "agent_status",
-            "agent": "Coordinator",
-            "status": "Analyzing request & decomposing into subtasks...",
+            "agent": asst_name,
+            "status": "Analyzing request & structuring response...",
             "progress": 0.1,
         }
 
@@ -78,13 +82,14 @@ class AgentCoordinator:
         tools = registry.get_all_tools()
         tools_schema = [t.to_openai_schema() for t in tools]
 
-        system_prompt = f"""You are Thanatos, an extraordinary autonomous AI assistant.
-You possess deep thinking, RAG memory, and real-time execution capabilities.
+        system_prompt = f"""You are {asst_name}, an extraordinary, deeply knowledgeable personal AI assistant.
+You possess unbounded capabilities: reasoning, coding, conversational depth, system execution, and long-term memory.
+You remember details about the user and adapt seamlessly to their workflow.
 
-USER BACKGROUND & MEMORY:
+USER BACKGROUND & MEMORY CONTEXT:
 {rag_context}
 
-Be concise, highly capable, and use tools when actions are needed."""
+Be insightful, articulate, and accurate. Call tools when external execution or actions are required."""
 
         history_payload = list(conversation_history)
         history_payload.append({"role": "user", "content": user_prompt})
