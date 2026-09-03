@@ -1,9 +1,9 @@
 # Thanatos/plugins/base/registry.py
 
-"""Singleton skill registry for Thanatos."""
+"""Singleton skill registry for Thanatos with lazy skill resolution."""
 
 import logging
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 
 from shared.models.tool_definition import ToolDefinition
 from shared.models.tool_result import ToolResult
@@ -13,26 +13,48 @@ logger = logging.getLogger(__name__)
 
 
 class SkillRegistry:
-    """Central registry that holds all installed skills and dispatches tool calls."""
+    """
+    Central registry that holds registered skills and lazy-loads skill instances on demand.
+    """
 
     def __init__(self) -> None:
         self._skills: Dict[str, BaseSkill] = {}
+        self._lazy_factories: Dict[str, Callable[[], BaseSkill]] = {}
 
     def register(self, skill: BaseSkill) -> None:
-        """Add a skill to the registry."""
-        if skill.skill_name in self._skills:
-            logger.info("Skill '%s' updated in registry.", skill.skill_name)
+        """Add an instantiated skill to the registry."""
         self._skills[skill.skill_name] = skill
-        logger.debug("Registered skill '%s' with %d tools.", skill.skill_name, len(skill.get_tool_definitions()))
+        logger.debug("Registered skill '%s'.", skill.skill_name)
+
+    def register_lazy(self, skill_name: str, factory: Callable[[], BaseSkill]) -> None:
+        """Register a lazy skill factory that initializes only when its tools are accessed."""
+        self._lazy_factories[skill_name] = factory
+
+    def _ensure_skill(self, skill_name: str) -> Optional[BaseSkill]:
+        if skill_name in self._skills:
+            return self._skills[skill_name]
+        if skill_name in self._lazy_factories:
+            try:
+                skill = self._lazy_factories[skill_name]()
+                self._skills[skill_name] = skill
+                return skill
+            except Exception as e:
+                logger.warning("Failed lazy-loading skill '%s': %s", skill_name, e)
+        return None
 
     def unregister(self, skill_name: str) -> None:
         self._skills.pop(skill_name, None)
+        self._lazy_factories.pop(skill_name, None)
 
     def get_skill(self, skill_name: str) -> Optional[BaseSkill]:
-        return self._skills.get(skill_name)
+        return self._ensure_skill(skill_name)
 
     def get_all_tools(self) -> List[ToolDefinition]:
-        """Aggregate tool definitions from every registered skill."""
+        """Aggregate tool definitions from every registered and lazy skill."""
+        # Ensure lazy skills are instantiated so their schemas are known
+        for name in list(self._lazy_factories.keys()):
+            self._ensure_skill(name)
+
         tools: List[ToolDefinition] = []
         for skill in self._skills.values():
             tools.extend(skill.get_tool_definitions())
@@ -57,23 +79,12 @@ registry = SkillRegistry()
 
 
 def init_default_skills() -> None:
-    """Auto-register all default domain and system skills."""
-    try:
-        from plugins.system_skills.job_hunter.job_hunter_skill import JobHunterSkill
-        from plugins.system_skills.resume_tailor.resume_tailor_skill import ResumeTailorSkill
-        from plugins.system_skills.job_applicator.job_applicator_skill import JobApplicatorSkill
-        from plugins.system_skills.novel_agent.novel_skill import NovelAgentSkill
-        from plugins.system_skills.self_improvement.self_improvement_skill import SelfImprovementSkill
-
-        registry.register(JobHunterSkill())
-        registry.register(ResumeTailorSkill())
-        registry.register(JobApplicatorSkill())
-        registry.register(NovelAgentSkill())
-        registry.register(SelfImprovementSkill())
-        logger.info("Default Thanatos skills initialized successfully.")
-    except Exception as e:
-        logger.warning("Could not auto-initialize some default skills: %s", e)
+    """Auto-register default domain skills using lazy factories for zero startup delay."""
+    registry.register_lazy("job_hunter", lambda: __import__("plugins.system_skills.job_hunter.job_hunter_skill", fromlist=["JobHunterSkill"]).JobHunterSkill())
+    registry.register_lazy("resume_tailor", lambda: __import__("plugins.system_skills.resume_tailor.resume_tailor_skill", fromlist=["ResumeTailorSkill"]).ResumeTailorSkill())
+    registry.register_lazy("job_applicator", lambda: __import__("plugins.system_skills.job_applicator.job_applicator_skill", fromlist=["JobApplicatorSkill"]).JobApplicatorSkill())
+    registry.register_lazy("novel_agent", lambda: __import__("plugins.system_skills.novel_agent.novel_skill", fromlist=["NovelAgentSkill"]).NovelAgentSkill())
+    registry.register_lazy("self_improvement", lambda: __import__("plugins.system_skills.self_improvement.self_improvement_skill", fromlist=["SelfImprovementSkill"]).SelfImprovementSkill())
 
 
-# Initialize on import
 init_default_skills()
