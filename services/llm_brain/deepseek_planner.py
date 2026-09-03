@@ -20,6 +20,8 @@ from tenacity import (
     before_sleep_log,
 )
 
+from config.settings import app_config
+
 logger = logging.getLogger(__name__)
 
 # --------------------------------------------------------------------------- #
@@ -42,10 +44,10 @@ class DeepSeekPlanner:
 
     def __init__(
         self,
-        model: str = "deepseek-chat",
+        model: str = app_config.deepseek_chat_model,
         api_key: Optional[str] = None,
-        base_url: str = "https://api.deepseek.com",
-        max_retries: int = 3,
+        base_url: str = app_config.deepseek_api_base_url,
+        max_retries: int = app_config.llm_max_retries,
     ) -> None:
         """
         Parameters
