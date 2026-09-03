@@ -1,7 +1,6 @@
 // Thanatos/apps/client_flutter/lib/ui/screens/settings_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
