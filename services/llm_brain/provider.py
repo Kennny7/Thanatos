@@ -8,6 +8,7 @@ import httpx
 from pydantic import BaseModel
 
 from shared.settings import Settings
+from config.settings import app_config
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +43,7 @@ class UnifiedLLMProvider:
                 base_url = self.settings.base_url
                 clean_url = base_url.replace("/v1", "")
                 if "8001" in clean_url:
-                    clean_url = "http://localhost:11434"
+                    clean_url = app_config.llm_base_url
                 async with httpx.AsyncClient(timeout=self.timeout) as client:
                     resp = await client.get(f"{clean_url}/api/tags")
                     if resp.status_code == 200:
@@ -106,7 +107,7 @@ class UnifiedLLMProvider:
         """Call Ollama API with function calling or structured prompt fallback."""
         base_url = self.settings.base_url.replace("/v1", "")
         if "8001" in base_url:
-            base_url = "http://localhost:11434"
+            base_url = app_config.llm_base_url
 
         formatted_messages = [dict(m) for m in messages]
         tools_payload = None
