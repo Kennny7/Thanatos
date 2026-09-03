@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/model_service.dart';
 import '../../state/theme_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/holo_panel.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -218,170 +219,169 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         children: [
           // Section 1: Futuristic Themes
           _buildSectionHeader('FUTURISTIC THEME ENGINE', primaryAccent),
-          Card(
-            color: surfaceColor,
-            child: Padding(
-              padding: const EdgeInsets.all(14.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Select Visual Holographic Interface', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _buildThemeChip('TRON LEGACY', AppThemeMode.tronLegacy, const Color(0xFF00F0FF), activeThemeMode),
-                      _buildThemeChip('CYBERPUNK AMBER', AppThemeMode.cyberpunkAmber, const Color(0xFFFF9E00), activeThemeMode),
-                      _buildThemeChip('DEEP MATRIX', AppThemeMode.deepMatrix, const Color(0xFF00FF66), activeThemeMode),
-                      _buildThemeChip('OBSIDIAN PURPLE', AppThemeMode.obsidianPurple, const Color(0xFF9D4EDD), activeThemeMode),
-                    ],
-                  ),
-                ],
-              ),
+          HoloPanel(
+            accentColor: primaryAccent,
+            surfaceColor: surfaceColor,
+            classificationTag: 'INTERFACE // PALETTE',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Select Visual Holographic Interface', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _buildThemeChip('TRON LEGACY', AppThemeMode.tronLegacy, const Color(0xFF00F0FF), activeThemeMode),
+                    _buildThemeChip('CYBERPUNK AMBER', AppThemeMode.cyberpunkAmber, const Color(0xFFFF9E00), activeThemeMode),
+                    _buildThemeChip('DEEP MATRIX', AppThemeMode.deepMatrix, const Color(0xFF00FF66), activeThemeMode),
+                    _buildThemeChip('OBSIDIAN PURPLE', AppThemeMode.obsidianPurple, const Color(0xFF9D4EDD), activeThemeMode),
+                  ],
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 18),
 
           // Section 2: Assistant Persona
           _buildSectionHeader('ASSISTANT PERSONA & IDENTITY', primaryAccent),
-          Card(
-            color: surfaceColor,
-            child: Padding(
-              padding: const EdgeInsets.all(14.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    controller: _assistantNameController,
-                    decoration: InputDecoration(
-                      labelText: 'Assistant Name (Customizable)',
-                      labelStyle: TextStyle(color: primaryAccent.withOpacity(0.8)),
-                      hintText: 'e.g. Aegis, Thanatos, Jarvis, Athena',
-                      prefixIcon: Icon(Icons.psychology, color: primaryAccent),
-                      enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: primaryAccent.withOpacity(0.4))),
-                      focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: primaryAccent)),
-                    ),
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                ],
+          HoloPanel(
+            accentColor: primaryAccent,
+            surfaceColor: surfaceColor,
+            classificationTag: 'CORE // PERSONA_ID',
+            child: TextField(
+              controller: _assistantNameController,
+              decoration: InputDecoration(
+                labelText: 'Assistant Custom Name',
+                labelStyle: TextStyle(color: primaryAccent.withValues(alpha: 0.8), fontFamily: 'Courier'),
+                hintText: 'e.g. Aegis, Jarvis, Thanatos, Athena',
+                prefixIcon: Icon(Icons.psychology, color: primaryAccent),
+                enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: primaryAccent.withValues(alpha: 0.4))),
+                focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: primaryAccent)),
               ),
+              style: const TextStyle(color: Colors.white, fontFamily: 'Courier'),
             ),
           ),
           const SizedBox(height: 18),
 
           // Section 3: LLM Model & Hardware Profile
           _buildSectionHeader('LOCAL & CLOUD LLM CONFIGURATION', primaryAccent),
-          Card(
-            color: surfaceColor,
-            child: Padding(
-              padding: const EdgeInsets.all(14.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Dynamic Ollama Model Selection', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                      if (_isLoadingModels)
-                        SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: primaryAccent))
-                      else
-                        IconButton(
-                          icon: Icon(Icons.refresh, size: 18, color: primaryAccent),
-                          tooltip: 'Refresh installed models',
-                          onPressed: _loadInitialData,
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  DropdownButtonFormField<String>(
-                    value: _models.contains(_selectedModel) ? _selectedModel : (_models.isNotEmpty ? _models.first : null),
-                    dropdownColor: surfaceColor,
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(borderSide: BorderSide(color: primaryAccent.withOpacity(0.4))),
-                    ),
-                    items: _models.map((m) => DropdownMenuItem(value: m, child: Text(m, style: const TextStyle(color: Colors.white)))).toList(),
-                    onChanged: (val) => setState(() => _selectedModel = val ?? _selectedModel),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Model Puller
-                  const Text('Pull New Model from Ollama', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _pullModelController,
-                          decoration: InputDecoration(
-                            hintText: 'e.g. llama3.2:3b, qwen2.5-coder:7b',
-                            hintStyle: const TextStyle(color: Colors.white30, fontSize: 13),
-                            isDense: true,
-                            enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: primaryAccent.withOpacity(0.3))),
-                            focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: primaryAccent)),
-                          ),
-                          style: const TextStyle(color: Colors.white, fontSize: 13),
-                        ),
+          HoloPanel(
+            accentColor: primaryAccent,
+            surfaceColor: surfaceColor,
+            classificationTag: 'NEURAL // MATRIX_CONF',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Dynamic Ollama Model Selection', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                    if (_isLoadingModels)
+                      SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: primaryAccent))
+                    else
+                      IconButton(
+                        icon: Icon(Icons.refresh, size: 18, color: primaryAccent),
+                        tooltip: 'Refresh installed models',
+                        onPressed: _loadInitialData,
                       ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(backgroundColor: primaryAccent, padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12)),
-                        onPressed: _isPullingModel ? null : _pullModel,
-                        child: _isPullingModel
-                            ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                            : const Text('Pull', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-                      ),
-                    ],
-                  ),
-                  if (_pullStatus != null) ...[
-                    const SizedBox(height: 8),
-                    Text(_pullStatus!, style: TextStyle(color: primaryAccent, fontSize: 12, fontFamily: 'Courier')),
                   ],
-                  const SizedBox(height: 16),
+                ),
+                const SizedBox(height: 6),
+                DropdownButtonFormField<String>(
+                  value: _models.contains(_selectedModel) ? _selectedModel : (_models.isNotEmpty ? _models.first : null),
+                  dropdownColor: surfaceColor,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(borderSide: BorderSide(color: primaryAccent.withValues(alpha: 0.4))),
+                  ),
+                  items: _models.map((m) => DropdownMenuItem(value: m, child: Text(m, style: const TextStyle(color: Colors.white, fontFamily: 'Courier')))).toList(),
+                  onChanged: (val) => setState(() => _selectedModel = val ?? _selectedModel),
+                ),
+                const SizedBox(height: 16),
 
-                  // Task Recommendation
-                  const Text('Intelligent Model Recommender', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          value: _selectedTaskType,
-                          dropdownColor: surfaceColor,
-                          decoration: InputDecoration(
-                            isDense: true,
-                            border: OutlineInputBorder(borderSide: BorderSide(color: primaryAccent.withOpacity(0.3))),
-                          ),
-                          items: const [
-                            DropdownMenuItem(value: 'general', child: Text('General Assistance', style: TextStyle(color: Colors.white, fontSize: 13))),
-                            DropdownMenuItem(value: 'coding', child: Text('Software Engineering', style: TextStyle(color: Colors.white, fontSize: 13))),
-                            DropdownMenuItem(value: 'reasoning', child: Text('Deep Reasoning & Math', style: TextStyle(color: Colors.white, fontSize: 13))),
-                            DropdownMenuItem(value: 'fast_dialogue', child: Text('Fast Voice / Chat', style: TextStyle(color: Colors.white, fontSize: 13))),
-                          ],
-                          onChanged: (val) => setState(() => _selectedTaskType = val ?? 'general'),
+                // Model Puller
+                const Text('Pull New Model from Ollama', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _pullModelController,
+                        decoration: InputDecoration(
+                          hintText: 'e.g. llama3.2:3b, qwen2.5-coder:7b',
+                          hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 13, fontFamily: 'Courier'),
+                          isDense: true,
+                          enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: primaryAccent.withValues(alpha: 0.3))),
+                          focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: primaryAccent)),
                         ),
+                        style: const TextStyle(color: Colors.white, fontSize: 13, fontFamily: 'Courier'),
                       ),
-                      const SizedBox(width: 8),
-                      OutlinedButton(
-                        style: OutlinedButton.styleFrom(side: BorderSide(color: primaryAccent)),
-                        onPressed: _requestRecommendation,
-                        child: Text('Recommend', style: TextStyle(color: primaryAccent, fontSize: 12)),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryAccent,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  Text('Temperature: ${_temperature.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white70)),
-                  Slider(
-                    value: _temperature,
-                    min: 0.0,
-                    max: 1.0,
-                    divisions: 10,
-                    activeColor: primaryAccent,
-                    onChanged: (v) => setState(() => _temperature = v),
-                  ),
+                      onPressed: _isPullingModel ? null : _pullModel,
+                      child: _isPullingModel
+                          ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                          : const Text('Pull', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontFamily: 'Courier')),
+                    ),
+                  ],
+                ),
+                if (_pullStatus != null) ...[
+                  const SizedBox(height: 8),
+                  Text(_pullStatus!, style: TextStyle(color: primaryAccent, fontSize: 12, fontFamily: 'Courier')),
                 ],
-              ),
+                const SizedBox(height: 16),
+
+                // Task Recommendation
+                const Text('Intelligent Model Recommender', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        value: _selectedTaskType,
+                        dropdownColor: surfaceColor,
+                        decoration: InputDecoration(
+                          isDense: true,
+                          border: OutlineInputBorder(borderSide: BorderSide(color: primaryAccent.withValues(alpha: 0.3))),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'general', child: Text('General Assistance', style: TextStyle(color: Colors.white, fontSize: 13))),
+                          DropdownMenuItem(value: 'coding', child: Text('Software Engineering', style: TextStyle(color: Colors.white, fontSize: 13))),
+                          DropdownMenuItem(value: 'reasoning', child: Text('Deep Reasoning & Math', style: TextStyle(color: Colors.white, fontSize: 13))),
+                          DropdownMenuItem(value: 'fast_dialogue', child: Text('Fast Voice / Chat', style: TextStyle(color: Colors.white, fontSize: 13))),
+                        ],
+                        onChanged: (val) => setState(() => _selectedTaskType = val ?? 'general'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: primaryAccent),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
+                      ),
+                      onPressed: _requestRecommendation,
+                      child: Text('Recommend', style: TextStyle(color: primaryAccent, fontSize: 12, fontFamily: 'Courier')),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                Text('Temperature: ${_temperature.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white70, fontFamily: 'Courier')),
+                Slider(
+                  value: _temperature,
+                  min: 0.0,
+                  max: 1.0,
+                  divisions: 10,
+                  activeColor: primaryAccent,
+                  onChanged: (v) => setState(() => _temperature = v),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 18),
@@ -389,19 +389,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           // Section 4: Hardware Specs
           if (_hardwareSpec != null) ...[
             _buildSectionHeader('DETECTED HARDWARE METRICS', primaryAccent),
-            Card(
-              color: surfaceColor,
-              child: Padding(
-                padding: const EdgeInsets.all(14.0),
-                child: Column(
-                  children: [
-                    _buildMetricRow('Operating System', '${_hardwareSpec!.os} (${_hardwareSpec!.cpuCount} Cores)', primaryAccent),
-                    const Divider(color: Colors.white10),
-                    _buildMetricRow('RAM Capacity', '${_hardwareSpec!.availableRamGb} GB Avail / ${_hardwareSpec!.totalRamGb} GB Total', primaryAccent),
-                    const Divider(color: Colors.white10),
-                    _buildMetricRow('Dedicated GPU', _hardwareSpec!.hasGpu ? (_hardwareSpec!.gpus.isNotEmpty ? '${_hardwareSpec!.gpus[0]["name"]} (${_hardwareSpec!.gpus[0]["vram_gb"]} GB VRAM)' : 'CUDA Active') : 'CPU Mode', primaryAccent),
-                  ],
-                ),
+            HoloPanel(
+              accentColor: primaryAccent,
+              surfaceColor: surfaceColor,
+              classificationTag: 'TELEMETRY // HOST_STATS',
+              child: Column(
+                children: [
+                  _buildMetricRow('Operating System', '${_hardwareSpec!.os} (${_hardwareSpec!.cpuCount} Cores)', primaryAccent),
+                  const Divider(color: Colors.white10),
+                  _buildMetricRow('RAM Capacity', '${_hardwareSpec!.availableRamGb} GB Avail / ${_hardwareSpec!.totalRamGb} GB Total', primaryAccent),
+                  const Divider(color: Colors.white10),
+                  _buildMetricRow('Dedicated GPU', _hardwareSpec!.hasGpu ? (_hardwareSpec!.gpus.isNotEmpty ? '${_hardwareSpec!.gpus[0]["name"]} (${_hardwareSpec!.gpus[0]["vram_gb"]} GB VRAM)' : 'CUDA Active') : 'CPU Mode', primaryAccent),
+                ],
               ),
             ),
             const SizedBox(height: 18),
