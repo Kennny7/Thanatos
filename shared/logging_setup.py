@@ -2,14 +2,18 @@
 import os
 import logging.config
 
+from config.settings import app_config
+
+
 def setup_logging():
-    log_dir = "logs"
+    log_dir = app_config.log_dir
     os.makedirs(log_dir, exist_ok=True)
 
     logging.config.fileConfig(
-        "config/logging.conf",
+        app_config.log_config_path,
         disable_existing_loggers=False
     )
+
 
 def ensure_logging():
     """
@@ -20,6 +24,7 @@ def ensure_logging():
 
     if not root_logger.handlers:
         setup_logging()
+
 
 """
 For testing
