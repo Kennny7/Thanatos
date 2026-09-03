@@ -196,3 +196,4 @@ Release*
 utils.h
 utils.cpp
 win32*
+*.bin
