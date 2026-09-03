@@ -11,6 +11,7 @@ from .stt import STTEngine
 from .tts import TTSEngine
 from .aec import AECProcessor
 from .speaker_id import SpeakerIdentifier
+from config.settings import app_config
 
 logger = logging.getLogger(__name__)
 
@@ -26,10 +27,10 @@ class SpeechService:
 
     def __init__(
         self,
-        stt_model_size: str = "base",
-        stt_device: str = "cpu",
-        stt_compute_type: str = "int8",
-        tts_voice: str = "en-US-AriaNeural",
+        stt_model_size: str = app_config.stt_model,
+        stt_device: str = app_config.stt_device,
+        stt_compute_type: str = app_config.stt_compute_type,
+        tts_voice: str = app_config.tts_voice,
     ) -> None:
         self._stt_engine = STTEngine(
             model_size=stt_model_size,
