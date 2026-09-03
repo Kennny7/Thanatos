@@ -7,7 +7,9 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-OLLAMA_URL = os.getenv("LLM_BASE_URL", "http://localhost:11434")
+from config.settings import app_config
+
+OLLAMA_URL = app_config.llm_base_url
 
 
 class OllamaClient:
