@@ -8,6 +8,7 @@ Model is loaded lazily and kept in memory after first use.
 import logging
 import os
 from typing import Optional
+from config.settings import app_config
 
 logger = logging.getLogger(__name__)
 
@@ -19,9 +20,9 @@ class STTEngine:
 
     def __init__(
         self,
-        model_size: str = "base",
-        device: str = "cpu",
-        compute_type: str = "int8",
+        model_size: str = app_config.stt_model,
+        device: str = app_config.stt_device,
+        compute_type: str = app_config.stt_compute_type,
     ) -> None:
         """
         Args:
