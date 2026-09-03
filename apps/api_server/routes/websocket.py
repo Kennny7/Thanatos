@@ -10,10 +10,12 @@ from ..core.session_manager import SessionManager
 from ..core.agent_loop import run_agent_loop
 from ..schemas.websocket_models import HeartbeatMessage
 
+from config.settings import app_config
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-HEARTBEAT_INTERVAL = 15  # seconds
+HEARTBEAT_INTERVAL = app_config.websocket_heartbeat_interval
 
 
 async def send_heartbeat(websocket: WebSocket, stop_event: asyncio.Event) -> None:
