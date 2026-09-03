@@ -4,6 +4,7 @@ import asyncio
 import logging
 from typing import Callable, Any, Optional
 from .logging_setup import ensure_logging
+from config.settings import app_config
 
 ensure_logging()
 logger = logging.getLogger(__name__)
@@ -98,8 +99,8 @@ async def retry_async(
 
 def resolve_llm_base_url(
     base_url: str | None = None,
-    default_local: str = "http://localhost:8001/v1",   # FIXED (was 11434)
-    default_docker: str = "http://local-llm:8001/v1"   # FIXED (was ollama:11434)
+    default_local: str = app_config.llm_adapter_url,
+    default_docker: str = app_config.llm_adapter_url_docker,
 ) -> str:
     """
     Resolve LLM base URL depending on environment (no env vars).
