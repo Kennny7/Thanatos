@@ -5,6 +5,7 @@ import logging
 import math
 import os
 from typing import Any, Dict, List, Optional, Tuple
+from config.settings import app_config
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -53,7 +54,7 @@ class SpeakerIdentifier:
     Identifies the primary user ("Owner") vs "Guest / Other Speakers".
     """
 
-    def __init__(self, profile_dir: str = "./voice_profiles") -> None:
+    def __init__(self, profile_dir: str = app_config.speaker_enrollment_dir) -> None:
         self.profile_dir = profile_dir
         self.owner_profile_path = os.path.join(self.profile_dir, "owner_voice.json")
         self.owner_features: Optional[List[float]] = None
