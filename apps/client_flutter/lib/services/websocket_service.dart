@@ -48,7 +48,13 @@ class WebSocketService {
   int _reconnectAttempts = 0;
   static const _maxReconnectDelay = Duration(seconds: 30);
 
+  final _rawStreamController = StreamController<dynamic>.broadcast();
   final _eventController = StreamController<WsEvent>.broadcast();
+
+  /// Stream of raw socket messages/events.
+  Stream<dynamic> get stream => _rawStreamController.stream;
+
+  /// Stream of parsed WsEvent instances.
   Stream<WsEvent> get eventStream => _eventController.stream;
 
   WebSocketService({String? url}) : url = url ?? AppConfig.websocketUrl;
@@ -62,6 +68,7 @@ class WebSocketService {
       _eventController.add(const ConnectionStateChanged(true));
 
       await for (final message in _channel!.stream) {
+        _rawStreamController.add(message);
         _handleMessage(message);
       }
       // Stream closed (server disconnected)
@@ -80,11 +87,11 @@ class WebSocketService {
       final Map<String, dynamic> json =
           raw is String ? jsonDecode(raw) : jsonDecode(raw as String);
       final type = json['type'] as String?;
-      if (type == 'chunk') {
+      if (type == 'chunk' || type == 'assistant_chunk') {
         final content = json['content'] as String? ?? '';
         _eventController.add(TextChunkEvent(content));
-      } else if (type == 'tool_update') {
-        final tool = json['tool'] as String? ?? 'unknown';
+      } else if (type == 'tool_update' || type == 'tool_call' || type == 'tool_call_request') {
+        final tool = (json['tool'] ?? json['tool_name'] ?? json['name']) as String? ?? 'unknown';
         final args = json['args'] as Map<String, dynamic>?;
         final desc = json['description'] as String?;
         _eventController.add(ToolUpdateEvent(
@@ -109,10 +116,20 @@ class WebSocketService {
     _reconnectTimer = Timer(delay, connect);
   }
 
+  /// Send raw message string or object to the backend.
+  void send(dynamic message) {
+    if (_channel != null) {
+      if (message is String) {
+        _channel!.sink.add(message);
+      } else {
+        _channel!.sink.add(jsonEncode(message));
+      }
+    }
+  }
+
   /// Send a text message to the backend.
   void sendMessage(String text) {
-    final data = jsonEncode({'type': 'user_message', 'content': text});
-    _channel?.sink.add(data);
+    send(jsonEncode({'type': 'user_message', 'content': text}));
   }
 
   /// Graceful shutdown.
@@ -120,6 +137,7 @@ class WebSocketService {
     _disposed = true;
     _reconnectTimer?.cancel();
     await _channel?.sink.close(status.goingAway);
+    await _rawStreamController.close();
     await _eventController.close();
   }
 }
