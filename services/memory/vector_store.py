@@ -7,6 +7,7 @@ import os
 import re
 from typing import Any, Dict, List, Optional
 import uuid
+from config.settings import app_config
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +41,8 @@ class VectorStore:
 
     def __init__(
         self,
-        persist_directory: str = "./memory_store",
-        collection_name: str = "thanatos_memories",
+        persist_directory: str = app_config.memory_persist_dir,
+        collection_name: str = app_config.memory_collection,
     ) -> None:
         self.persist_directory = persist_directory
         self.collection_name = collection_name
