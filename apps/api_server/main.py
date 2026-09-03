@@ -2,10 +2,12 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+import os
 from .routes.websocket import router as ws_router
 from .routes.health import router as health_router
 from .routes.speech import router as speech_router
 from .routes.config import router as config_router
+from .middleware.auth import ApiAuthMiddleware
 from services.os_automation.router import os_automation_router
 from plugins.base.registry import init_default_skills
 
@@ -24,10 +26,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Enable CORS for cross-platform Flutter client and web browsers
+# Optional Bearer Token Authentication
+app.add_middleware(ApiAuthMiddleware)
+
+# Configurable CORS origins for production security
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins if allowed_origins != ["*"] else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
