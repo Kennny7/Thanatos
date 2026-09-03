@@ -14,7 +14,9 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 # Common high‑quality voices. You can extend this list.
-DEFAULT_VOICE = "en-US-AriaNeural"
+from config.settings import app_config
+
+DEFAULT_VOICE = app_config.tts_voice
 
 class TTSEngine:
     """
