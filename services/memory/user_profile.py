@@ -4,15 +4,16 @@ import json
 import logging
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
+from config.settings import app_config
 
 logger = logging.getLogger(__name__)
 
 
 class UserProfile(BaseModel):
-    name: str = "User"
-    email: str = "user@example.com"
-    location: str = "Pune, India"
-    title: str = "Software Engineer / AI Enthusiast"
+    name: str = app_config.user_name
+    email: str = app_config.user_email
+    location: str = app_config.user_location
+    title: str = app_config.user_title
     education: List[Dict[str, str]] = Field(default_factory=lambda: [
         {"degree": "Bachelor of Technology in Computer Science", "institution": "University of Pune", "year": "2024"}
     ])
