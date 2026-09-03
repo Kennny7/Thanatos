@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 
 from .vector_store import VectorStore
 from .user_profile import UserProfileManager, UserProfile
+from config.settings import app_config
 
 logger = logging.getLogger(__name__)
 
@@ -16,8 +17,8 @@ class MemoryManager:
 
     def __init__(
         self,
-        persist_directory: str = "./memory_store",
-        collection_name: str = "thanatos_memories",
+        persist_directory: str = app_config.memory_persist_dir,
+        collection_name: str = app_config.memory_collection,
     ) -> None:
         self.vector_store = VectorStore(
             persist_directory=persist_directory,
