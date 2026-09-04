@@ -67,12 +67,12 @@ pip install -r requirements.txt
 ### Step 4: Configure Environment Variables
 Create a `.env` file in the root directory (or copy from sample):
 ```env
-APP_ENV=development
-API_PORT=8000
-API_HOST=0.0.0.0
-DEFAULT_LLM_PROVIDER=ollama
-DEFAULT_LLM_MODEL=qwen2.5:7b
-OLLAMA_BASE_URL=http://localhost:11434
+ENVIRONMENT=development
+PORT=8000
+HOST=0.0.0.0
+LLM_PROVIDER=ollama
+LLM_MODEL=qwen2.5:7b
+LLM_BASE_URL=http://localhost:11434
 ```
 
 ---
