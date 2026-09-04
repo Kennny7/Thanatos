@@ -1,0 +1,25 @@
+# Production Caddy Reverse Proxy Configuration for Thanatos
+# Replace 'your-domain.com' with your VPS domain or IP for auto-SSL
+
+:80 {
+    # If a domain is configured, Caddy will automatically obtain Let's Encrypt certificates
+    # and redirect HTTP to HTTPS. For direct IP access, it handles reverse proxying.
+
+    # Security Headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    # Reverse proxy all REST requests and WebSocket streams to FastAPI api-server
+    reverse_proxy api-server:8000 {
+        # WebSocket Upgrade header handling
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
