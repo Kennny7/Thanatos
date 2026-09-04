@@ -1,23 +1,23 @@
 # **Thanatos**
 
-### *Autonomous Multi-Agent AI Assistant Engine with Voice Intelligence & RAG*
+### *Autonomous Multi-Agent AI Assistant Engine with Tony Stark Holographic HUD, Voice Intelligence & Hybrid Memory*
 
 <div align="center">
 
-[![Python](https://img.shields.io/badge/Python-3.12%20%7C%203.14-3776AB.svg?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12-3776AB.svg?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B.svg?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev)
+[![Flutter](https://img.shields.io/badge/Flutter-3.44+-02569B.svg?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev)
 [![Ollama](https://img.shields.io/badge/Ollama-Local%20LLM-black.svg?style=for-the-badge)](https://ollama.com)
-[![Tests](https://img.shields.io/badge/Tests-48%20Passed-brightgreen.svg?style=for-the-badge)](./tests)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?style=for-the-badge&logo=docker&logoColor=white)](./docker-compose.yml)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=for-the-badge)](./LICENSE)
 
 <br/>
 
-[![Documentation Hub](https://img.shields.io/badge/Docs-Documentation%20Hub-007ACC?style=for-the-badge)](#documentation-hub)
-[![Quick Start](https://img.shields.io/badge/Guide-Quick%20Start-2EA44F?style=for-the-badge)](#quick-start)
-[![Architecture](https://img.shields.io/badge/Spec-Architecture-6F42C1?style=for-the-badge)](#system-architecture)
-[![Plugins & Skills](https://img.shields.io/badge/Ecosystem-Plugins%20%26%20Skills-F39C12?style=for-the-badge)](#sub-agent-skills--plugin-ecosystem)
-[![Contributing](https://img.shields.io/badge/Community-Contributing-E74C3C?style=for-the-badge)](#contributing)
+[![Quick Start](#quick-start-orderly-setup-guide)](#quick-start-orderly-setup-guide)
+[![Production Deployment](./docs/production_deployment.md)](./docs/production_deployment.md)
+[![Vector DB Guide](./docs/vector_database_setup.md)](./docs/vector_database_setup.md)
+[![Security & Network](./docs/security_and_network.md)](./docs/security_and_network.md)
+[![Future Vision: Vision & CCTV](./docs/future_vision_roadmap.md)](./docs/future_vision_roadmap.md)
 
 </div>
 
@@ -25,264 +25,120 @@
 
 ## Overview
 
-**Thanatos** is an autonomous, local-first multi-agent AI assistant engine designed for cross-platform automation and intelligent personal assistance. Combining local LLM execution via Ollama with multi-agent orchestration, Retrieval-Augmented Generation (RAG), and advanced speech intelligence, Thanatos runs with high privacy, low latency, and zero cloud dependency.
+**Thanatos** is a local-first, autonomous multi-agent personal assistant engine. Inspired by the Tony Stark / Jarvis paradigm, it rejects bland chat bubbles in favor of a **holographic command terminal**, real-time telemetry HUD panels, continuous 3D mathematical data sphere visualization, and dynamic hybrid memory.
 
-### Core Capabilities
+### Core Architecture Highlights
 
-1. **Unified LLM Brain & Deep Thinking**: Local Ollama execution (`qwen2.5:7b`, `deepseek-r1:7b/14b`, `llama3.1:8b`, `phi3`) with real-time `<think>` reasoning streaming and robust tool parsing.
-2. **Multi-Agent Supervisor / Coordinator**: Decomposes high-level natural language goals into sub-agent Directed Acyclic Graphs (DAGs).
-3. **Speech Intelligence & Speaker Diarization**:
-   - **ASR & TTS**: Powered by `faster-whisper` and neural `edge-tts`.
-   - **Acoustic Echo Cancellation (AEC)**: Real-time spectral subtraction and noise suppression.
-   - **Speaker Diarization**: Distinguishes between "Owner (You)" and "Guest Speaker" using pitch and spectral embeddings.
-4. **Hybrid Memory & Career RAG**: ChromaDB vector search integrated with a structured candidate profile manager for context-aware workflows.
-5. **Cross-Platform Flutter Client**: Responsive desktop (Windows, macOS, Linux) and mobile (Android, iOS) UI with deep thinking traces, animated voice visualizer, and live agent status tracking.
-6. **Zero-Trust Sandbox & Merkle Audit Trail**: Subprocess timeouts, isolated test runners, and SHA-256 tamper-evident cryptographic event logging.
-
----
-
-## Documentation Hub
-
-Explore the comprehensive technical documentation suite in the [`docs/`](./docs) directory:
-
-| Document | Description | Action |
-| :--- | :--- | :---: |
-| **Getting Started Guide** | Step-by-step setup guide for Python backend, Ollama models, and Flutter client. | [![Read Guide](https://img.shields.io/badge/Open-Guide-2EA44F?style=flat-square)](./docs/getting_started.md) |
-| **System Architecture** | Component breakdown, supervisor-worker topology, and layer interactions. | [![Read Spec](https://img.shields.io/badge/Open-Spec-6F42C1?style=flat-square)](./docs/architecture.md) |
-| **Master Architecture & Workflows** | Authoritative 7-module blueprint with sequence diagrams and execution contracts. | [![Read Blueprint](https://img.shields.io/badge/Open-Blueprint-007ACC?style=flat-square)](./docs/system_architecture_and_workflow.md) |
-| **API Specification** | Full REST endpoints and WebSocket streaming protocol (`/ws`) reference. | [![Read API Spec](https://img.shields.io/badge/Open-API%20Spec-009688?style=flat-square)](./docs/api_spec.md) |
-| **Plugin Development Guide** | Tutorial on creating, registering, and testing custom sub-agent skills. | [![Read Guide](https://img.shields.io/badge/Open-Dev%20Guide-F39C12?style=flat-square)](./docs/plugin_dev_guide.md) |
-| **Speech Intelligence & AEC** | Voice pipeline, acoustic echo cancellation, and speaker diarization details. | [![Read Voice Spec](https://img.shields.io/badge/Open-Voice%20Spec-3776AB?style=flat-square)](./docs/speech_intelligence.md) |
-| **Memory & RAG Subsystem** | ChromaDB vector store, semantic embeddings, and career profile matching. | [![Read RAG Guide](https://img.shields.io/badge/Open-RAG%20Guide-4B8BBE?style=flat-square)](./docs/memory_and_rag.md) |
-| **Security & Isolation Model** | Sandbox boundaries, OS safety confirmation gates, and Merkle audit logs. | [![Read Model](https://img.shields.io/badge/Open-Security%20Model-E74C3C?style=flat-square)](./docs/security_model.md) |
-| **Model Context Protocol (MCP)** | Exposing Thanatos OS tools to Claude Desktop, Cursor IDE, and MCP hosts. | [![Read MCP Guide](https://img.shields.io/badge/Open-MCP%20Guide-555555?style=flat-square)](./docs/mcp_server.md) |
-| **Contributor Guide** | Coding conventions, PR guidelines, and running the test suite. | [![Read Guide](https://img.shields.io/badge/Open-Contributing-24292E?style=flat-square)](./docs/contributing.md) |
+1. **Tony Stark / Jarvis Holographic HUD Client**:
+   - Built in Flutter with 4 customizable futuristic palettes: **TRON Legacy** (pitch-black with neon cyan wireframes), **Cyberpunk Amber**, **Deep Matrix**, and **Obsidian Purple**.
+   - Persistent 110-node 3D Fibonacci Holographic Data Sphere with continuous harmonic rotation and audio-reactivity.
+   - Chamfered (45° cut corner) tactical panels and holographic data transmission readouts instead of standard chat bubbles.
+   - Command Deck input terminal with mode selector (`AUTONOMOUS`, `DEEP REASONING`, `TERMINAL CODE`).
+2. **Autonomous Multi-Agent Brain**:
+   - General-purpose autonomous coordinator that plans, reasons, and invokes OS automation tools.
+   - Proactive self-diagnosis: when model connectivity or resources fail, it identifies the problem and guides the operator.
+3. **Dynamic Ollama Engine & In-UI Model Puller**:
+   - Directly detects locally installed models via Ollama API (`GET /api/tags`).
+   - In-app model puller with real-time percentage progress streaming.
+   - Hardware detection (CPU cores, RAM capacity, GPU VRAM) with task-aware intelligent recommendation.
+4. **Self-Learning Hybrid Memory**:
+   - Combines structured dynamic fact extraction with semantic vector storage (`ChromaDB`).
+   - Automatically remembers operator preferences, personal details, and ongoing workflows across restarts without hardcoded values.
+5. **Security & Production Hardening**:
+   - Optional Bearer token authentication and WSS WebSocket security gate.
+   - Caddy auto-HTTPS reverse proxy integration.
+   - Tamper-evident SHA-256 Merkle audit trail for every action.
 
 ---
 
-## System Architecture
+## Quick Start: Orderly Setup Guide
 
-```mermaid
-flowchart TB
-    subgraph ClientLayer ["1. Client Layer (Cross-Platform Flutter)"]
-        FlutterApp["Flutter App (Desktop / Mobile / Web)"]
-        ChatUI["Chat UI & Deep Thinking Trace"]
-        VoiceUI["Voice Visualizer (AEC & Speaker Diarization)"]
-        SettingsUI["Model Configuration (Ollama & Cloud)"]
-    end
+Follow these steps in order to get Thanatos running smoothly on your machine.
 
-    subgraph APILayer ["2. API Orchestration Gateway (FastAPI)"]
-        MainApp["FastAPI Server (:8000)"]
-        WSRoute["WebSocket Handler (/ws)"]
-        ConfigRoute["Config API (/api/config)"]
-        SpeechRoute["Speech API (/speech)"]
-        OSRoute["OS Automation API (/os)"]
-    end
+### Method A: One-Command Docker Stack (Recommended)
 
-    subgraph CoreEngine ["3. Agent & Orchestration Core"]
-        Coordinator["Agent Coordinator / Supervisor"]
-        UnifiedProvider["Unified LLM Brain Adapter"]
-        SkillRegistry["Singleton Skill Registry"]
-    end
+1. Ensure [Docker Desktop](https://www.docker.com/) is installed and running.
+2. Clone the repository:
+   ```bash
+   git clone https://github.com/Kennny7/Thanatos.git
+   cd Thanatos
+   ```
+3. Copy environment file:
+   ```bash
+   cp .env.example .env
+   ```
+4. Start the complete system stack:
+   ```bash
+   docker compose up --build
+   ```
+   *This automatically starts the Ollama engine, pulls the default `qwen2.5:7b` model, boots the ChromaDB vector database, initializes the FastAPI application gateway on port 8000, and enables the Caddy auto-TLS proxy.*
 
-    subgraph SubAgents ["4. Domain Agent Skills"]
-        JobHunter["Job Hunter Agent"]
-        ResumeTailor["Resume Tailor Agent (RAG)"]
-        JobApplicator["Job Applicator Agent"]
-        NovelAgent["Novel Translation Agent"]
-        SelfImprovement["Self-Improvement & Sandbox Verifier"]
-    end
-
-    subgraph MemoryVoice ["5. Memory, Audio & Governance"]
-        RAGMemory["ChromaDB Vector Store & User Profile"]
-        SpeechService["AEC, ASR, TTS & Speaker Diarization"]
-        SandboxAudit["Sandbox Runner & Merkle Audit Trail"]
-    end
-
-    FlutterApp <-->|WebSocket / REST| MainApp
-    MainApp --> WSRoute & ConfigRoute & SpeechRoute & OSRoute
-    WSRoute --> Coordinator --> UnifiedProvider
-    Coordinator --> SkillRegistry --> SubAgents
-    Coordinator --> RAGMemory
-    SpeechRoute --> SpeechService
-    SubAgents --> SandboxAudit
-```
+5. Launch the Flutter Holographic Client:
+   ```bash
+   cd apps/client_flutter
+   flutter pub get
+   flutter run -d windows    # Or macos / linux / chrome / android
+   ```
 
 ---
 
-## Key Workflows
+### Method B: Manual Local Setup (Developer Mode)
 
-### 1. Autonomous Job Hunting & Resume Tailoring Pipeline
-```text
-User Prompt ──► Agent Coordinator ──► JobHunter (finds matching tech openings)
-                                  ──► ResumeTailor (queries UserProfile RAG & generates custom resume)
-                                  ──► JobApplicator (packages application & logs entry)
-                                  ──► Streams live progress to Flutter UI
-```
-
-### 2. Web Novel Translation & Glossary Polish Pipeline
-```text
-Chapter Raw Text ──► NovelAgent ──► Translates with glossary term enforcement
-                                ──► Polishes prose style & tone
-                                ──► Returns structured bilingual chapter output
-```
-
-### 3. Self-Improvement Code Reflection Pipeline
-```text
-Codebase Inspection ──► SelfImprovement Agent ──► Analyzes target file
-                                              ──► Proposes fix / refactor
-                                              ──► Runs tests inside Sandbox
-                                              ──► Commits verified patch
-```
-
-### 4. Multi-Speaker Voice Intelligence & Diarization
-```text
-Microphone Audio ──► AEC Processor (removes acoustic echo & noise)
-                 ──► Speaker Identifier (extracts pitch/spectral features vs Owner profile)
-                 ──► Faster-Whisper ASR (transcribes multi-speaker audio with timestamps)
-                 ──► Agent Loop (handles directives like "summarize what others said")
-```
-
----
-
-## Sub-Agent Skills & Plugin Ecosystem
-
-Thanatos features a pluggable skill architecture where every domain agent implements `BaseSkill` and registers with `SkillRegistry`:
-
-| Skill Identifier | Tools Provided | Functional Scope |
-| :--- | :--- | :--- |
-| `job_hunter` | `search_jobs` | Scrapes tech openings by role and location (e.g. Pune freshers). |
-| `resume_tailor` | `tailor_resume` | Queries RAG career memory and generates tailored resumes and cover letters. |
-| `job_applicator` | `prepare_job_application` | Formulates application submission packages and logs history. |
-| `novel_agent` | `translate_and_edit_novel` | Translates raw novel chapters with glossary consistency. |
-| `self_improvement` | `self_improve_code` | Inspects architecture, runs sandbox tests, and validates code improvements. |
-
-*To build a custom skill, refer to the [Plugin Development Guide](./docs/plugin_dev_guide.md).*
-
----
-
-## Quick Start
-
-### 1. Prerequisites
-- **Python 3.12+**
-- **Flutter SDK 3.x** (for desktop/mobile client)
-- **Ollama** (for local LLM execution: `ollama run qwen2.5:7b` or `deepseek-r1:7b`)
-
-### 2. Backend Setup
+#### 1. Start Ollama Engine & Pull Default Model
+Install [Ollama](https://ollama.com/), start the daemon, and pull your preferred model:
 ```bash
-# Clone the repository
-git clone https://github.com/Kennny7/Thanatos.git
-cd Thanatos
-
-# Create and activate virtual environment
-python -m venv venv
-venv\Scripts\activate      # On Windows
-source venv/bin/activate    # On Linux/macOS
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Start the FastAPI server
-uvicorn apps.api_server.main:app --host 0.0.0.0 --port 8000 --reload
-```
-### 3. Environment & Variable Configuration
-
-Copy `.env.example` to `.env` in the root directory to customize configuration settings:
-
-```bash
-cp .env.example .env
-```
-
-Key configuration parameters handled via `.env` file or environment variables:
-
-- LLM Settings:
-  - `LLM_PROVIDER`: LLM provider identifier (default: `ollama`).
-  - `LLM_MODEL`: Active model name (default: `qwen2.5:7b`).
-  - `LLM_BASE_URL`: Connection URL for local LLM service (default: `http://localhost:11434`).
-  - `DEEPSEEK_API_KEY`: API key for DeepSeek cloud service.
-  - `OPENAI_API_KEY`: API key for OpenAI API endpoint.
-- Memory & Vector Database (ChromaDB):
-  - `MEMORY_PERSIST_DIR`: Persistence storage path for ChromaDB vector database (default: `./memory_store`).
-  - `MEMORY_COLLECTION`: Vector database collection name (default: `thanatos_memories`).
-  - `EMBEDDING_MODEL`: Embedding model name for local RAG (default: `all-MiniLM-L6-v2`).
-  - `EMBEDDING_DEVICE`: Computing device for embedding generation (default: `cpu`).
-- User Profile & Personal Data Defaults:
-  - `USER_NAME`: User display name in system context (default: `User`).
-  - `USER_EMAIL`: User contact email address (default: `user@example.com`).
-  - `USER_LOCATION`: Location context for localized skills.
-  - `USER_TITLE`: Professional title context.
-- Speech & Voice Settings:
-  - `TTS_VOICE`: Voice identifier for Text-to-Speech (default: `en-US-AriaNeural`).
-  - `STT_MODEL`: Faster-Whisper model size for Speech-to-Text (default: `base`).
-  - `SPEAKER_ENROLLMENT_DIR`: Storage path for speaker enrollment profiles (default: `./voice_profiles`).
-
-### 4. Local Model Setup (Ollama)
-```bash
-# Pull recommended models
+ollama serve
+# In another terminal:
 ollama pull qwen2.5:7b
-ollama pull deepseek-r1:7b
 ```
 
-### 5. Flutter Client Setup
+#### 2. Configure Python Virtual Environment
+```bash
+python -m venv venv
+
+# Windows:
+.\venv\Scripts\activate
+# Linux/macOS:
+source venv/bin/activate
+
+pip install -r requirements.txt
+```
+
+#### 3. Vector Database (ChromaDB)
+Thanatos automatically initializes an embedded ChromaDB store inside `./memory_store`.
+No manual database setup is required. If you wish to use a remote ChromaDB or Qdrant server, see the [Vector Database Setup Guide](./docs/vector_database_setup.md).
+
+#### 4. Launch Backend API Gateway
+```bash
+uvicorn apps.api_server.main:app --host 127.0.0.1 --port 8000 --reload
+```
+Test health endpoint:
+```bash
+curl http://127.0.0.1:8000/health
+```
+
+#### 5. Launch Flutter Holographic HUD Client
 ```bash
 cd apps/client_flutter
-
-# Install Flutter dependencies
 flutter pub get
-
-# Run on your desktop platform
-flutter run -d windows    # Windows Desktop
-# or
-flutter run -d macos      # macOS Desktop
-# or
-flutter run -d chrome     # Web Browser
-```
-
-### 6. Running the Test Suite
-```bash
-# Run all 48 unit and integration tests
-pytest tests -v
+flutter run -d windows
 ```
 
 ---
 
-## Project Structure
+## Master Documentation Suite
 
-```text
-Thanatos
-|-- apps/
-|   |-- api_server/               # FastAPI backend with WebSockets & REST routers
-|   |   |-- core/                 # Agent loop, dispatcher, session manager
-|   |   |-- routes/               # WebSocket, config, speech, health, OS routes
-|   |   `-- schemas/              # Pydantic v2 communication models
-|   |-- client_flutter/           # Cross-platform Flutter application
-|   |   |-- lib/models/           # Message, thought, and agent models
-|   |   |-- lib/state/            # Riverpod state management & WebSocket provider
-|   |   `-- lib/ui/               # Chat screen, voice visualizer, settings & tracker
-|   `-- mcp_server/               # Model Context Protocol (MCP) server for Claude / Cursor
-|-- services/
-|   |-- llm_brain/                # Unified LLM provider & multi-agent coordinator
-|   |-- local_llm/                # Ollama client with dynamic model discovery
-|   |-- memory/                   # VectorStore (ChromaDB), MemoryManager & UserProfile
-|   |-- speech/                   # STT, TTS, AEC processor & Speaker Diarization
-|   `-- os_automation/            # System control & OS interaction
-|-- plugins/
-|   |-- base/                     # BaseSkill interface & SkillRegistry
-|   `-- system_skills/            # Domain skills (Job hunter, resume tailor, applicator, novel, self-improvement)
-|-- sandbox/                      # Subprocess limiter & Docker container isolation
-|-- audit/                        # Tamper-evident Merkle hash audit logger
-|-- docs/                         # Comprehensive technical documentation suite
-`-- tests/                        # Full test suite (48 tests passing)
-```
-
----
-
-## Contributing
-
-We welcome contributions from the community. Please read our [Contributor Guide](./docs/contributing.md) to learn about our development process, coding standards, and how to submit pull requests.
+| Document | Purpose |
+| :--- | :--- |
+| **[Production Deployment Guide](./docs/production_deployment.md)** | Step-by-step VPS server deployment, port mappings, Caddy auto-HTTPS, and systemd service templates. |
+| **[Vector Database Setup Guide](./docs/vector_database_setup.md)** | Detailed setup for embedded ChromaDB, Docker ChromaDB, Qdrant, and Ollama embedding models. |
+| **[Security & Network Intelligence](./docs/security_and_network.md)** | Authentication gates, network scanning capabilities, OSINT pipelines, and defense mechanisms. |
+| **[Future Vision: CCTV & Biometrics](./docs/future_vision_roadmap.md)** | Architectural blueprint for RTSP video stream ingest, YOLO object tracking, and InsightFace recognition. |
+| **[System Architecture & Workflows](./docs/system_architecture_and_workflow.md)** | Technical specification of modules, schemas, and multi-agent coordination contracts. |
+| **[API Specification](./docs/api_spec.md)** | Complete REST endpoint contracts and bidirectional WebSocket protocol documentation. |
 
 ---
 
 ## License
 
-This project is licensed under the Apache 2.0 License. See the [LICENSE](./LICENSE) file for details.
+Apache License 2.0. See [`LICENSE`](./LICENSE) for full details.
