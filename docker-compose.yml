@@ -1,4 +1,36 @@
 services:
+  # 1. Primary AI Gateway (FastAPI, WebSockets, Autonomous Coordinator, Multi-Agent Orchestrator)
+  api-server:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.api
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - HOST=0.0.0.0
+      - PORT=8000
+      - LLM_PROVIDER=ollama
+      - LLM_BASE_URL=http://ollama:11434
+      - LLM_MODEL=qwen2.5:7b
+      - MEMORY_PERSIST_DIR=/app/memory_store
+      - MEMORY_COLLECTION=thanatos_memories
+      - API_AUTH_TOKEN=${API_AUTH_TOKEN:-}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+    volumes:
+      - ./memory_store:/app/memory_store
+      - ./logs:/app/logs
+      - ./audit/storage:/app/audit/storage
+    depends_on:
+      ollama:
+        condition: service_healthy
+      chromadb:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - thanatos_net
+
+  # 2. Local Ollama Engine (Dedicated containerized local LLM runtime)
   ollama:
     build:
       context: .
@@ -10,31 +42,61 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
-      interval: 10s
+      interval: 8s
       timeout: 5s
-      retries: 10
+      retries: 15
     networks:
       - thanatos_net
 
-  local-llm:
-    build:
-      context: .
-      dockerfile: infra/docker/Dockerfile.local_llm
+  # 3. Model Auto-Provisioner (Pulls default model on first boot)
+  ollama-provisioner:
+    image: curlimages/curl:latest
     depends_on:
       ollama:
         condition: service_healthy
+    command: >
+      sh -c "echo 'Checking/pulling default Thanatos model qwen2.5:7b...' &&
+             curl -X POST http://ollama:11434/api/pull -d '{\"name\": \"qwen2.5:7b\", \"stream\": false}' &&
+             echo 'Default model provisioned successfully.'"
+    restart: on-failure
+    networks:
+      - thanatos_net
+
+  # 4. Vector Database (ChromaDB Server)
+  chromadb:
+    image: chromadb/chroma:latest
     ports:
-      - "8001:8001"
-    restart: unless-stopped
-    environment:
-      - LLM_BASE_URL=http://ollama:11434
+      - "8001:8000"
     volumes:
-      - .:/app
+      - chroma_data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+    restart: unless-stopped
+    networks:
+      - thanatos_net
+
+  # 5. Reverse Proxy & Auto-HTTPS (Caddy sidecar for production SSL termination)
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api-server
+    restart: unless-stopped
     networks:
       - thanatos_net
 
 volumes:
   ollama_data:
+  chroma_data:
+  caddy_data:
+  caddy_config:
 
 networks:
   thanatos_net:
