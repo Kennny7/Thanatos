@@ -54,6 +54,7 @@ Explore the comprehensive technical documentation suite in the [`docs/`](./docs)
 | **API Specification** | Full REST endpoints and WebSocket streaming protocol (`/ws`) reference. | [![Read API Spec](https://img.shields.io/badge/Open-API%20Spec-009688?style=flat-square)](./docs/api_spec.md) |
 | **Plugin Development Guide** | Tutorial on creating, registering, and testing custom sub-agent skills. | [![Read Guide](https://img.shields.io/badge/Open-Dev%20Guide-F39C12?style=flat-square)](./docs/plugin_dev_guide.md) |
 | **Speech Intelligence & AEC** | Voice pipeline, acoustic echo cancellation, and speaker diarization details. | [![Read Voice Spec](https://img.shields.io/badge/Open-Voice%20Spec-3776AB?style=flat-square)](./docs/speech_intelligence.md) |
+| **Voice Mode & Speaker Verification** | Separate Voice Mode, ECG frequency line, VAD, multi-speaker authorization, and optional camera lip-sync. | [![Read Voice Mode Guide](https://img.shields.io/badge/Open-Voice%20Mode-00E5FF?style=flat-square)](./docs/voice_mode_speaker_verification.md) |
 | **Memory & RAG Subsystem** | ChromaDB vector store, semantic embeddings, and career profile matching. | [![Read RAG Guide](https://img.shields.io/badge/Open-RAG%20Guide-4B8BBE?style=flat-square)](./docs/memory_and_rag.md) |
 | **Vector Database Setup Guide** | Detailed setup for embedded ChromaDB, Docker ChromaDB, Qdrant, and Ollama embedding models. | [![Read Setup Guide](https://img.shields.io/badge/Open-Vector%20DB%20Guide-4B8BBE?style=flat-square)](./docs/vector_database_setup.md) |
 | **Security & Isolation Model** | Sandbox boundaries, OS safety confirmation gates, and Merkle audit logs. | [![Read Model](https://img.shields.io/badge/Open-Security%20Model-E74C3C?style=flat-square)](./docs/security_model.md) |
@@ -253,8 +254,28 @@ Thanatos features a pluggable skill architecture where every domain agent implem
 | `job_applicator` | `prepare_job_application` | Formulates application submission packages and logs history. |
 | `novel_agent` | `translate_and_edit_novel` | Translates raw novel chapters with glossary consistency. |
 | `self_improvement` | `self_improve_code` | Inspects architecture, runs sandbox tests, and validates code improvements. |
+| `web_search` | `search_web`, `search_news` | Live internet queries and breaking news via Google News RSS & DuckDuckGo. |
 
 *To build a custom skill, refer to the [Plugin Development Guide](./docs/plugin_dev_guide.md).*
+
+---
+
+## Tactical Voice Mode & Speaker Biometrics
+
+Thanatos features a dedicated **Voice Mode** alongside standard Text Mode, designed for hands-free operations:
+
+- **ECG / Cardiogram Frequency Waveform**: Live animated pulse wave visualizer that sweeps and modulates in real-time based on audio frequency (idle rhythm, user speaking bursts, AI neural speech harmonics).
+- **Voice Activity Detection (VAD)**: Continuously evaluates energy thresholds and human vocal spectral boundaries (75 Hz to 3800 Hz) to detect speech without clipping.
+- **Multi-Speaker Diarization & Authorization**:
+  - **Owner (Boss)**: Primary enrolled voice profile with full administrative directive privileges.
+  - **Authorized Delegates**: Approved team members or operators enrolled to issue permitted tasks.
+  - **Unauthorized Guests**: Third-party speech is detected, flagged, and rejected by the agent authorization guard to prevent accidental or malicious execution.
+- **Optional Camera Module (Face Recognition & Lip Tracking)**:
+  - Real-time webcam viewfinder tracking the user's face.
+  - Measures Mouth Aspect Ratio (MAR) and optical pixel variance to verify if the Boss is physically speaking on camera, preventing voice-spoofing or off-camera background audio execution.
+  - Uses standard OpenCV Haar Cascades with zero mandatory cloud dependencies.
+
+*For complete technical details and architecture, see [Voice Mode & Speaker Verification Specification](./docs/voice_mode_speaker_verification.md).*
 
 ---
 
@@ -262,8 +283,9 @@ Thanatos features a pluggable skill architecture where every domain agent implem
 
 ### 1. Prerequisites
 - **Python 3.12+**
-- **Flutter SDK 3.x** (for desktop/mobile client)
+- **Flutter SDK 3.x** (for desktop/mobile/web client)
 - **Ollama** (for local LLM execution: `ollama run qwen2.5:7b` or `deepseek-r1:7b`)
+- *(Optional)* **OpenCV** for camera facial tracking: `pip install opencv-python`
 
 ### 2. Backend Setup
 ```bash
