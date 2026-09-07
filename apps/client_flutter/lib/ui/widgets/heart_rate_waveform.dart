@@ -9,16 +9,22 @@ enum WaveformMode {
   aiSpeaking,
 }
 
+/// Real-time acoustic sound frequency analyzer widget.
+/// Renders a laser-traced audio spectrum line that remains flat/calm when idle or silent,
+/// modulates dynamically with input decibels/amplitude when mic is active,
+/// and animates harmonic frequency bands during AI speech.
 class HeartRateWaveform extends StatefulWidget {
   final WaveformMode mode;
   final Color accentColor;
   final double height;
+  final double soundLevel; // Decibel level / amplitude (0.0 to ~100.0 or 0.0 to 1.0)
 
   const HeartRateWaveform({
     super.key,
     this.mode = WaveformMode.idle,
     this.accentColor = const Color(0xFF00E5FF),
     this.height = 140,
+    this.soundLevel = 0.0,
   });
 
   @override
@@ -34,7 +40,7 @@ class _HeartRateWaveformState extends State<HeartRateWaveform>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2400),
+      duration: const Duration(milliseconds: 1800),
     )..repeat();
   }
 
@@ -51,10 +57,11 @@ class _HeartRateWaveformState extends State<HeartRateWaveform>
       builder: (context, child) {
         return CustomPaint(
           size: Size(double.infinity, widget.height),
-          painter: _ECGWaveformPainter(
+          painter: _AcousticFrequencyPainter(
             progress: _controller.value,
             mode: widget.mode,
             accentColor: widget.accentColor,
+            soundLevel: widget.soundLevel,
           ),
         );
       },
@@ -62,15 +69,17 @@ class _HeartRateWaveformState extends State<HeartRateWaveform>
   }
 }
 
-class _ECGWaveformPainter extends CustomPainter {
+class _AcousticFrequencyPainter extends CustomPainter {
   final double progress;
   final WaveformMode mode;
   final Color accentColor;
+  final double soundLevel;
 
-  _ECGWaveformPainter({
+  _AcousticFrequencyPainter({
     required this.progress,
     required this.mode,
     required this.accentColor,
+    required this.soundLevel,
   });
 
   @override
@@ -79,9 +88,9 @@ class _ECGWaveformPainter extends CustomPainter {
     final height = size.height;
     final midY = height / 2.0;
 
-    // 1. Draw subtle background medical grid lines
+    // 1. Draw subtle background tactical grid lines
     final gridPaint = Paint()
-      ..color = accentColor.withValues(alpha: 0.08)
+      ..color = accentColor.withValues(alpha: 0.07)
       ..strokeWidth = 0.8;
 
     const gridStep = 18.0;
@@ -92,51 +101,45 @@ class _ECGWaveformPainter extends CustomPainter {
       canvas.drawLine(Offset(0, y), Offset(width, y), gridPaint);
     }
 
-    // 2. Compute dynamic heart rate ECG / sound frequency path
+    // 2. Compute dynamic frequency waveform
     final path = Path();
     final glowPath = Path();
 
-    // Pulse parameters based on mode
-    final double amplitudeScale = mode == WaveformMode.userSpeaking
-        ? 1.4
-        : (mode == WaveformMode.aiSpeaking ? 1.1 : 0.65);
+    final isMicActive = mode == WaveformMode.userSpeaking;
+    final isAiSpeaking = mode == WaveformMode.aiSpeaking;
 
+    // Normalize sound level: speech_to_text gives roughly 0 to 10 or dB
+    final normalizedLevel = isMicActive ? (soundLevel.abs().clamp(0.0, 10.0) / 10.0) : 0.0;
     final double phase = progress * 2.0 * pi;
     bool started = false;
 
+    // Step across waveform with high resolution
     for (double x = 0; x <= width; x += 2.0) {
       final normX = x / width;
-      // Repeating heartbeat cycle across screen (3 cycles across width)
-      final cyclePos = (normX * 3.2 - progress * 1.5) % 1.0;
-      final cycle = cyclePos < 0 ? cyclePos + 1.0 : cyclePos;
-
       double dy = 0.0;
 
-      if (cycle >= 0.18 && cycle < 0.24) {
-        // P-Wave (mild atrial depolarization bump)
-        final pNorm = (cycle - 0.18) / 0.06;
-        dy = -sin(pNorm * pi) * 10.0 * amplitudeScale;
-      } else if (cycle >= 0.28 && cycle < 0.31) {
-        // Q-Wave (small initial downward dip)
-        final qNorm = (cycle - 0.28) / 0.03;
-        dy = sin(qNorm * pi) * 8.0 * amplitudeScale;
-      } else if (cycle >= 0.31 && cycle < 0.36) {
-        // R-Peak (high-amplitude ventricular spike)
-        final rNorm = (cycle - 0.31) / 0.05;
-        dy = -sin(rNorm * pi) * (height * 0.44) * amplitudeScale;
-      } else if (cycle >= 0.36 && cycle < 0.40) {
-        // S-Wave (sharp rebound dip)
-        final sNorm = (cycle - 0.36) / 0.04;
-        dy = sin(sNorm * pi) * 18.0 * amplitudeScale;
-      } else if (cycle >= 0.48 && cycle < 0.60) {
-        // T-Wave (ventricular repolarization wave)
-        final tNorm = (cycle - 0.48) / 0.12;
-        dy = -sin(tNorm * pi) * 16.0 * amplitudeScale;
+      if (isMicActive) {
+        // True acoustic voice wave: flat if silent, high-frequency spikes when voice input is detected
+        if (normalizedLevel > 0.05) {
+          final carrier = sin(normX * 36.0 + phase * 4.0);
+          final harmonic1 = sin(normX * 72.0 - phase * 2.5) * 0.45;
+          final harmonic2 = cos(normX * 18.0 + phase * 1.5) * 0.3;
+          final envelope = sin(normX * pi); // taper edges
+          final totalAmp = (carrier + harmonic1 + harmonic2) * envelope * (height * 0.38) * normalizedLevel;
+          dy = totalAmp;
+        } else {
+          // Subtle baseline flicker when mic is listening but room is quiet
+          dy = sin(normX * 16.0 + phase) * 0.6;
+        }
+      } else if (isAiSpeaking) {
+        // AI vocal synthesis harmonic spectrum
+        final primaryWave = sin(normX * 24.0 + phase * 3.0);
+        final modulation = sin(normX * 8.0 - phase * 1.5);
+        final envelope = sin(normX * pi);
+        dy = primaryWave * modulation * envelope * (height * 0.32);
       } else {
-        // Sound frequency micro-ripple baseline
-        final rippleFreq = mode == WaveformMode.userSpeaking ? 22.0 : 12.0;
-        final rippleAmp = mode == WaveformMode.userSpeaking ? 3.5 : 1.2;
-        dy = sin(normX * rippleFreq + phase) * rippleAmp;
+        // Idle mode / Mic OFF: Flatline laser level with microscopic calibration ripple
+        dy = sin(normX * 4.0 + phase * 0.5) * 0.3;
       }
 
       final y = (midY + dy).clamp(4.0, height - 4.0);
@@ -151,37 +154,34 @@ class _ECGWaveformPainter extends CustomPainter {
       }
     }
 
-    // 3. Draw Outer Neon Glow
+    // 3. Draw outer neon luminescence
     final glowPaint = Paint()
-      ..color = accentColor.withValues(alpha: 0.35)
-      ..strokeWidth = 4.5
+      ..color = (isMicActive && normalizedLevel > 0.1)
+          ? Colors.redAccent.withValues(alpha: 0.4)
+          : accentColor.withValues(alpha: 0.3)
+      ..strokeWidth = 4.0
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0);
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.5);
     canvas.drawPath(glowPath, glowPaint);
 
-    // 4. Draw Crisp Laser Trace Line
+    // 4. Draw crisp laser trace line
     final linePaint = Paint()
-      ..color = accentColor
+      ..color = (isMicActive && normalizedLevel > 0.1) ? Colors.redAccent : accentColor
       ..strokeWidth = 2.0
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
     canvas.drawPath(path, linePaint);
 
-    // 5. Draw Sweeping Pulse Laser Dot
+    // 5. Draw laser scanning dot
     final scanX = (progress * width) % width;
+    final dotColor = (isMicActive && normalizedLevel > 0.1) ? Colors.white : accentColor;
     final scanPaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill
-      ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 2.0);
-    canvas.drawCircle(Offset(scanX, midY), 3.5, scanPaint);
-
-    final auraPaint = Paint()
-      ..color = accentColor.withValues(alpha: 0.6)
+      ..color = dotColor
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(scanX, midY), 6.5, auraPaint);
+    canvas.drawCircle(Offset(scanX, midY), 3.0, scanPaint);
   }
 
   @override
-  bool shouldRepaint(_ECGWaveformPainter oldDelegate) => true;
+  bool shouldRepaint(_AcousticFrequencyPainter oldDelegate) => true;
 }
