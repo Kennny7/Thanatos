@@ -11,6 +11,8 @@ class UserMessage(BaseModel):
     """Incoming message from the WebSocket client."""
     type: Literal["user_message"] = "user_message"
     content: str = Field(..., description="Text input from the user")
+    speaker_tag: Optional[str] = Field(None, description="Identified speaker name or role")
+    is_authorized: Optional[bool] = Field(True, description="Whether speaker is permitted to issue directives")
 
 
 class AssistantChunk(BaseModel):
