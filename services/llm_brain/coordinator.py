@@ -78,9 +78,24 @@ class AgentCoordinator:
                 yield chunk
             return
 
-        # Default ReAct agent loop
-        tools = registry.get_all_tools()
-        tools_schema = [t.to_openai_schema() for t in tools]
+        # 4. Relevant tool filtering to reduce Ollama prompt size & inference latency
+        all_tools = registry.get_all_tools()
+        
+        # Heuristic matching: if prompt clearly targets specific domains, only inject those tools
+        is_news_or_web = any(k in lower_prompt for k in ["news", "headline", "trending", "current events", "latest", "search", "lookup", "who is", "what happened"])
+        is_job = any(k in lower_prompt for k in ["job", "resume", "cv", "hire", "apply"])
+        is_novel = any(k in lower_prompt for k in ["novel", "chapter", "translate"])
+
+        if is_news_or_web:
+            selected_tools = [t for t in all_tools if t.name in ("search_news", "search_web")]
+        elif is_job:
+            selected_tools = [t for t in all_tools if "job" in t.name or "resume" in t.name]
+        elif is_novel:
+            selected_tools = [t for t in all_tools if "novel" in t.name]
+        else:
+            selected_tools = all_tools
+
+        tools_schema = [t.to_openai_schema() for t in selected_tools]
 
         system_prompt = f"""You are {asst_name}, an extraordinary, deeply knowledgeable personal AI assistant.
 You possess unbounded capabilities: reasoning, coding, conversational depth, system execution, and long-term memory.
@@ -89,13 +104,23 @@ You remember details about the user and adapt seamlessly to their workflow.
 USER BACKGROUND & MEMORY CONTEXT:
 {rag_context}
 
-Be insightful, articulate, and accurate. Call tools when external execution or actions are required."""
+Be insightful, articulate, and accurate. Call tools when external execution or actions are required.
+If the user asks you to perform an action or integration that you lack tools for, clearly inform them:
+"This feature is currently missing from my core capabilities. Would you like me to develop and validate it in the parallel sandbox?"
+"""
 
         history_payload = list(conversation_history)
         if not history_payload or history_payload[-1].get("content") != user_prompt:
             history_payload.append({"role": "user", "content": user_prompt})
 
-        # Step-by-step reasoning
+        # Step-by-step reasoning with live keepalive
+        yield {
+            "type": "agent_status",
+            "agent": asst_name,
+            "status": "Generating response via neural engine...",
+            "progress": 0.3,
+        }
+
         response = await self.provider.generate_response(
             history=history_payload,
             tools_schema=tools_schema,
