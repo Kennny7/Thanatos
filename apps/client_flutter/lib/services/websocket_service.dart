@@ -64,10 +64,13 @@ class WebSocketService {
     if (_disposed) return;
     try {
       _channel = WebSocketChannel.connect(Uri.parse(url));
+      await _channel!.ready;
       _reconnectAttempts = 0;
       _eventController.add(const ConnectionStateChanged(true));
 
-      await for (final message in _channel!.stream) {
+      await for (final message in _channel!.stream.handleError((error) {
+        _eventController.add(ConnectionErrorEvent('Socket stream error: $error'));
+      })) {
         _rawStreamController.add(message);
         _handleMessage(message);
       }
@@ -77,7 +80,9 @@ class WebSocketService {
       _eventController.add(const ConnectionStateChanged(false));
     } finally {
       // Cleanup and schedule reconnect if not disposed
-      await _channel?.sink.close();
+      try {
+        await _channel?.sink.close();
+      } catch (_) {}
       _scheduleReconnect();
     }
   }
