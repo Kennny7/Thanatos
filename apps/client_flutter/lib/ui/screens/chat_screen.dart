@@ -12,7 +12,7 @@ import '../widgets/holo_panel.dart';
 import '../widgets/action_card_snackbar.dart';
 import '../widgets/ai_speaking_indicator.dart';
 import '../widgets/agent_status_tracker.dart';
-import '../widgets/voice_overlay.dart';
+import '../widgets/tactical_voice_deck.dart';
 import 'settings_screen.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
@@ -29,6 +29,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   String _assistantName = 'AEGIS';
   String _activeModel = 'qwen2.5:7b';
   String _activeMode = 'AUTONOMOUS';
+  bool _isVoiceMode = false;
 
   @override
   void initState() {
@@ -72,18 +73,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     ref.read(chatProvider.notifier).sendTextMessage(text);
     _textController.clear();
     _scrollToBottom();
-  }
-
-  void _openVoiceOverlay() {
-    showDialog(
-      context: context,
-      builder: (ctx) => VoiceOverlayDialog(
-        onTranscriptionComplete: (transcript, speakerTag) {
-          ref.read(chatProvider.notifier).sendTextMessage(transcript, speakerTag: speakerTag);
-          _scrollToBottom();
-        },
-      ),
-    );
   }
 
   void _scrollToBottom() {
@@ -132,26 +121,34 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     progress: state.agentProgress,
                   ),
 
-                // 3. Holographic Stream Viewport
-                Expanded(
-                  child: state.messages.isEmpty
-                      ? _buildEmptyStateHologram(primaryAccent)
-                      : ListView.builder(
-                          controller: _scrollController,
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          itemCount: state.messages.length,
-                          itemBuilder: (context, idx) {
-                            return HoloStreamEntry(
-                              message: state.messages[idx],
-                              accentColor: primaryAccent,
-                              surfaceColor: surfaceColor,
-                            );
-                          },
-                        ),
-                ),
+                // 3. Holographic Stream Viewport OR Dedicated Voice Mode Deck
+                if (_isVoiceMode)
+                  TacticalVoiceDeck(
+                    primaryAccent: primaryAccent,
+                    surfaceColor: surfaceColor,
+                    onSwitchToTextMode: () => setState(() => _isVoiceMode = false),
+                  )
+                else ...[
+                  Expanded(
+                    child: state.messages.isEmpty
+                        ? _buildEmptyStateHologram(primaryAccent)
+                        : ListView.builder(
+                            controller: _scrollController,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            itemCount: state.messages.length,
+                            itemBuilder: (context, idx) {
+                              return HoloStreamEntry(
+                                message: state.messages[idx],
+                                accentColor: primaryAccent,
+                                surfaceColor: surfaceColor,
+                              );
+                            },
+                          ),
+                  ),
 
-                // 4. Futuristic Command Deck Input Terminal
-                _buildCommandDeckInput(surfaceColor, primaryAccent, state.isAiResponding),
+                  // 4. Futuristic Command Deck Input Terminal
+                  _buildCommandDeckInput(surfaceColor, primaryAccent, state.isAiResponding),
+                ],
               ],
             ),
           ),
@@ -209,6 +206,69 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ),
               ),
             ],
+          ),
+          // Mode Switcher: [ TEXT ] | [ VOICE ]
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.45),
+              border: Border.all(color: primaryAccent.withValues(alpha: 0.35)),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  onTap: () => setState(() => _isVoiceMode = false),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: !_isVoiceMode ? primaryAccent.withValues(alpha: 0.25) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.terminal, size: 12, color: !_isVoiceMode ? primaryAccent : Colors.white54),
+                        const SizedBox(width: 4),
+                        Text(
+                          'TEXT',
+                          style: TextStyle(
+                            color: !_isVoiceMode ? primaryAccent : Colors.white54,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Courier',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => setState(() => _isVoiceMode = true),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _isVoiceMode ? primaryAccent.withValues(alpha: 0.25) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.graphic_eq, size: 12, color: _isVoiceMode ? primaryAccent : Colors.white54),
+                        const SizedBox(width: 4),
+                        Text(
+                          'VOICE',
+                          style: TextStyle(
+                            color: _isVoiceMode ? primaryAccent : Colors.white54,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Courier',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
           Row(
             children: [
@@ -379,8 +439,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             // Voice Input with Tactical Icon
             IconButton(
               icon: Icon(Icons.mic, color: primaryAccent, size: 22),
-              tooltip: 'Acoustic Voice Intelligence',
-              onPressed: _openVoiceOverlay,
+              tooltip: 'Engage Acoustic Voice Mode',
+              onPressed: () => setState(() => _isVoiceMode = true),
             ),
             const SizedBox(width: 4),
             // Futuristic Monospace Input Field
