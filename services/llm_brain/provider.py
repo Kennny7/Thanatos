@@ -109,7 +109,40 @@ class UnifiedLLMProvider:
         if "8001" in base_url:
             base_url = app_config.llm_base_url
 
-        formatted_messages = [dict(m) for m in messages]
+        # Sanitize messages for Ollama's parser
+        def _sanitize_for_ollama(msgs: List[Dict[str, Any]], keep_tools_structure: bool = True) -> List[Dict[str, Any]]:
+            clean_msgs = []
+            for m in msgs:
+                item = dict(m)
+                role = item.get("role")
+                if keep_tools_structure:
+                    if role == "assistant" and "tool_calls" in item:
+                        clean_tool_calls = []
+                        for tc in item.get("tool_calls", []):
+                            tc_copy = dict(tc)
+                            if "function" in tc_copy and isinstance(tc_copy["function"], dict):
+                                fn = dict(tc_copy["function"])
+                                if isinstance(fn.get("arguments"), str):
+                                    try:
+                                        fn["arguments"] = json.loads(fn["arguments"])
+                                    except Exception:
+                                        fn["arguments"] = {}
+                                tc_copy["function"] = fn
+                            clean_tool_calls.append(tc_copy)
+                        item["tool_calls"] = clean_tool_calls
+                    clean_msgs.append(item)
+                else:
+                    if role == "assistant" and "tool_calls" in item:
+                        tcs = item.get("tool_calls", [])
+                        names = [tc.get("function", {}).get("name", "tool") for tc in tcs if isinstance(tc, dict)]
+                        clean_msgs.append({"role": "assistant", "content": f"[Invoked tool: {', '.join(names)}]"})
+                    elif role == "tool":
+                        clean_msgs.append({"role": "user", "content": f"[Tool Result]: {item.get('content', '')}"})
+                    else:
+                        clean_msgs.append(item)
+            return clean_msgs
+
+        formatted_messages = _sanitize_for_ollama(messages, keep_tools_structure=True)
         tools_payload = None
 
         if tools_schema:
@@ -146,6 +179,7 @@ class UnifiedLLMProvider:
                 if resp.status_code != 200:
                     logger.warning("Ollama returned %s: %s, falling back without tools param", resp.status_code, resp.text)
                     payload.pop("tools", None)
+                    payload["messages"] = _sanitize_for_ollama(messages, keep_tools_structure=False)
                     resp = await client.post(f"{base_url}/api/chat", json=payload)
 
                 resp.raise_for_status()
