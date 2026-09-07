@@ -30,8 +30,11 @@ class _TacticalVoiceDeckState extends ConsumerState<TacticalVoiceDeck> {
   final _speechService = SpeechService();
   StreamSubscription<String>? _textSub;
   StreamSubscription<SpeechStatus>? _statusSub;
+  StreamSubscription<double>? _soundLevelSub;
   bool _isListening = false;
   bool _cameraActive = false;
+  bool _showTerminalLogs = true;
+  double _currentSoundLevel = 0.0;
   String _speakerTag = "Owner (Boss)";
   bool _isAuthorized = true;
   String _vadStatus = "STANDBY // MONITORING";
@@ -68,9 +71,19 @@ class _TacticalVoiceDeckState extends ConsumerState<TacticalVoiceDeck> {
         } else {
           setState(() {
             _isListening = false;
+            _currentSoundLevel = 0.0;
             _vadStatus = "STANDBY // READY";
           });
         }
+      });
+      _soundLevelSub = _speechService.onSoundLevelChange.listen((level) {
+        if (!mounted) return;
+        setState(() {
+          _currentSoundLevel = level;
+          if (level > 1.5) {
+            _vadStatus = "ACOUSTIC SIGNAL DETECTED";
+          }
+        });
       });
     }
   }
@@ -80,6 +93,7 @@ class _TacticalVoiceDeckState extends ConsumerState<TacticalVoiceDeck> {
     _simulatedVadTimer?.cancel();
     _textSub?.cancel();
     _statusSub?.cancel();
+    _soundLevelSub?.cancel();
     super.dispose();
   }
 
@@ -88,6 +102,7 @@ class _TacticalVoiceDeckState extends ConsumerState<TacticalVoiceDeck> {
       await _speechService.stopListening();
       setState(() {
         _isListening = false;
+        _currentSoundLevel = 0.0;
         _vadStatus = "STANDBY // READY";
       });
       _simulatedVadTimer?.cancel();
@@ -216,7 +231,7 @@ class _TacticalVoiceDeckState extends ConsumerState<TacticalVoiceDeck> {
             ),
             const SizedBox(height: 18),
 
-            // 2. Frequency / Heart-Rate Waveform Visualizer
+            // 2. Frequency / Acoustic Waveform Visualizer
             HoloPanel(
               accentColor: widget.primaryAccent,
               surfaceColor: widget.surfaceColor.withValues(alpha: 0.7),
@@ -231,7 +246,7 @@ class _TacticalVoiceDeckState extends ConsumerState<TacticalVoiceDeck> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'ACOUSTIC FREQUENCY // CARDIOGRAM OSCILLOSCOPE',
+                          'ACOUSTIC SPECTRUM // FREQUENCY ANALYZER',
                           style: TextStyle(
                             color: widget.primaryAccent.withValues(alpha: 0.9),
                             fontSize: 10.5,
@@ -241,7 +256,9 @@ class _TacticalVoiceDeckState extends ConsumerState<TacticalVoiceDeck> {
                           ),
                         ),
                         Text(
-                          _isListening ? '72 BPM • 1.2 kHz' : 'STANDBY',
+                          _isListening
+                              ? '${(_currentSoundLevel * 10).toInt()} dB • 1.2 kHz'
+                              : 'STANDBY // FLATLINE',
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.6),
                             fontSize: 10,
@@ -256,6 +273,7 @@ class _TacticalVoiceDeckState extends ConsumerState<TacticalVoiceDeck> {
                     mode: waveformMode,
                     accentColor: widget.primaryAccent,
                     height: 150,
+                    soundLevel: _currentSoundLevel,
                   ),
                 ],
               ),
@@ -377,58 +395,136 @@ class _TacticalVoiceDeckState extends ConsumerState<TacticalVoiceDeck> {
                 ),
               ),
 
-            // 4. Live Subtitle & Directive Feedback Box
-            HoloPanel(
-              accentColor: widget.primaryAccent.withValues(alpha: 0.4),
-              surfaceColor: widget.surfaceColor.withValues(alpha: 0.5),
-              padding: const EdgeInsets.all(14),
-              chamferSize: 6,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'ACOUSTIC TRANSCRIPT STREAM',
-                    style: TextStyle(
-                      color: widget.primaryAccent.withValues(alpha: 0.7),
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.1,
-                      fontFamily: 'Courier',
-                    ),
+            // 4. Closable Mini Terminal Window: Live Log Stream
+            if (_showTerminalLogs)
+              Container(
+                margin: const EdgeInsets.only(bottom: 20),
+                child: HoloPanel(
+                  accentColor: widget.primaryAccent.withValues(alpha: 0.6),
+                  surfaceColor: const Color(0xFF040810).withValues(alpha: 0.95),
+                  padding: const EdgeInsets.all(12),
+                  chamferSize: 8,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF00E676),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'MINI TERMINAL // LIVE DIALOGUE LOG',
+                                style: TextStyle(
+                                  color: widget.primaryAccent,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.2,
+                                  fontFamily: 'Courier',
+                                ),
+                              ),
+                            ],
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white54, size: 16),
+                            tooltip: 'Close Terminal Window',
+                            onPressed: () => setState(() => _showTerminalLogs = false),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.6),
+                          border: Border.all(color: Colors.white10),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '> OPERATOR [SPEECH IN]:',
+                              style: TextStyle(
+                                color: widget.primaryAccent.withValues(alpha: 0.8),
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Courier',
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _liveTranscript,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12.5,
+                                fontFamily: 'Courier',
+                                height: 1.35,
+                              ),
+                            ),
+                            if (state.messages.isNotEmpty && state.messages.last.sender == MessageSender.assistant) ...[
+                              const Divider(color: Colors.white12, height: 16),
+                              Text(
+                                '> CORE [SYNTHESIS OUT]:',
+                                style: const TextStyle(
+                                  color: Color(0xFF00E676),
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Courier',
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                state.messages.last.content,
+                                maxLines: 5,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.85),
+                                  fontSize: 12,
+                                  fontFamily: 'Courier',
+                                  height: 1.35,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    _liveTranscript,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontFamily: 'Courier',
-                      height: 1.4,
-                    ),
-                  ),
-                  if (state.messages.isNotEmpty && state.messages.last.sender == MessageSender.assistant) ...[
-                    const Divider(color: Colors.white12, height: 16),
-                    Text(
-                      'LATEST ASSISTANT VOCAL SYNTHESIS:',
-                      style: TextStyle(color: widget.primaryAccent, fontSize: 9.5, fontFamily: 'Courier'),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      state.messages.last.content,
-                      maxLines: 4,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 12, fontFamily: 'Courier'),
-                    ),
-                  ],
-                ],
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
 
             // 5. Voice Command Deck HUD Controls
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                // Terminal Logs Toggle
+                IconButton.filledTonal(
+                  icon: Icon(
+                    _showTerminalLogs ? Icons.terminal : Icons.terminal_outlined,
+                    color: _showTerminalLogs ? widget.primaryAccent : Colors.white60,
+                  ),
+                  tooltip: _showTerminalLogs ? 'Hide Live Terminal Log' : 'Show Live Terminal Log',
+                  onPressed: () => setState(() => _showTerminalLogs = !_showTerminalLogs),
+                  style: IconButton.styleFrom(
+                    backgroundColor: widget.surfaceColor,
+                    side: BorderSide(
+                      color: _showTerminalLogs ? widget.primaryAccent : Colors.white24,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 14),
+
                 // Camera Toggle
                 IconButton.filledTonal(
                   icon: Icon(
