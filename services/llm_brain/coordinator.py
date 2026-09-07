@@ -92,7 +92,8 @@ USER BACKGROUND & MEMORY CONTEXT:
 Be insightful, articulate, and accurate. Call tools when external execution or actions are required."""
 
         history_payload = list(conversation_history)
-        history_payload.append({"role": "user", "content": user_prompt})
+        if not history_payload or history_payload[-1].get("content") != user_prompt:
+            history_payload.append({"role": "user", "content": user_prompt})
 
         # Step-by-step reasoning
         response = await self.provider.generate_response(
@@ -140,16 +141,18 @@ Be insightful, articulate, and accurate. Call tools when external execution or a
                 tool_res: ToolResult = await registry.dispatch(response.tool_name, response.args or {})
                 res_content = tool_res.content if tool_res.success else f"Error: {tool_res.error}"
                 
-                # Feedback loop to LLM
+                # Feedback loop to LLM with structured dictionary arguments for local LLMs
+                tool_args = response.args if isinstance(response.args, dict) else {}
                 history_payload.append({
                     "role": "assistant",
                     "content": None,
-                    "tool_calls": [{"id": "call_1", "type": "function", "function": {"name": response.tool_name, "arguments": json.dumps(response.args or {})}}],
+                    "tool_calls": [{"id": "call_1", "type": "function", "function": {"name": response.tool_name, "arguments": tool_args}}],
                 })
                 history_payload.append({
                     "role": "tool",
                     "tool_call_id": "call_1",
-                    "content": json.dumps(res_content),
+                    "name": response.tool_name,
+                    "content": str(res_content),
                 })
                 
                 follow_up = await self.provider.generate_response(history=history_payload, system_prompt=system_prompt)
