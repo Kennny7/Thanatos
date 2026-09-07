@@ -13,6 +13,8 @@ import '../widgets/action_card_snackbar.dart';
 import '../widgets/ai_speaking_indicator.dart';
 import '../widgets/agent_status_tracker.dart';
 import '../widgets/tactical_voice_deck.dart';
+import '../widgets/digital_earth_sphere.dart';
+import '../widgets/system_telemetry_window.dart';
 import 'settings_screen.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
@@ -30,6 +32,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   String _activeModel = 'qwen2.5:7b';
   String _activeMode = 'AUTONOMOUS';
   bool _isVoiceMode = false;
+  bool _showEarthWindow = false;
+  bool _showMetricsWindow = false;
+  String _currentLayout = 'DEFAULT';
 
   @override
   void initState() {
@@ -119,6 +124,45 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     agentName: state.activeAgent!,
                     statusText: state.agentStatusText!,
                     progress: state.agentProgress,
+                  ),
+
+                // 2.5. Modular Division Windows (Adjustable & Closable HUD Cards)
+                if (_showEarthWindow || _showMetricsWindow)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isWide = constraints.maxWidth > 800;
+                        final windows = <Widget>[
+                          if (_showEarthWindow)
+                            Expanded(
+                              flex: isWide ? 1 : 0,
+                              child: DigitalEarthSphere(
+                                accentColor: primaryAccent,
+                                surfaceColor: surfaceColor,
+                                onClose: () => setState(() => _showEarthWindow = false),
+                              ),
+                            ),
+                          if (_showEarthWindow && _showMetricsWindow && isWide)
+                            const SizedBox(width: 12),
+                          if (_showEarthWindow && _showMetricsWindow && !isWide)
+                            const SizedBox(height: 12),
+                          if (_showMetricsWindow)
+                            Expanded(
+                              flex: isWide ? 1 : 0,
+                              child: SystemTelemetryWindow(
+                                accentColor: primaryAccent,
+                                surfaceColor: surfaceColor,
+                                onClose: () => setState(() => _showMetricsWindow = false),
+                              ),
+                            ),
+                        ];
+
+                        return isWide
+                            ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: windows)
+                            : Column(children: windows);
+                      },
+                    ),
                   ),
 
                 // 3. Holographic Stream Viewport OR Dedicated Voice Mode Deck
@@ -272,11 +316,121 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ),
           Row(
             children: [
+              // Digital Earth Sphere Window Toggle
+              GestureDetector(
+                onTap: () => setState(() => _showEarthWindow = !_showEarthWindow),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _showEarthWindow ? primaryAccent.withValues(alpha: 0.25) : Colors.transparent,
+                    border: Border.all(
+                      color: _showEarthWindow ? primaryAccent : primaryAccent.withValues(alpha: 0.3),
+                    ),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.public, size: 12, color: _showEarthWindow ? primaryAccent : Colors.white60),
+                      const SizedBox(width: 4),
+                      Text(
+                        'EARTH',
+                        style: TextStyle(
+                          color: _showEarthWindow ? primaryAccent : Colors.white60,
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Courier',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+
+              // Live System Telemetry Metrics Window Toggle
+              GestureDetector(
+                onTap: () => setState(() => _showMetricsWindow = !_showMetricsWindow),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _showMetricsWindow ? primaryAccent.withValues(alpha: 0.25) : Colors.transparent,
+                    border: Border.all(
+                      color: _showMetricsWindow ? primaryAccent : primaryAccent.withValues(alpha: 0.3),
+                    ),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.memory, size: 12, color: _showMetricsWindow ? primaryAccent : Colors.white60),
+                      const SizedBox(width: 4),
+                      Text(
+                        'METRICS',
+                        style: TextStyle(
+                          color: _showMetricsWindow ? primaryAccent : Colors.white60,
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Courier',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // Layout Presets Selector (Tactical, Minimal, Command, Custom)
+              PopupMenuButton<String>(
+                icon: Icon(Icons.dashboard_customize, color: primaryAccent, size: 18),
+                tooltip: 'Workstation Layout Presets [$_currentLayout]',
+                color: const Color(0xFF060D1A),
+                onSelected: (layout) {
+                  setState(() {
+                    _currentLayout = layout;
+                    if (layout == 'MINIMAL') {
+                      _showEarthWindow = false;
+                      _showMetricsWindow = false;
+                    } else if (layout == 'FULL COMMAND') {
+                      _showEarthWindow = true;
+                      _showMetricsWindow = true;
+                    } else if (layout == 'GEO FOCUS') {
+                      _showEarthWindow = true;
+                      _showMetricsWindow = false;
+                    } else if (layout == 'TELEMETRY') {
+                      _showEarthWindow = false;
+                      _showMetricsWindow = true;
+                    }
+                  });
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'DEFAULT',
+                    child: Text('LAYOUT: DEFAULT', style: TextStyle(color: Colors.white, fontSize: 11, fontFamily: 'Courier')),
+                  ),
+                  const PopupMenuItem(
+                    value: 'FULL COMMAND',
+                    child: Text('LAYOUT: FULL COMMAND (ALL PANELS)', style: TextStyle(color: Colors.white, fontSize: 11, fontFamily: 'Courier')),
+                  ),
+                  const PopupMenuItem(
+                    value: 'GEO FOCUS',
+                    child: Text('LAYOUT: DIGITAL EARTH FOCUS', style: TextStyle(color: Colors.white, fontSize: 11, fontFamily: 'Courier')),
+                  ),
+                  const PopupMenuItem(
+                    value: 'TELEMETRY',
+                    child: Text('LAYOUT: SYSTEM TELEMETRY', style: TextStyle(color: Colors.white, fontSize: 11, fontFamily: 'Courier')),
+                  ),
+                  const PopupMenuItem(
+                    value: 'MINIMAL',
+                    child: Text('LAYOUT: MINIMALIST (PURE CHAT)', style: TextStyle(color: Colors.white, fontSize: 11, fontFamily: 'Courier')),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 4),
+
               Text(
                 '[$_activeModel]',
                 style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11, fontFamily: 'Courier'),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 6),
               IconButton(
                 icon: Icon(Icons.tune, color: primaryAccent, size: 20),
                 tooltip: 'Holographic & Model Matrix Settings',
@@ -436,13 +590,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         chamferSize: 8.0,
         child: Row(
           children: [
-            // Voice Input with Tactical Icon
-            IconButton(
-              icon: Icon(Icons.mic, color: primaryAccent, size: 22),
-              tooltip: 'Engage Acoustic Voice Mode',
-              onPressed: () => setState(() => _isVoiceMode = true),
-            ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 8),
+            Icon(Icons.terminal, color: primaryAccent.withValues(alpha: 0.7), size: 18),
+            const SizedBox(width: 8),
             // Futuristic Monospace Input Field
             Expanded(
               child: TextField(
