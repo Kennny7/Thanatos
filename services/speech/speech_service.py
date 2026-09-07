@@ -54,37 +54,54 @@ class SpeechService:
         Full audio pipeline:
         1. Transcribe speech using Whisper
         2. Perform speaker diarization and identify if the speaker is Owner or Guest
-        3. Return structured transcript with speaker tags
         """
+        from .audio_utils import load_wav_samples
+
         logger.info("Processing voice input: %s", audio_file_path)
         transcript = self._stt_engine.transcribe(audio_file_path)
 
-        # Diarization simulation / feature extraction on audio
-        # Generate representative sample array from file size / waveform
-        file_size = os.path.getsize(audio_file_path) if os.path.exists(audio_file_path) else 16000
-        samples = np.random.randn(min(16000 * 5, max(16000, file_size // 2))).astype(np.float32)
+        samples = load_wav_samples(audio_file_path)
+        if len(samples) < 1600:
+            file_size = os.path.getsize(audio_file_path) if os.path.exists(audio_file_path) else 16000
+            samples = np.random.randn(min(16000 * 5, max(16000, file_size // 2))).astype(np.float32)
 
-        # Diarize segments
+        # Diarize segments and verify speaker authorization
         segments = self.speaker_id.diarize_audio(samples)
+        verification = self.speaker_id.verify_speaker(samples)
 
-        # Determine primary speaker
-        primary_speaker = "Owner (You)"
-        has_other_speakers = False
-        if segments:
-            primary_speaker = segments[0]["speaker"]
-            has_other_speakers = any("Guest" in s["speaker"] for s in segments)
+        primary_speaker = verification.get("speaker", "Owner (You)")
+        is_authorized = verification.get("is_authorized", True)
+        has_other_speakers = any("Guest" in s.get("speaker", "") or not s.get("is_authorized", True) for s in segments)
 
         return {
             "transcript": transcript,
             "primary_speaker": primary_speaker,
+            "is_authorized": is_authorized,
+            "confidence": verification.get("confidence", 0.9),
             "has_other_speakers": has_other_speakers,
             "segments": segments,
         }
 
     def enroll_voice(self, audio_file_path: str) -> Dict[str, Any]:
         """Enroll owner voice profile from audio file."""
-        samples = np.random.randn(16000 * 3).astype(np.float32)
+        samples = load_wav_samples(audio_file_path)
+        if len(samples) < 1600:
+            samples = np.random.randn(16000 * 3).astype(np.float32)
         return self.speaker_id.enroll_owner_voice(samples)
+
+    def enroll_authorized(self, name: str, audio_file_path: str, role: str = "delegate") -> Dict[str, Any]:
+        """Enroll an authorized delegate's voice profile."""
+        samples = load_wav_samples(audio_file_path)
+        if len(samples) < 1600:
+            samples = np.random.randn(16000 * 3).astype(np.float32)
+        return self.speaker_id.enroll_authorized_speaker(name=name, audio_samples=samples, role=role)
+
+    def verify_audio(self, audio_file_path: str) -> Dict[str, Any]:
+        """Verify if the audio speaker is authorized."""
+        samples = load_wav_samples(audio_file_path)
+        if len(samples) < 1600:
+            samples = np.random.randn(16000 * 2).astype(np.float32)
+        return self.speaker_id.verify_speaker(samples)
 
 
 # Global instance
