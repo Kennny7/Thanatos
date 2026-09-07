@@ -67,6 +67,11 @@ async def run_agent_loop(websocket: WebSocket, session_manager: SessionManager) 
             await websocket.send_json(ErrorMessage(detail=f"Invalid message format: {exc}").model_dump())
             continue
 
+        if user_msg.is_authorized is False:
+            denial_msg = f"⚠ Access Restricted: Voice detected from unauthorized speaker ({user_msg.speaker_tag or 'Guest'}). Only the Owner (Boss) or Authorized Delegates can issue directives."
+            await websocket.send_json(AssistantChunk(content=denial_msg).model_dump())
+            continue
+
         session_manager.remember_user_input(user_text)
         history = session_manager.get_conversation_history()
 
