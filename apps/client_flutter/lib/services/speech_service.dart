@@ -15,12 +15,12 @@ class SpeechService {
     final _textController = StreamController<String>.broadcast();
     final _statusController = StreamController<SpeechStatus>.broadcast();
     final _errorController = StreamController<String>.broadcast();
+    final _soundLevelController = StreamController<double>.broadcast();
 
-//   Stream<String> get onText => _textController.stream;
-//   Stream<SpeechStatus> get onStatus => _statusController.stream;
     Stream<String> get onText => _textController.stream;
     Stream<SpeechStatus> get onStatus => _statusController.stream;
     Stream<String> get onError => _errorController.stream;
+    Stream<double> get onSoundLevelChange => _soundLevelController.stream;
 
 
   bool get isListening => _isListening;
@@ -70,6 +70,9 @@ class SpeechService {
       pauseFor: const Duration(seconds: 3),
       partialResults: true,
       localeId: 'en_US',
+      onSoundLevelChange: (level) {
+        _soundLevelController.add(level);
+      },
       cancelOnError: true,
       listenMode: stt.ListenMode.confirmation,
     );
@@ -81,6 +84,7 @@ class SpeechService {
     await _speech.stop();
     _isListening = false;
     _statusController.add(SpeechStatus.notListening);
+    _soundLevelController.add(0.0);
   }
 
   /// Cancel listening without finalizing.
@@ -88,19 +92,16 @@ class SpeechService {
     await _speech.cancel();
     _isListening = false;
     _statusController.add(SpeechStatus.notListening);
+    _soundLevelController.add(0.0);
   }
 
-//   Future<void> dispose() async {
-//     await cancelListening();
-//     await _textController.close();
-//     await _statusController.close();
-//   }
-    Future<void> dispose() async {
+  Future<void> dispose() async {
     await cancelListening();
     await _textController.close();
     await _statusController.close();
     await _errorController.close();
-    }
+    await _soundLevelController.close();
+  }
 }
 
 enum SpeechStatus { listening, notListening, error }
