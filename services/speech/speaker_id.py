@@ -50,17 +50,21 @@ def _euclidean_distance(v1: List[float], v2: List[float]) -> float:
 
 class SpeakerIdentifier:
     """
-    Speaker Diarization and Voice Recognition Engine.
-    Identifies the primary user ("Owner") vs "Guest / Other Speakers".
+    Speaker Diarization, Voice Recognition, and Authorization Engine.
+    Distinguishes the primary system owner ("Owner / Boss"),
+    authorized secondary delegates ("Authorized Users"), and unauthorized third-party guests.
     """
 
     def __init__(self, profile_dir: str = app_config.speaker_enrollment_dir) -> None:
         self.profile_dir = profile_dir
         self.owner_profile_path = os.path.join(self.profile_dir, "owner_voice.json")
+        self.authorized_profiles_path = os.path.join(self.profile_dir, "authorized_speakers.json")
         self.owner_features: Optional[List[float]] = None
-        self._load_owner_profile()
+        self.authorized_speakers: Dict[str, Dict[str, Any]] = {}
+        self._load_profiles()
 
-    def _load_owner_profile(self) -> None:
+    def _load_profiles(self) -> None:
+        # Load primary owner profile
         if os.path.exists(self.owner_profile_path):
             try:
                 with open(self.owner_profile_path, "r", encoding="utf-8") as f:
@@ -70,18 +74,177 @@ class SpeakerIdentifier:
             except Exception as e:
                 logger.warning("Could not load owner voice profile: %s", e)
 
+        # Load authorized delegates list
+        if os.path.exists(self.authorized_profiles_path):
+            try:
+                with open(self.authorized_profiles_path, "r", encoding="utf-8") as f:
+                    self.authorized_speakers = json.load(f)
+                    logger.info("Loaded %d authorized speaker profiles", len(self.authorized_speakers))
+            except Exception as e:
+                logger.warning("Could not load authorized speakers: %s", e)
+
     def enroll_owner_voice(self, audio_samples: np.ndarray, sample_rate: int = 16000) -> Dict[str, Any]:
-        """Enroll the owner's voice fingerprint."""
+        """Enroll or update the owner's (boss) biometric voice fingerprint."""
         features = _extract_voice_features(audio_samples, sample_rate)
         self.owner_features = features
         os.makedirs(self.profile_dir, exist_ok=True)
         with open(self.owner_profile_path, "w", encoding="utf-8") as f:
             json.dump({"features": features, "sample_rate": sample_rate}, f, indent=2)
         logger.info("Enrolled owner voice profile successfully.")
-        return {"status": "success", "message": "Owner voice enrolled successfully!"}
+        return {"status": "success", "message": "Owner (Boss) voice enrolled successfully."}
+
+    def enroll_authorized_speaker(
+        self,
+        name: str,
+        audio_samples: np.ndarray,
+        sample_rate: int = 16000,
+        role: str = "delegate",
+    ) -> Dict[str, Any]:
+        """Enroll an authorized delegate permitted to issue directives."""
+        features = _extract_voice_features(audio_samples, sample_rate)
+        os.makedirs(self.profile_dir, exist_ok=True)
+        self.authorized_speakers[name] = {
+            "name": name,
+            "role": role,
+            "features": features,
+            "sample_rate": sample_rate,
+        }
+        with open(self.authorized_profiles_path, "w", encoding="utf-8") as f:
+            json.dump(self.authorized_speakers, f, indent=2)
+        logger.info("Enrolled authorized speaker '%s' (%s).", name, role)
+        return {"status": "success", "message": f"Speaker '{name}' authorized successfully."}
+
+    def remove_authorized_speaker(self, name: str) -> bool:
+        """Revoke authorization for a speaker."""
+        if name in self.authorized_speakers:
+            del self.authorized_speakers[name]
+            os.makedirs(self.profile_dir, exist_ok=True)
+            with open(self.authorized_profiles_path, "w", encoding="utf-8") as f:
+                json.dump(self.authorized_speakers, f, indent=2)
+            logger.info("Revoked authorization for speaker '%s'.", name)
+            return True
+        return False
+
+    def list_authorized_speakers(self) -> List[Dict[str, str]]:
+        """List all currently authorized speakers."""
+        items = []
+        if self.owner_features:
+            items.append({"name": "Owner (Boss)", "role": "primary_owner", "is_owner": True})
+        for name, data in self.authorized_speakers.items():
+            items.append({"name": name, "role": data.get("role", "delegate"), "is_owner": False})
+        return items
 
     def is_enrolled(self) -> bool:
         return self.owner_features is not None
+
+    def detect_voice_activity(
+        self,
+        audio_samples: np.ndarray,
+        sample_rate: int = 16000,
+        energy_threshold: float = 0.012,
+    ) -> Dict[str, Any]:
+        """
+        Lightweight Voice Activity Detection (VAD) computing RMS energy,
+        dominant frequency peak, and binary speech activity flag.
+        """
+        if len(audio_samples) == 0:
+            return {"is_speech": False, "rms": 0.0, "dominant_hz": 0.0}
+
+        samples = audio_samples.astype(np.float32)
+        rms = float(np.sqrt(np.mean(samples ** 2)))
+        
+        # Dominant frequency estimation via FFT
+        fft_vals = np.abs(np.fft.rfft(samples))
+        freqs = np.fft.rfftfreq(len(samples), 1.0 / sample_rate)
+        peak_idx = int(np.argmax(fft_vals)) if len(fft_vals) > 0 else 0
+        dominant_hz = float(freqs[peak_idx]) if peak_idx < len(freqs) else 0.0
+
+        is_speech = bool(rms > energy_threshold and 75.0 <= dominant_hz <= 3800.0)
+        return {
+            "is_speech": is_speech,
+            "rms": round(rms, 4),
+            "dominant_hz": round(dominant_hz, 1),
+        }
+
+    def verify_speaker(
+        self,
+        audio_samples: np.ndarray,
+        sample_rate: int = 16000,
+        threshold: float = 2.6,
+    ) -> Dict[str, Any]:
+        """
+        Evaluates an audio snippet to determine if the speaker is:
+        1. Owner (Boss) - Full Access
+        2. Authorized Delegate - Permitted Access
+        3. Unauthorized Guest - Directive Execution Blocked
+        """
+        if len(audio_samples) == 0:
+            return {
+                "speaker": "Unknown",
+                "is_owner": False,
+                "is_authorized": False,
+                "confidence": 0.0,
+                "action": "deny",
+                "reason": "Empty audio",
+            }
+
+        feat = _extract_voice_features(audio_samples, sample_rate)
+
+        # Compare against Owner and all Authorized delegates to find the closest match
+        candidates = []
+        if self.owner_features is not None:
+            owner_dist = _euclidean_distance(feat, self.owner_features)
+            candidates.append({
+                "speaker": "Owner (Boss)",
+                "is_owner": True,
+                "is_authorized": True,
+                "dist": owner_dist,
+            })
+
+        for name, entry in self.authorized_speakers.items():
+            ref_feat = entry.get("features", [])
+            if ref_feat:
+                dist = _euclidean_distance(feat, ref_feat)
+                candidates.append({
+                    "speaker": f"Authorized ({name})",
+                    "is_owner": False,
+                    "is_authorized": True,
+                    "dist": dist,
+                })
+
+        if candidates:
+            best = min(candidates, key=lambda c: c["dist"])
+            if best["dist"] < threshold:
+                conf = max(0.6, min(0.99, 1.0 - (best["dist"] / 5.0)))
+                return {
+                    "speaker": best["speaker"],
+                    "is_owner": best["is_owner"],
+                    "is_authorized": True,
+                    "confidence": round(conf, 2),
+                    "action": "allow",
+                    "reason": f"Voice matched {best['speaker']} profile",
+                }
+
+        # If no profile enrolled yet, default to allowing with warning
+        if self.owner_features is None and not self.authorized_speakers:
+            return {
+                "speaker": "Primary User (Default)",
+                "is_owner": True,
+                "is_authorized": True,
+                "confidence": 0.80,
+                "action": "allow",
+                "reason": "No voice profiles enrolled yet; defaulting to open mode",
+            }
+
+        # Unauthorized third party
+        return {
+            "speaker": "Unauthorized Guest",
+            "is_owner": False,
+            "is_authorized": False,
+            "confidence": 0.90,
+            "action": "deny",
+            "reason": "Speaker voice does not match Owner or any Authorized Delegate",
+        }
 
     def diarize_audio(
         self,
@@ -90,7 +253,7 @@ class SpeakerIdentifier:
         segment_duration_sec: float = 3.0,
     ) -> List[Dict[str, Any]]:
         """
-        Segments audio into speaker turns and classifies each as Owner ("You") or Guest Speaker.
+        Segments audio into speaker turns and classifies each as Owner, Authorized, or Guest.
         """
         if len(audio_samples) == 0:
             return []
@@ -107,25 +270,15 @@ class SpeakerIdentifier:
             if len(chunk) < sample_rate * 0.5:
                 continue
 
-            chunk_feat = _extract_voice_features(chunk, sample_rate)
-
-            # Determine speaker identity
-            if self.owner_features is not None:
-                dist = _euclidean_distance(chunk_feat, self.owner_features)
-                is_owner = dist < 2.5
-                speaker_tag = "Owner (You)" if is_owner else f"Guest Speaker {(i % 2) + 1}"
-                confidence = max(0.5, min(0.99, 1.0 - (dist / 5.0)))
-            else:
-                # If not enrolled yet, default first turn to User
-                speaker_tag = "Speaker 1 (You)" if i == 0 else f"Speaker {(i % 2) + 1}"
-                confidence = 0.85
+            ver = self.verify_speaker(chunk, sample_rate)
 
             segments.append({
                 "segment_index": i,
                 "start_time_sec": round(start_sample / sample_rate, 2),
                 "end_time_sec": round(end_sample / sample_rate, 2),
-                "speaker": speaker_tag,
-                "confidence": round(confidence, 2),
+                "speaker": ver["speaker"],
+                "is_authorized": ver["is_authorized"],
+                "confidence": ver["confidence"],
             })
 
         return segments
