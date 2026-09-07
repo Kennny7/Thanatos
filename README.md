@@ -48,14 +48,18 @@ Explore the comprehensive technical documentation suite in the [`docs/`](./docs)
 | Document | Description | Action |
 | :--- | :--- | :---: |
 | **Getting Started Guide** | Step-by-step setup guide for Python backend, Ollama models, and Flutter client. | [![Read Guide](https://img.shields.io/badge/Open-Guide-2EA44F?style=flat-square)](./docs/getting_started.md) |
+| **Production Deployment Guide** | Step-by-step VPS server deployment, port mappings, Caddy auto-HTTPS, and systemd service templates. | [![Read Deployment Guide](https://img.shields.io/badge/Open-Deployment%20Guide-2EA44F?style=flat-square)](./docs/production_deployment.md) |
 | **System Architecture** | Component breakdown, supervisor-worker topology, and layer interactions. | [![Read Spec](https://img.shields.io/badge/Open-Spec-6F42C1?style=flat-square)](./docs/architecture.md) |
 | **Master Architecture & Workflows** | Authoritative 7-module blueprint with sequence diagrams and execution contracts. | [![Read Blueprint](https://img.shields.io/badge/Open-Blueprint-007ACC?style=flat-square)](./docs/system_architecture_and_workflow.md) |
 | **API Specification** | Full REST endpoints and WebSocket streaming protocol (`/ws`) reference. | [![Read API Spec](https://img.shields.io/badge/Open-API%20Spec-009688?style=flat-square)](./docs/api_spec.md) |
 | **Plugin Development Guide** | Tutorial on creating, registering, and testing custom sub-agent skills. | [![Read Guide](https://img.shields.io/badge/Open-Dev%20Guide-F39C12?style=flat-square)](./docs/plugin_dev_guide.md) |
 | **Speech Intelligence & AEC** | Voice pipeline, acoustic echo cancellation, and speaker diarization details. | [![Read Voice Spec](https://img.shields.io/badge/Open-Voice%20Spec-3776AB?style=flat-square)](./docs/speech_intelligence.md) |
 | **Memory & RAG Subsystem** | ChromaDB vector store, semantic embeddings, and career profile matching. | [![Read RAG Guide](https://img.shields.io/badge/Open-RAG%20Guide-4B8BBE?style=flat-square)](./docs/memory_and_rag.md) |
+| **Vector Database Setup Guide** | Detailed setup for embedded ChromaDB, Docker ChromaDB, Qdrant, and Ollama embedding models. | [![Read Setup Guide](https://img.shields.io/badge/Open-Vector%20DB%20Guide-4B8BBE?style=flat-square)](./docs/vector_database_setup.md) |
 | **Security & Isolation Model** | Sandbox boundaries, OS safety confirmation gates, and Merkle audit logs. | [![Read Model](https://img.shields.io/badge/Open-Security%20Model-E74C3C?style=flat-square)](./docs/security_model.md) |
+| **Security & Network Intelligence** | Authentication gates, network scanning capabilities, OSINT pipelines, and defence mechanisms. | [![Read Security Guide](https://img.shields.io/badge/Open-Network%20Security-E74C3C?style=flat-square)](./docs/security_and_network.md) |
 | **Model Context Protocol (MCP)** | Exposing Thanatos OS tools to Claude Desktop, Cursor IDE, and MCP hosts. | [![Read MCP Guide](https://img.shields.io/badge/Open-MCP%20Guide-555555?style=flat-square)](./docs/mcp_server.md) |
+| **Future Vision: CCTV & Biometrics** | Architectural blueprint for RTSP video stream ingest, YOLO object tracking, and InsightFace recognition. | [![Read Roadmap](https://img.shields.io/badge/Open-Future%20Roadmap-007ACC?style=flat-square)](./docs/future_vision_roadmap.md) |
 | **Contributor Guide** | Coding conventions, PR guidelines, and running the test suite. | [![Read Guide](https://img.shields.io/badge/Open-Contributing-24292E?style=flat-square)](./docs/contributing.md) |
 
 ---
@@ -64,48 +68,141 @@ Explore the comprehensive technical documentation suite in the [`docs/`](./docs)
 
 ```mermaid
 flowchart TB
-    subgraph ClientLayer ["1. Client Layer (Cross-Platform Flutter)"]
+
+    subgraph ClientLayer ["1. Holographic HUD Client (Cross-Platform Flutter)"]
         FlutterApp["Flutter App (Desktop / Mobile / Web)"]
-        ChatUI["Chat UI & Deep Thinking Trace"]
-        VoiceUI["Voice Visualizer (AEC & Speaker Diarization)"]
-        SettingsUI["Model Configuration (Ollama & Cloud)"]
+        ChatUI["Tactical Chat UI & Deep Thinking Trace"]
+        HUDSphere["110-Node 3D Holographic Data Sphere<br/>Audio-Reactive & Harmonic Rotation"]
+        CommandDeck["Command Deck Input Terminal"]
+        ModeSelector["Operation Modes<br/>AUTONOMOUS | DEEP REASONING | TERMINAL CODE"]
+        VoiceUI["Voice Visualizer<br/>AEC & Speaker Diarization"]
+        ThemeEngine["Futuristic Theme Engine<br/>TRON | Cyberpunk Amber | Deep Matrix | Obsidian Purple"]
+        SettingsUI["Dynamic Model & System Configuration"]
     end
 
     subgraph APILayer ["2. API Orchestration Gateway (FastAPI)"]
         MainApp["FastAPI Server (:8000)"]
+        AuthGate["Bearer Token & WSS Security Gate"]
         WSRoute["WebSocket Handler (/ws)"]
-        ConfigRoute["Config API (/api/config)"]
+        ConfigRoute["Configuration API (/api/config)"]
         SpeechRoute["Speech API (/speech)"]
         OSRoute["OS Automation API (/os)"]
+        OllamaRoute["Ollama Model Management API"]
     end
 
-    subgraph CoreEngine ["3. Agent & Orchestration Core"]
-        Coordinator["Agent Coordinator / Supervisor"]
-        UnifiedProvider["Unified LLM Brain Adapter"]
+    subgraph CoreEngine ["3. Autonomous Agent & Orchestration Core"]
+        Coordinator["Autonomous Agent Coordinator / Supervisor"]
+        ReasoningEngine["Planning & Deep Reasoning Engine"]
+        UnifiedProvider["Unified LLM Brain Adapter<br/>Ollama & Cloud Models"]
+        SelfDiagnosis["Proactive Self-Diagnosis<br/>Connectivity & Resource Monitoring"]
         SkillRegistry["Singleton Skill Registry"]
     end
 
-    subgraph SubAgents ["4. Domain Agent Skills"]
+    subgraph ModelEngine ["4. Dynamic Model & Hardware Intelligence"]
+        OllamaManager["Dynamic Ollama Engine"]
+        ModelDetection["Local Model Detection<br/>GET /api/tags"]
+        ModelPuller["In-UI Model Puller<br/>Real-Time Progress Streaming"]
+        HardwareDetector["Hardware Detection<br/>CPU | RAM | GPU VRAM"]
+        ModelRecommendation["Task-Aware Model Recommendation"]
+    end
+
+    subgraph SubAgents ["5. Domain Agent Skills"]
         JobHunter["Job Hunter Agent"]
         ResumeTailor["Resume Tailor Agent (RAG)"]
         JobApplicator["Job Applicator Agent"]
         NovelAgent["Novel Translation Agent"]
-        SelfImprovement["Self-Improvement & Sandbox Verifier"]
+        SelfImprovement["Self-Improvement Agent"]
+        SandboxVerifier["Sandbox & Execution Verifier"]
     end
 
-    subgraph MemoryVoice ["5. Memory, Audio & Governance"]
-        RAGMemory["ChromaDB Vector Store & User Profile"]
-        SpeechService["AEC, ASR, TTS & Speaker Diarization"]
-        SandboxAudit["Sandbox Runner & Merkle Audit Trail"]
+    subgraph IntelligenceMemory ["6. Hybrid Memory & Intelligence"]
+        FactExtractor["Dynamic Fact & Preference Extraction"]
+        RAGMemory["Semantic Vector Memory<br/>ChromaDB"]
+        WorkflowMemory["Persistent Workflow & Context Memory"]
+        UserProfile["Dynamic User Profile"]
     end
 
-    FlutterApp <-->|WebSocket / REST| MainApp
-    MainApp --> WSRoute & ConfigRoute & SpeechRoute & OSRoute
-    WSRoute --> Coordinator --> UnifiedProvider
-    Coordinator --> SkillRegistry --> SubAgents
-    Coordinator --> RAGMemory
+    subgraph VoiceGovernance ["7. Voice, Security & Governance"]
+        SpeechService["AEC | ASR | TTS | Speaker Diarization"]
+        SandboxAudit["Sandbox Runner"]
+        MerkleAudit["SHA-256 Merkle Audit Trail"]
+        SecurityMonitor["Action & Security Monitoring"]
+        CaddyProxy["Caddy Reverse Proxy<br/>Auto-HTTPS"]
+    end
+
+
+    %% Client Interactions
+    FlutterApp --> ChatUI
+    FlutterApp --> HUDSphere
+    FlutterApp --> CommandDeck
+    CommandDeck --> ModeSelector
+    FlutterApp --> VoiceUI
+    FlutterApp --> ThemeEngine
+    FlutterApp --> SettingsUI
+
+    %% API Communication
+    FlutterApp <-->|REST / WebSocket / WSS| AuthGate
+    AuthGate --> MainApp
+    MainApp --> WSRoute
+    MainApp --> ConfigRoute
+    MainApp --> SpeechRoute
+    MainApp --> OSRoute
+    MainApp --> OllamaRoute
+
+    %% Agent Orchestration
+    WSRoute --> Coordinator
+    ModeSelector --> ReasoningEngine
+    ReasoningEngine --> Coordinator
+    Coordinator --> UnifiedProvider
+    Coordinator --> SkillRegistry
+    Coordinator --> SelfDiagnosis
+
+    %% Model Intelligence
+    ConfigRoute --> OllamaManager
+    OllamaRoute --> OllamaManager
+    OllamaManager --> ModelDetection
+    OllamaManager --> ModelPuller
+    OllamaManager --> HardwareDetector
+    HardwareDetector --> ModelRecommendation
+    ModelRecommendation --> UnifiedProvider
+    ModelDetection --> UnifiedProvider
+
+    %% Agent Skills
+    SkillRegistry --> JobHunter
+    SkillRegistry --> ResumeTailor
+    SkillRegistry --> JobApplicator
+    SkillRegistry --> NovelAgent
+    SkillRegistry --> SelfImprovement
+    SelfImprovement --> SandboxVerifier
+
+    %% Hybrid Memory
+    Coordinator --> FactExtractor
+    FactExtractor --> UserProfile
+    FactExtractor --> WorkflowMemory
+    UserProfile --> RAGMemory
+    WorkflowMemory --> RAGMemory
+    Coordinator <--> RAGMemory
+    ResumeTailor <--> RAGMemory
+
+    %% Voice
     SpeechRoute --> SpeechService
-    SubAgents --> SandboxAudit
+    VoiceUI <--> SpeechService
+
+    %% OS Automation & Governance
+    OSRoute --> SandboxAudit
+    Coordinator --> SandboxAudit
+    SandboxVerifier --> SandboxAudit
+    SandboxAudit --> MerkleAudit
+    MerkleAudit --> SecurityMonitor
+
+    %% Production Deployment
+    CaddyProxy --> AuthGate
+
+    %% Self-Diagnosis Feedback
+    SelfDiagnosis --> OllamaManager
+    SelfDiagnosis --> HardwareDetector
+    SelfDiagnosis --> SecurityMonitor
+    SelfDiagnosis --> ChatUI
 ```
 
 ---
