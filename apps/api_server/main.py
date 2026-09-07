@@ -7,6 +7,7 @@ from .routes.websocket import router as ws_router
 from .routes.health import router as health_router
 from .routes.speech import router as speech_router
 from .routes.config import router as config_router
+from .routes.system_metrics import router as system_metrics_router
 from .middleware.auth import ApiAuthMiddleware
 from services.os_automation.router import os_automation_router
 from plugins.base.registry import init_default_skills
@@ -44,5 +45,6 @@ app.include_router(health_router)
 app.include_router(ws_router)
 app.include_router(speech_router)
 app.include_router(config_router)
+app.include_router(system_metrics_router)
 app.include_router(os_automation_router)
 
