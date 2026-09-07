@@ -62,6 +62,10 @@ class SkillRegistry:
 
     async def dispatch(self, tool_name: str, params: dict) -> ToolResult:
         """Find the skill that owns the given tool and invoke its execution."""
+        # Ensure lazy skills are instantiated so their tools can be dispatched
+        for name in list(self._lazy_factories.keys()):
+            self._ensure_skill(name)
+
         for skill in self._skills.values():
             for tool_def in skill.get_tool_definitions():
                 if tool_def.name == tool_name:
@@ -85,6 +89,7 @@ def init_default_skills() -> None:
     registry.register_lazy("job_applicator", lambda: __import__("plugins.system_skills.job_applicator.job_applicator_skill", fromlist=["JobApplicatorSkill"]).JobApplicatorSkill())
     registry.register_lazy("novel_agent", lambda: __import__("plugins.system_skills.novel_agent.novel_skill", fromlist=["NovelAgentSkill"]).NovelAgentSkill())
     registry.register_lazy("self_improvement", lambda: __import__("plugins.system_skills.self_improvement.self_improvement_skill", fromlist=["SelfImprovementSkill"]).SelfImprovementSkill())
+    registry.register_lazy("web_search", lambda: __import__("plugins.system_skills.web_search.web_search_skill", fromlist=["WebSearchSkill"]).WebSearchSkill())
 
 
 init_default_skills()
