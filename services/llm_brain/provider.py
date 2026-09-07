@@ -30,7 +30,7 @@ class UnifiedLLMProvider:
 
     def __init__(self, settings: Optional[Settings] = None) -> None:
         self.settings = settings or Settings.load()
-        self.timeout = httpx.Timeout(connect=10.0, read=120.0, write=10.0, pool=5.0)
+        self.timeout = httpx.Timeout(connect=15.0, read=300.0, write=30.0, pool=10.0)
 
     def update_settings(self, new_settings: Settings) -> None:
         self.settings = new_settings
