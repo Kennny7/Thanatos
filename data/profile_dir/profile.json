@@ -1,0 +1,57 @@
+{
+  "name": "Khushal",
+  "email": "khushalpareta9@gmail.com",
+  "location": "Mumbai-India",
+  "title": "ML-AI-Engineer",
+  "portfolio_url": "https://khushal-portfolio.dev",
+  "github_url": "https://github.com/Kennny7",
+  "linkedin_url": "https://linkedin.com/in/khushal-pareta",
+  "education": [
+    {
+      "degree": "Bachelor of Technology in Computer Science",
+      "institution": "University of Pune",
+      "year": "2024"
+    }
+  ],
+  "skills": [
+    "Python",
+    "Flutter",
+    "FastAPI",
+    "Machine Learning",
+    "LLMs",
+    "RAG",
+    "SQL",
+    "Git",
+    "Docker"
+  ],
+  "experience": [
+    {
+      "role": "AI / ML Developer Intern",
+      "company": "Tech Solutions",
+      "duration": "2023 - 2024",
+      "summary": "Built RAG systems and autonomous agent workflows."
+    }
+  ],
+  "projects": [
+    {
+      "name": "Thanatos Assistant",
+      "tech": "Python, Flutter, LLMs, Vector DB",
+      "summary": "Autonomous AI assistant capable of web scraping, RAG, and multi-agent coordination."
+    }
+  ],
+  "preferences": {
+    "preferred_locations": [
+      "Pune",
+      "Remote",
+      "Bangalore"
+    ],
+    "target_roles": [
+      "Software Engineer",
+      "AI Engineer",
+      "Fresher Developer",
+      "Full Stack Developer"
+    ],
+    "min_expected_salary": "6-12 LPA"
+  },
+  "custom_documents": {}
+}
