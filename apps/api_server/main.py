@@ -13,10 +13,22 @@ from services.os_automation.router import os_automation_router
 from plugins.base.registry import init_default_skills
 
 
+from services.memory.memory_manager import memory_service
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Auto-initialize default system skills on startup
     init_default_skills()
+    diag = memory_service.vector_store.verify_and_diagnose()
+    print(f"\n========================================================")
+    print(f"🚀 Thanatos AI Server Engine Starting Up")
+    print(f"📦 Vector Store Backend : {diag.get('backend')}")
+    print(f"📂 Persistence Path     : {diag.get('persist_directory')}")
+    print(f"🗂️  Collection Name      : {diag.get('collection')}")
+    print(f"📄 Indexed Documents    : {diag.get('doc_count')}")
+    print(f"✨ New DB Created?      : {'Yes (Empty initialized)' if diag.get('is_new') else 'No (Existing store loaded)'}")
+    print(f"========================================================\n")
     yield
 
 

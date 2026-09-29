@@ -94,8 +94,10 @@ class UnifiedLLMProvider:
             elif content is not None:
                 messages.append({"role": role, "content": str(content)})
 
-        if self.settings.provider == "deepseek" and self.settings.api_key:
-            return await self._call_openai_compatible(messages, tools_schema, self.settings.base_url, self.settings.api_key)
+        if self.settings.provider in ("openai", "deepseek"):
+            return await self._call_openai_compatible(
+                messages, tools_schema, self.settings.base_url, self.settings.api_key or "default-key"
+            )
 
         return await self._call_ollama(messages, tools_schema)
 
@@ -261,29 +263,53 @@ class UnifiedLLMProvider:
             payload["tools"] = tools
 
         headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-        url = f"{base_url.rstrip('/v1')}/v1/chat/completions"
+        clean_base = base_url.rstrip("/")
+        url = clean_base if clean_base.endswith("/chat/completions") else f"{clean_base.rstrip('/v1')}/v1/chat/completions"
 
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            resp = await client.post(url, json=payload, headers=headers)
-            resp.raise_for_status()
-            data = resp.json()
-            choice = data["choices"][0]["message"]
-            content = choice.get("content", "")
-            tool_calls = choice.get("tool_calls")
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                resp = await client.post(url, json=payload, headers=headers)
+                resp.raise_for_status()
+                data = resp.json()
+                choice = data["choices"][0]["message"]
+                content = choice.get("content") or ""
+                reasoning = choice.get("reasoning_content") or choice.get("thought")
+                tool_calls = choice.get("tool_calls")
 
-            if tool_calls:
-                tc = tool_calls[0]
-                tool_name = tc["function"]["name"]
-                raw_args = tc["function"]["arguments"]
-                args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args
-                return LLMResponse(action="tool_call", tool_name=tool_name, args=args, text=content)
+                if tool_calls:
+                    tc = tool_calls[0]
+                    tool_name = tc["function"]["name"]
+                    raw_args = tc["function"]["arguments"]
+                    args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args
+                    return LLMResponse(action="tool_call", tool_name=tool_name, args=args, text=content, thought=reasoning)
 
-            parsed = self._extract_embedded_tool_call(content)
-            if parsed:
-                return parsed
+                parsed = self._extract_embedded_tool_call(content)
+                if parsed:
+                    if reasoning and not parsed.thought:
+                        parsed.thought = reasoning
+                    return parsed
 
-            thought, clean_text = self._extract_thought(content)
-            return LLMResponse(action="respond", text=clean_text or content, thought=thought)
+                thought, clean_text = self._extract_thought(content)
+                combined_thought = reasoning or thought
+                return LLMResponse(action="respond", text=clean_text or content, thought=combined_thought)
+        except httpx.ConnectError as e:
+            logger.exception("OpenAI-compatible connection refused at %s: %s", url, e)
+            return LLMResponse(
+                action="error",
+                text=f"Cannot connect to LLM server at {url}. Error: {e}",
+            )
+        except httpx.HTTPStatusError as e:
+            logger.exception("OpenAI-compatible HTTP error %s at %s: %s", e.response.status_code, url, e)
+            return LLMResponse(
+                action="error",
+                text=f"LLM server returned HTTP {e.response.status_code}: {e.response.text}",
+            )
+        except Exception as e:
+            logger.exception("Unexpected error calling OpenAI-compatible API at %s: %s", url, e)
+            return LLMResponse(
+                action="error",
+                text=f"Error communicating with LLM server: {e}",
+            )
 
     def _extract_embedded_tool_call(self, text: str) -> Optional[LLMResponse]:
         """Extract tool calls formatted inside <tool_call> tags or JSON code blocks."""

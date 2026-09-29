@@ -51,20 +51,57 @@ class VectorStore:
         self._collection = None
         self._fallback_docs: List[Dict[str, Any]] = []
 
+        self._status_summary: Dict[str, Any] = {}
         self._init_backend()
 
     def _init_backend(self) -> None:
+        """Autonomously initialize, verify, and report vector database health."""
+        os.makedirs(self.persist_directory, exist_ok=True)
         try:
             import chromadb
-            os.makedirs(self.persist_directory, exist_ok=True)
             self._chroma_client = chromadb.PersistentClient(path=self.persist_directory)
+            
+            # Check existing collections
+            existing_cols = [c.name for c in self._chroma_client.list_collections()]
+            is_new = self.collection_name not in existing_cols
+            
             self._collection = self._chroma_client.get_or_create_collection(name=self.collection_name)
             self._use_chroma = True
-            logger.info("ChromaDB vector store initialized in %s", self.persist_directory)
+            count = self._collection.count()
+            
+            action_desc = "created new collection" if is_new else f"loaded existing collection with {count} documents"
+            logger.info("ChromaDB vector store initialized in '%s' (%s: '%s')", self.persist_directory, action_desc, self.collection_name)
+            self._status_summary = {
+                "backend": "ChromaDB (Persistent SQLite)",
+                "status": "ready",
+                "is_new": is_new,
+                "persist_directory": os.path.abspath(self.persist_directory),
+                "collection": self.collection_name,
+                "doc_count": count,
+            }
         except Exception as e:
-            logger.warning("ChromaDB not available (%s), using local fast fallback store.", e)
+            logger.warning("ChromaDB not available or failed (%s), using local fast fallback store.", e)
             self._use_chroma = False
             self._load_fallback_store()
+            self._status_summary = {
+                "backend": "Local JSON Fallback Store",
+                "status": "fallback",
+                "persist_directory": os.path.abspath(self.persist_directory),
+                "collection": self.collection_name,
+                "doc_count": len(self._fallback_docs),
+                "reason": str(e),
+            }
+
+    def verify_and_diagnose(self) -> Dict[str, Any]:
+        """Return diagnostic health information for startup inspection and UI/CLI display."""
+        if self._use_chroma and self._collection is not None:
+            try:
+                self._status_summary["doc_count"] = self._collection.count()
+            except Exception:
+                pass
+        else:
+            self._status_summary["doc_count"] = len(self._fallback_docs)
+        return self._status_summary
 
     def _load_fallback_store(self) -> None:
         os.makedirs(self.persist_directory, exist_ok=True)

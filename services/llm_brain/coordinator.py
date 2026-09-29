@@ -193,46 +193,62 @@ If the user asks you to perform an action or integration that you lack tools for
 
     async def _run_job_hunt_pipeline(self, user_prompt: str, rag_context: str) -> AsyncGenerator[Dict[str, Any], None]:
         """Multi-agent pipeline: Job Search -> Resume Tailoring -> Job Application."""
+        # Detect target experience, location, and role from user prompt
+        lower_prompt = user_prompt.lower()
+        exp_target = "3 years and 8 months" if any(k in lower_prompt for k in ["3 year", "3.8", "3 years 8 months", "3 years and 8 months"]) else "3+ years"
+        location_target = "Pune (Hybrid/Office) & Remote" if "pune" in lower_prompt or "remote" in lower_prompt else "Remote / Pune"
+        role_target = "AI / ML Engineer" if any(k in lower_prompt for k in ["ai", "ml", "machine learning"]) else "Software Engineer"
+
         # 1. Job Hunter Subtask
         yield {
             "type": "agent_status",
             "agent": "Web Crawler & Job Hunter",
-            "status": "Searching for freshers job openings in Pune and extracting listings...",
+            "status": f"Browsing web for {role_target} openings ({location_target}, exp: {exp_target}) accepting email applications...",
             "progress": 0.25,
         }
         
-        search_res = await registry.dispatch("search_jobs", {"location": "Pune", "keywords": "freshers software engineer", "limit": 3})
+        search_res = await registry.dispatch("search_jobs", {
+            "location": location_target,
+            "keywords": role_target,
+            "experience": exp_target,
+            "require_email_apply": True,
+            "limit": 5,
+        })
         jobs = search_res.content.get("jobs", []) if search_res.success and isinstance(search_res.content, dict) else []
 
         if not jobs:
             yield {
                 "type": "assistant_chunk",
-                "content": "I searched for freshers job openings in Pune but found no immediate matches. Please refine the query.",
+                "content": f"I browsed for {role_target} openings matching {location_target} with {exp_target} experience accepting email applications, but found no open vacancies. Try broadening your criteria.",
             }
             return
 
         # 2. Resume Tailoring Subtask
+        first_job = jobs[0]
         yield {
             "type": "agent_status",
             "agent": "Resume Tailor Agent",
-            "status": f"Reading your profile from RAG memory and tailoring resume for {len(jobs)} positions...",
+            "status": f"Calibrating resume to {exp_target} and crafting LaTeX & Markdown documents for {first_job['company']}...",
             "progress": 0.60,
         }
 
-        first_job = jobs[0]
         tailor_res = await registry.dispatch("tailor_resume", {
-            "job_title": first_job.get("title", "Software Engineer"),
-            "company": first_job.get("company", "TechCorp"),
-            "job_description": first_job.get("description", "Python, FastAPI, RAG, Web Development"),
+            "job_title": first_job.get("title", role_target),
+            "company": first_job.get("company", "DeepLogic AI"),
+            "job_description": first_job.get("description", ""),
+            "experience_level": exp_target,
         })
 
-        tailored_resume = tailor_res.content if tailor_res.success else "Tailored resume generated based on your profile."
+        tailor_data = tailor_res.content if tailor_res.success and isinstance(tailor_res.content, dict) else {}
+        tailored_resume_md = tailor_data.get("resume_markdown", "Tailored Markdown Resume")
+        tailored_resume_latex = tailor_data.get("resume_latex", "")
+        cover_letter = tailor_data.get("cover_letter", "")
 
         # 3. Job Applicator Subtask
         yield {
             "type": "agent_status",
             "agent": "Job Applicator Agent",
-            "status": f"Preparing job applications and drafting cover letters...",
+            "status": f"Drafting humanized email outreach to {first_job.get('apply_email')} and recording application log...",
             "progress": 0.85,
         }
 
@@ -240,36 +256,52 @@ If the user asks you to perform an action or integration that you lack tools for
             "job_id": first_job.get("id", "job-1"),
             "job_title": first_job.get("title"),
             "company": first_job.get("company"),
-            "tailored_resume": str(tailored_resume),
+            "recipient_email": first_job.get("apply_email"),
+            "hiring_manager": first_job.get("hiring_manager"),
+            "tailored_resume": tailored_resume_md,
+            "cover_letter": cover_letter,
+            "status": "Staged for Email Dispatch (Humanized Outreach)",
         })
 
         yield {
             "type": "agent_status",
             "agent": "Coordinator",
-            "status": "All sub-agent tasks completed successfully!",
+            "status": "Job hunt & email application package completed and logged!",
             "progress": 1.0,
         }
 
-        # Final synthesized markdown response
-        summary_md = f"""### 🎯 Autonomous Job Hunt & Application Summary
+        # Build clean summary
+        summary_md = f"""### 🎯 Autonomous Job Hunt & Email Outreach Dispatch
 
-**1. 🔍 Job Search Agent Found:**
+**1. 🔍 Suitable Matched Jobs ({location_target} | Experience: {exp_target}):**
 """
         for j in jobs:
-            summary_md += f"- **{j['title']}** at *{j['company']}* ({j.get('location', 'Pune')}) | Exp: {j.get('experience', '0-1 yrs')} | [View Job]({j.get('url', '#')})\n"
+            email_info = f"`{j.get('apply_email')}`" if j.get('apply_email') else "Portal"
+            summary_md += f"- **{j['title']}** at **{j['company']}**\n  - Mode: {j.get('work_mode', 'Remote/Hybrid')} | Exp: {j.get('experience_required', exp_target)}\n  - Email Channel: {email_info} ({j.get('hiring_manager', 'Hiring Team')})\n  - [Job Link]({j.get('url', '#')})\n"
 
         summary_md += f"""
 ---
-**2. 📄 Tailored Resume Prepared for {first_job['title']} at {first_job['company']}:**
-```markdown
-{tailored_resume.get('resume_markdown', tailored_resume) if isinstance(tailored_resume, dict) else tailored_resume}
+**2. ✉️ Humanized Outreach Email Prepared for `{first_job['company']}`:**
+```text
+To: {first_job.get('apply_email', 'talent@company.com')}
+Subject: Application: {first_job['title']} - {hybrid_memory.profile.name or 'Applicant'}
+
+{cover_letter}
 ```
 
 ---
-**3. ✉️ Application Status:**
-- **Application Package**: Ready for `{first_job['company']}`
-- **Cover Letter**: Prepared and formatted
-- **Submission Mode**: Staged for dispatch ({apply_res.content.get('status', 'Ready') if apply_res.success and isinstance(apply_res.content, dict) else 'Ready'})
+**3. 📄 Tailored Resume Preview (Calibrated to {exp_target}):**
+```markdown
+{tailored_resume_md[:700]}...
+```
+
+---
+**4. 📋 Application Log & Audit Trail:**
+- **Application ID**: `{apply_res.content.get('application_id', 'N/A') if apply_res.success else 'N/A'}`
+- **Company**: `{first_job['company']}`
+- **Status**: `{apply_res.content.get('status', 'Staged') if apply_res.success else 'Staged'}`
+- **Persistent Audit File**: `logs/job_applications.jsonl`
+- **Resume Formats Prepared**: Markdown (`.md`) and LaTeX (`.tex`) with compensated experience requirements.
 """
         yield {"type": "assistant_chunk", "content": summary_md.strip()}
 

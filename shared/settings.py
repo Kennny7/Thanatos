@@ -56,12 +56,14 @@ class Settings:
 
         is_local = any(local in base_url for local in ("localhost", "127.0.0.1", "ollama", "local-llm"))
 
-        if "deepseek" in base_url:
+        provider_env = os.getenv("LLM_PROVIDER", app_config.llm_provider).lower()
+
+        if provider_env in ("openai", "openai_compatible") or "openai" in base_url or ":8080" in base_url or base_url.endswith("/v1"):
+            provider = "openai"
+            api_key = openai_key or "not-needed"
+        elif "deepseek" in base_url or provider_env == "deepseek":
             provider = "deepseek"
             api_key = deepseek_key
-        elif "openai" in base_url:
-            provider = "openai"
-            api_key = openai_key
         else:
             provider = "ollama"
             api_key = "ollama"

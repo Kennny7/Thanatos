@@ -45,6 +45,7 @@ class AppConfig(BaseSettings):
     deepseek_api_base_url: str = "https://api.deepseek.com"
     deepseek_chat_model: str = "deepseek-chat"
     openai_api_key: Optional[str] = None
+    llm_enable_thinking: bool = True
 
     # ------------------------------------------------------------------ #
     # Memory / ChromaDB
@@ -61,6 +62,17 @@ class AppConfig(BaseSettings):
     user_email: str = "user@example.com"
     user_location: str = ""
     user_title: str = ""
+    profile_dir: str = "./data/profile_dir"
+
+    # ------------------------------------------------------------------ #
+    # Email / SMTP Settings
+    # ------------------------------------------------------------------ #
+    smtp_host: Optional[str] = None
+    smtp_port: int = 587
+    smtp_user: Optional[str] = None
+    smtp_password: Optional[str] = None
+    smtp_use_tls: bool = True
+    smtp_from_email: Optional[str] = None
 
     # ------------------------------------------------------------------ #
     # Voice / Speech
