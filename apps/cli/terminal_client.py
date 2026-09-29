@@ -151,20 +151,90 @@ class ThanatosCLI:
 
         elif cmd == "/profile":
             if arg:
-                if os.path.exists(arg):
+                if os.path.isdir(arg):
+                    stats = memory_service.user_profile.set_profile_directory(arg)
+                    console.print(f"[bold green]✔ Configured profile repository folder: {os.path.abspath(arg)}[/bold green]")
+                    console.print(f"[dim]Sync Results: {stats.get('added', 0)} added, {stats.get('updated', 0)} updated, {stats.get('skipped', 0)} unchanged.[/dim]")
+                elif os.path.isfile(arg):
                     self.user_resume_path = os.path.abspath(arg)
-                    console.print(f"[bold green]✔ Configured custom resume source: {self.user_resume_path}[/bold green]")
+                    console.print(f"[bold green]✔ Configured custom resume file: {self.user_resume_path}[/bold green]")
                 else:
-                    console.print(f"[bold red]File not found: {arg}[/bold red]")
+                    console.print(f"[bold red]Path not found: {arg}[/bold red]")
             else:
+                stats = memory_service.user_profile.sync()
                 p = memory_service.user_profile.get_profile()
-                console.print(f"[bold cyan]User Profile:[/bold cyan] {p.name} ({p.title})")
-                console.print(f"[dim]Email:[/dim] {p.email} │ [dim]Location:[/dim] {p.location}")
-                console.print(f"[dim]Skills:[/dim] {', '.join(p.skills[:8])}...")
-                if self.user_resume_path:
-                    console.print(f"[dim]Active Resume Path:[/dim] [yellow]{self.user_resume_path}[/yellow]")
+                console.print(f"\n[bold cyan]👤 Candidate Profile & Knowledge Directory:[/bold cyan]")
+                console.print(f"  [dim]Name:[/dim]      [bold white]{p.name}[/bold white] ({p.title})")
+                console.print(f"  [dim]Contact:[/dim]   {p.email} │ {p.location}")
+                console.print(f"  [dim]Links:[/dim]     GitHub: [cyan]{p.github_url or 'N/A'}[/cyan] │ LinkedIn: [cyan]{p.linkedin_url or 'N/A'}[/cyan]")
+                console.print(f"  [dim]Portfolio:[/dim] [cyan]{p.portfolio_url or 'N/A'}[/cyan]")
+                console.print(f"  [dim]Directory:[/dim] [yellow]{os.path.abspath(memory_service.user_profile.profile_dir)}[/yellow]")
+                console.print(f"  [dim]Files Ingested:[/dim] [green]{', '.join(p.custom_documents.keys()) if p.custom_documents else 'None'}[/green]")
+                console.print(f"  [dim]Skills ({len(p.skills)}):[/dim] {', '.join(p.skills[:8])}...\n")
+
+        elif cmd == "/smtp":
+            from services.email.email_service import email_service
+            if not arg:
+                conf = email_service.is_configured()
+                console.print(f"\n[bold cyan]✉️ SMTP Email Configuration Status:[/bold cyan]")
+                console.print(f"  [dim]Configured:[/dim] [{'green' if conf else 'red'}]{'YES' if conf else 'NO'}[/]")
+                console.print(f"  [dim]Host:[/dim]       {email_service.host or 'Not set'}")
+                console.print(f"  [dim]Port:[/dim]       {email_service.port}")
+                console.print(f"  [dim]User:[/dim]       {email_service.user or 'Not set'}")
+                console.print(f"  [dim]From:[/dim]       {email_service.from_email or 'Not set'}")
+                if conf:
+                    console.print("[dim]Testing connection...[/dim]")
+                    res = email_service.verify_connection()
+                    status_col = "green" if res.success else "red"
+                    console.print(f"  [dim]Test Result:[/dim] [{status_col}]{res.message}[/{status_col}]\n")
                 else:
-                    console.print("[dim]No custom resume path set. Using default embedded profile. (Set with /profile <path>)[/dim]")
+                    console.print("[dim yellow]To configure, type: /smtp set <host> <port> <user> <password>[/dim yellow]\n")
+            elif arg.startswith("set "):
+                parts = arg.split(maxsplit=4)
+                if len(parts) >= 5:
+                    _, h, po, u, pw = parts
+                    email_service.update_credentials(host=h, port=int(po), user=u, password=pw)
+                    console.print(f"[bold green]✔ SMTP credentials updated for {u}@{h}:{po}[/bold green]")
+                    res = email_service.verify_connection()
+                    status_col = "green" if res.success else "red"
+                    console.print(f"[{status_col}]{res.message}[/{status_col}]")
+                else:
+                    console.print("[red]Usage: /smtp set <host> <port> <username> <password>[/red]")
+
+        elif cmd == "/audit":
+            target = arg or "127.0.0.1"
+            console.print(f"\n[bold cyan]🛡️ Running Defensive Port & Service Audit on: {target}[/bold cyan]")
+            audit_res = await registry.dispatch("audit_authorized_services", {"host": target})
+            if audit_res.success:
+                data = audit_res.content
+                open_svcs = data.get("open_services", [])
+                console.print(f"[dim]Audited {data.get('audited_ports')} ports: [green]{len(open_svcs)} open[/green], {data.get('closed_filtered_count')} closed/filtered.[/dim]")
+                for s in open_svcs:
+                    console.print(f"  • [bold green]Port {s['port']}[/bold green] ({s['service']}): {s['status']} [dim]({s['risk_assessment']})[/dim]")
+                console.print(f"[bold yellow]Posture:[/bold yellow] {data.get('assessment')}\n")
+            else:
+                console.print(f"[red]Audit error: {audit_res.error}[/red]")
+
+        elif cmd == "/audit-web":
+            url = arg or "http://localhost:8000"
+            console.print(f"\n[bold cyan]🛡️ Auditing Web Security Headers: {url}[/bold cyan]")
+            res = await registry.dispatch("audit_web_security_headers", {"url": url})
+            if res.success:
+                data = res.content
+                console.print(f"[bold white]Status:[/bold white] {data.get('status_code')} │ [bold white]Rating:[/bold white] [green]{data.get('defensive_rating')}[/green]")
+                present = data.get("present_security_headers", [])
+                missing = data.get("missing_security_headers", [])
+                if present:
+                    console.print("[bold green]Present Security Headers:[/bold green]")
+                    for p in present:
+                        console.print(f"  ✔ [green]{p['header']}[/green]: {p['purpose']}")
+                if missing:
+                    console.print("[bold yellow]Missing Hardening Headers:[/bold yellow]")
+                    for m in missing:
+                        console.print(f"  ⚠ [yellow]{m['header']}[/yellow]: {m['purpose']}")
+                console.print()
+            else:
+                console.print(f"[red]Error: {res.error}[/red]")
 
         else:
             console.print(f"[red]Unknown command '{cmd}'. Type [bold white]/help[/bold white] for assistance.[/red]")
