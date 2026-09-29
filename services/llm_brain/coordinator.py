@@ -85,28 +85,47 @@ class AgentCoordinator:
         is_news_or_web = any(k in lower_prompt for k in ["news", "headline", "trending", "current events", "latest", "search", "lookup", "who is", "what happened"])
         is_job = any(k in lower_prompt for k in ["job", "resume", "cv", "hire", "apply"])
         is_novel = any(k in lower_prompt for k in ["novel", "chapter", "translate"])
+        is_security = any(k in lower_prompt for k in ["security", "audit", "port", "header", "vulnerability", "hardening", "intel", "recon", "remediation", "firewall"])
 
         if is_news_or_web:
             selected_tools = [t for t in all_tools if t.name in ("search_news", "search_web")]
         elif is_job:
-            selected_tools = [t for t in all_tools if "job" in t.name or "resume" in t.name]
+            selected_tools = [t for t in all_tools if "job" in t.name or "resume" in t.name or "email" in t.name]
         elif is_novel:
             selected_tools = [t for t in all_tools if "novel" in t.name]
+        elif is_security:
+            selected_tools = [t for t in all_tools if "audit" in t.name or "intel" in t.name or "remediation" in t.name or "security" in t.name]
         else:
             selected_tools = all_tools
+
+        # Check for missing capability if prompt is task-oriented but no tools match
+        missing_cap = registry.identify_missing_capability(user_prompt)
+        missing_cap_prompt = ""
+        if missing_cap:
+            missing_cap_prompt = f"""
+NOTICE ON CAPABILITIES:
+The user is requesting an operation related to '{missing_cap.get('capability')}'.
+If your available tools cannot fulfill this directly, explain:
+1. What capability or tool is missing ({missing_cap.get('suggested_skill_name')}).
+2. Why it is needed: {missing_cap.get('reason')}.
+3. Ask the user for explicit approval: "Would you like me to create and register this new skill plugin?"
+"""
 
         tools_schema = [t.to_openai_schema() for t in selected_tools]
 
         system_prompt = f"""You are {asst_name}, an extraordinary, deeply knowledgeable personal AI assistant.
-You possess unbounded capabilities: reasoning, coding, conversational depth, system execution, and long-term memory.
+You possess unbounded capabilities: reasoning, coding, conversational depth, system execution, defensive cybersecurity, and long-term memory.
 You remember details about the user and adapt seamlessly to their workflow.
 
 USER BACKGROUND & MEMORY CONTEXT:
 {rag_context}
+{missing_cap_prompt}
 
-Be insightful, articulate, and accurate. Call tools when external execution or actions are required.
-If the user asks you to perform an action or integration that you lack tools for, clearly inform them:
-"This feature is currently missing from my core capabilities. Would you like me to develop and validate it in the parallel sandbox?"
+COLLABORATIVE OPERATING GUIDELINES:
+1. When you encounter ambiguity, missing critical parameters (like credentials, ambiguous paths, or unclear scope), or high-impact actions, pause and ASK A CLARIFYING QUESTION to the user instead of guessing or proceeding with incomplete assumptions.
+2. For job applications and outreach, prioritize transparency: inform the user whether an email was verified as sent via SMTP or merely staged as a draft.
+3. For defensive cybersecurity, only assist with authorized testing, exposed service inspection, security header auditing, and system hardening on authorized hosts/accounts.
+4. When a tool or integration is missing, explain what is needed and ask for approval to develop or add the tool.
 """
 
         history_payload = list(conversation_history)
