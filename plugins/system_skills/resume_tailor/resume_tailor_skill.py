@@ -130,6 +130,14 @@ High-impact Machine Learning and AI Engineer with \textbf{{{exp_duration}}} of d
 \end{{document}}
 """
 
+            links_block = ""
+            if profile.portfolio_url:
+                links_block += f"\n- **Portfolio**: {profile.portfolio_url}"
+            if profile.github_url:
+                links_block += f"\n- **GitHub**: {profile.github_url}"
+            if profile.linkedin_url:
+                links_block += f"\n- **LinkedIn**: {profile.linkedin_url}"
+
             cover_letter = f"""Subject: Application for {job_title} - {profile.name}
 
 Dear Hiring Team at {company},
@@ -137,6 +145,11 @@ Dear Hiring Team at {company},
 I am writing to express my eager interest in the {job_title} opening at {company}. Over the past {exp_duration}, I have focused intensely on architecting and scaling production AI systems, specifically around LLM tool calling, retrieval-augmented generation (RAG), and high-throughput async Python backends.
 
 Reviewing {company}'s tech stack and vision, I recognize strong synergies with my work optimizing neural inference, building robust vector memory layers, and engineering clean cross-platform client-server systems.
+
+You can explore my open-source code and technical projects via:
+- Portfolio: {profile.portfolio_url or 'Available upon request'}
+- GitHub: {profile.github_url or 'Available upon request'}
+- LinkedIn: {profile.linkedin_url or 'Available upon request'}
 
 I have attached my tailored resume (available in both formatted Markdown and compiled LaTeX) highlighting projects directly aligned with your mission. I would welcome the opportunity to discuss how my skill set can accelerate your AI deliverables.
 
