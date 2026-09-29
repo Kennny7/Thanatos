@@ -77,6 +77,43 @@ class SkillRegistry:
 
         return ToolResult.error_result(tool_name=tool_name, error=f"Tool '{tool_name}' not found in any registered skill.")
 
+    def identify_missing_capability(self, task_description: str) -> Optional[Dict[str, Any]]:
+        """
+        Inspects existing tool capabilities against a task.
+        If no existing tool matches the domain, formulates a proposed tool specification.
+        """
+        all_tools = self.get_all_tools()
+        tool_names = [t.name for t in all_tools]
+        lower_task = task_description.lower()
+
+        # Check existing tool coverage
+        for t in all_tools:
+            if any(word in lower_task for word in t.name.split("_")):
+                return None
+
+        # Determine what capability is missing
+        if any(w in lower_task for w in ["database backup", "export database", "dump db"]):
+            return {
+                "capability": "Database Export & Backup Skill",
+                "suggested_skill_name": "db_backup_manager",
+                "tool_name": "backup_vector_and_sqlite_stores",
+                "reason": "Thanatos currently has memory search and profiling tools, but lacks automated database export/snapshot capabilities.",
+            }
+        elif any(w in lower_task for w in ["docker", "container", "containerize"]):
+            return {
+                "capability": "Docker Container Management Skill",
+                "suggested_skill_name": "docker_manager",
+                "tool_name": "manage_docker_containers",
+                "reason": "Thanatos lacks direct Docker Engine socket orchestration tools.",
+            }
+
+        return {
+            "capability": f"Specialized Tool for '{task_description[:40]}...'",
+            "suggested_skill_name": "custom_extension",
+            "tool_name": "execute_custom_task",
+            "reason": f"No existing skill currently covers: {task_description}",
+        }
+
 
 # Module-level singleton
 registry = SkillRegistry()
@@ -87,6 +124,7 @@ def init_default_skills() -> None:
     registry.register_lazy("job_hunter", lambda: __import__("plugins.system_skills.job_hunter.job_hunter_skill", fromlist=["JobHunterSkill"]).JobHunterSkill())
     registry.register_lazy("resume_tailor", lambda: __import__("plugins.system_skills.resume_tailor.resume_tailor_skill", fromlist=["ResumeTailorSkill"]).ResumeTailorSkill())
     registry.register_lazy("job_applicator", lambda: __import__("plugins.system_skills.job_applicator.job_applicator_skill", fromlist=["JobApplicatorSkill"]).JobApplicatorSkill())
+    registry.register_lazy("security_auditor", lambda: __import__("plugins.system_skills.security_auditor.security_auditor_skill", fromlist=["SecurityAuditorSkill"]).SecurityAuditorSkill())
     registry.register_lazy("novel_agent", lambda: __import__("plugins.system_skills.novel_agent.novel_skill", fromlist=["NovelAgentSkill"]).NovelAgentSkill())
     registry.register_lazy("self_improvement", lambda: __import__("plugins.system_skills.self_improvement.self_improvement_skill", fromlist=["SelfImprovementSkill"]).SelfImprovementSkill())
     registry.register_lazy("web_search", lambda: __import__("plugins.system_skills.web_search.web_search_skill", fromlist=["WebSearchSkill"]).WebSearchSkill())
