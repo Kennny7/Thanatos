@@ -121,8 +121,23 @@ def print_help() -> None:
     table.add_row("/vector-db", "Verify and inspect vector database health & collections")
     table.add_row("/thinking on|off", "Toggle visibility of model reasoning / thought blocks")
     table.add_row("/history", "View recent autonomous job applications & email logs")
-    table.add_row("/jobs [query]", "Run autonomous job hunter & email application workflow")
-    table.add_row("/profile [path]", "Inspect or set path to resume (.tex/.md) / user profile")
+    table.add_row("/jobs [query]", "Run autonomous job hunter & verified email workflow")
+    table.add_row("/profile [folder]", "Inspect or set path to profile directory & sync files")
+    table.add_row("/smtp", "Test or configure SMTP email transmission credentials")
+    table.add_row("/audit [target]", "Run defensive port and service audit on authorized target")
+    table.add_row("/audit-web [url]", "Inspect defensive HTTP security headers and TLS status")
     table.add_row("/exit, /quit", "Exit the Thanatos terminal client")
 
     console.print(table)
+
+
+def print_clarification_box(question: str) -> None:
+    """Print an interactive inquiry box asking the user for clarification."""
+    console.print()
+    console.print(Panel(
+        f"[bold yellow]❓ {question}[/bold yellow]\n\n[dim]Thanatos paused this action to ensure accuracy. Please provide your answer or instruction below:[/dim]",
+        title="[bold yellow]Agent Clarification Needed[/bold yellow]",
+        box=ROUNDED,
+        border_style="yellow",
+        padding=(0, 1),
+    ))
