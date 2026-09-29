@@ -8,6 +8,7 @@ import uuid
 from plugins.base.skill_interface import BaseSkill
 from shared.models.tool_definition import ToolDefinition
 from shared.models.tool_result import ToolResult
+from services.email.email_service import email_service
 
 logger = logging.getLogger(__name__)
 
@@ -60,10 +61,16 @@ class JobApplicatorSkill(BaseSkill):
                         "hiring_manager": {"type": "string", "description": "Name/title of recipient"},
                         "tailored_resume": {"type": "string", "description": "Tailored resume markdown or latex"},
                         "cover_letter": {"type": "string", "description": "Personalized cover letter or email body"},
-                        "status": {"type": "string", "description": "Status (e.g., Staged for Dispatch, Email Dispatched)"},
+                        "resume_attachments": {"type": "array", "items": {"type": "string"}, "description": "File paths to resume attachments"},
+                        "send_email_now": {"type": "boolean", "description": "Attempt immediate SMTP dispatch and verify delivery"},
                     },
                     "required": ["job_title", "company"],
                 },
+            ),
+            ToolDefinition(
+                name="verify_email_configuration",
+                description="Checks if SMTP email sending credentials are fully configured and functional.",
+                parameters={"type": "object", "properties": {}},
             ),
             ToolDefinition(
                 name="get_application_history",
@@ -78,11 +85,51 @@ class JobApplicatorSkill(BaseSkill):
         ]
 
     async def execute(self, tool_name: str, params: Dict[str, Any]) -> ToolResult:
-        if tool_name == "prepare_job_application":
+        if tool_name == "verify_email_configuration":
+            configured = email_service.is_configured()
+            conn_res = email_service.verify_connection() if configured else None
+            return ToolResult.success_result(
+                tool_name=tool_name,
+                content={
+                    "configured": configured,
+                    "smtp_host": email_service.host,
+                    "smtp_user": email_service.user,
+                    "connection_test": conn_res.to_dict() if conn_res else None,
+                    "ready_for_dispatch": configured and (conn_res.success if conn_res else False),
+                },
+            )
+
+        elif tool_name == "prepare_job_application":
             app_id = f"app-{uuid.uuid4().hex[:8]}"
             now_iso = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             recipient_email = params.get("recipient_email") or f"talent@{params.get('company', 'company').lower().replace(' ', '')}.com"
-            status = params.get("status", "Staged for Email Dispatch")
+            cover_letter = params.get("cover_letter", "")
+            subject = f"Application for {params.get('job_title')} - {params.get('hiring_manager', 'Hiring Team')}"
+            attachments = params.get("resume_attachments") or []
+
+            send_now = params.get("send_email_now", False)
+            dispatch_status = "Staged for Email Dispatch"
+            verified_delivery = False
+            verification_note = ""
+
+            if send_now:
+                if not email_service.is_configured():
+                    dispatch_status = "Awaiting SMTP Credentials"
+                    verification_note = "Email was NOT sent: SMTP credentials (host, user, password) are missing."
+                else:
+                    send_res = email_service.send_email(
+                        to_email=recipient_email,
+                        subject=subject,
+                        body_text=cover_letter,
+                        attachments=attachments,
+                    )
+                    if send_res.success:
+                        dispatch_status = "Email Sent & Server Verified"
+                        verified_delivery = True
+                        verification_note = f"Verified: Accepted by {email_service.host} for delivery to {recipient_email}. (ID: {send_res.message_id})"
+                    else:
+                        dispatch_status = "Email Delivery Failed"
+                        verification_note = f"Failed to deliver: {send_res.message}"
 
             entry = {
                 "application_id": app_id,
@@ -92,13 +139,16 @@ class JobApplicatorSkill(BaseSkill):
                 "recipient_email": recipient_email,
                 "hiring_manager": params.get("hiring_manager", "Hiring Team"),
                 "resume_preview": (params.get("tailored_resume") or "")[:200] + "...",
-                "cover_letter": params.get("cover_letter", ""),
-                "status": status,
+                "cover_letter": cover_letter,
+                "status": dispatch_status,
+                "verified_delivery": verified_delivery,
+                "verification_note": verification_note,
+                "attachments": attachments,
                 "timestamp": now_iso,
             }
             self.application_history.append(entry)
             self._persist_entry(entry)
-            logger.info("Saved job application %s for %s (%s)", app_id, entry["company"], recipient_email)
+            logger.info("Saved job application %s for %s (%s): %s", app_id, entry["company"], recipient_email, dispatch_status)
 
             return ToolResult.success_result(
                 tool_name=tool_name,
@@ -107,10 +157,12 @@ class JobApplicatorSkill(BaseSkill):
                     "company": entry["company"],
                     "job_title": entry["job_title"],
                     "recipient_email": recipient_email,
-                    "status": status,
+                    "status": dispatch_status,
+                    "verified_delivery": verified_delivery,
+                    "verification_note": verification_note,
+                    "needs_credentials": not email_service.is_configured(),
                     "timestamp": now_iso,
                     "log_file": APPLICATIONS_LOG_FILE,
-                    "message": f"Application for '{entry['job_title']}' at '{entry['company']}' successfully prepared and logged to {APPLICATIONS_LOG_FILE}.",
                 },
             )
 
