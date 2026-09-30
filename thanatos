@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Thanatos Universal Linux/macOS/Termux Launcher
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if [ -f "$SCRIPT_DIR/venv/bin/python" ]; then
+    "$SCRIPT_DIR/venv/bin/python" "$SCRIPT_DIR/thanatos_cli.py" "$@"
+elif [ -f "$SCRIPT_DIR/venv/Scripts/python.exe" ]; then
+    "$SCRIPT_DIR/venv/Scripts/python.exe" "$SCRIPT_DIR/thanatos_cli.py" "$@"
+else
+    python3 "$SCRIPT_DIR/thanatos_cli.py" "$@"
+fi
