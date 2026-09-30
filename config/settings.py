@@ -48,8 +48,9 @@ class AppConfig(BaseSettings):
     llm_enable_thinking: bool = True
 
     # ------------------------------------------------------------------ #
-    # Memory / ChromaDB
+    # Memory / Vector DB (ChromaDB / Milvus Lite)
     # ------------------------------------------------------------------ #
+    vector_db_backend: str = "milvus"  # "milvus", "chroma", or "auto"
     memory_persist_dir: str = "./memory_store"
     memory_collection: str = "thanatos_memories"
     embedding_model: str = "all-MiniLM-L6-v2"
