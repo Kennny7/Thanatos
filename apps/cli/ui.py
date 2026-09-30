@@ -44,7 +44,7 @@ def print_thought(thought_text: str) -> None:
     console.print()
     thought_panel = Panel(
         Markdown(thought_text.strip()),
-        title="🧠 [bold magenta]Deep Reasoning & Planning[/bold magenta]",
+        title="[bold magenta]• REASONING & PLANNING[/bold magenta]",
         title_align="left",
         border_style="dim magenta",
         box=ROUNDED,
@@ -56,19 +56,19 @@ def print_thought(thought_text: str) -> None:
 def print_agent_breadcrumb(agent: str, status: str, progress: Optional[float] = None) -> None:
     """Print live sub-agent status indicator."""
     pct_text = f" [{int(progress * 100)}%]" if progress is not None else ""
-    console.print(f"[bold cyan]⚡ [{agent}][/bold cyan] [dim]{status}[/dim]{pct_text}")
+    console.print(f"[bold cyan]❯ [{agent}][/bold cyan] [dim]{status}[/dim]{pct_text}")
 
 
 def print_assistant_response(text: str) -> None:
     """Render finalized assistant markdown response."""
     console.print()
-    console.print(Panel(Markdown(text.strip()), title="🤖 [bold cyan]Thanatos[/bold cyan]", title_align="left", border_style="cyan", box=ROUNDED, padding=(1, 2)))
+    console.print(Panel(Markdown(text.strip()), title="[bold cyan]• THANATOS[/bold cyan]", title_align="left", border_style="cyan", box=ROUNDED, padding=(1, 2)))
     console.print()
 
 
 def print_vector_status(diag: Dict[str, Any]) -> None:
     """Render diagnostic table of vector store health."""
-    table = Table(title="📦 Vector Database Self-Diagnostics", box=ROUNDED, border_style="blue")
+    table = Table(title="• Vector Database Self-Diagnostics", box=ROUNDED, border_style="blue")
     table.add_column("Property", style="bold white")
     table.add_column("Value", style="green")
 
@@ -88,7 +88,7 @@ def print_application_history_table(applications: List[Dict[str, Any]]) -> None:
         console.print("[dim yellow]No applications logged yet.[/dim yellow]")
         return
 
-    table = Table(title="📄 Autonomous Job Applications & Email Outreach Log", box=ROUNDED, border_style="green")
+    table = Table(title="• Job Applications & Outreach Audit Ledger", box=ROUNDED, border_style="green")
     table.add_column("App ID", style="dim white")
     table.add_column("Company", style="bold white")
     table.add_column("Role", style="cyan")
@@ -111,7 +111,7 @@ def print_application_history_table(applications: List[Dict[str, Any]]) -> None:
 
 def print_help() -> None:
     """Display terminal CLI command help."""
-    table = Table(title="💡 Thanatos Terminal Commands", box=ROUNDED, border_style="magenta")
+    table = Table(title="• Thanatos Terminal Commands", box=ROUNDED, border_style="cyan")
     table.add_column("Command", style="bold yellow")
     table.add_column("Description", style="white")
 
@@ -126,6 +126,7 @@ def print_help() -> None:
     table.add_row("/smtp", "Test or configure SMTP email transmission credentials")
     table.add_row("/audit [target]", "Run defensive port and service audit on authorized target")
     table.add_row("/audit-web [url]", "Inspect defensive HTTP security headers and TLS status")
+    table.add_row("/nodes", "View connected distributed mesh devices / worker nodes")
     table.add_row("/exit, /quit", "Exit the Thanatos terminal client")
 
     console.print(table)
@@ -135,8 +136,8 @@ def print_clarification_box(question: str) -> None:
     """Print an interactive inquiry box asking the user for clarification."""
     console.print()
     console.print(Panel(
-        f"[bold yellow]❓ {question}[/bold yellow]\n\n[dim]Thanatos paused this action to ensure accuracy. Please provide your answer or instruction below:[/dim]",
-        title="[bold yellow]Agent Clarification Needed[/bold yellow]",
+        f"[bold yellow][?] {question}[/bold yellow]\n\n[dim]Action paused for accuracy. Please provide your answer or instruction below:[/dim]",
+        title="[bold yellow]• Clarification Required[/bold yellow]",
         box=ROUNDED,
         border_style="yellow",
         padding=(0, 1),
