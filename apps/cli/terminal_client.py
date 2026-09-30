@@ -47,6 +47,16 @@ class ThanatosCLI:
         self.conversation_history: List[Dict[str, Any]] = []
         self.user_resume_path: Optional[str] = None
 
+    async def execute_single_command(self, cmd_input: str) -> None:
+        """Execute a single non-interactive command or query and exit cleanly."""
+        cmd_input = cmd_input.strip()
+        if not cmd_input:
+            return
+        if cmd_input.startswith("/"):
+            await self._handle_command(cmd_input)
+        else:
+            await self._handle_chat(cmd_input)
+
     async def start(self) -> None:
         """Run terminal REPL loop."""
         os.system("cls" if os.name == "nt" else "clear")
@@ -58,7 +68,7 @@ class ThanatosCLI:
 
         # Autonomously self-verify vector database on client boot
         diag = memory_service.vector_store.verify_and_diagnose()
-        console.print(f"[dim blue]⚙ Vector DB Auto-Verified: {diag.get('backend')} ({diag.get('doc_count')} indexed memories)[/dim blue]")
+        console.print(f"[dim blue]• Vector DB Auto-Verified: {diag.get('backend')} ({diag.get('doc_count')} indexed memories)[/dim blue]")
         console.print("[dim]Type [bold white]/help[/bold white] for command list or start typing instructions/queries.[/dim]\n")
 
         session: PromptSession = PromptSession()
@@ -123,11 +133,11 @@ class ThanatosCLI:
             if arg.lower() in ("on", "true", "1"):
                 self.show_thinking = True
                 self.job_runner.show_thinking = True
-                console.print("[bold green]✔ Model deep reasoning / thinking display enabled.[/bold green]")
+                console.print("[bold green][✓] Model deep reasoning / thinking display enabled.[/bold green]")
             elif arg.lower() in ("off", "false", "0"):
                 self.show_thinking = False
                 self.job_runner.show_thinking = False
-                console.print("[bold yellow]✔ Model thinking display hidden.[/bold yellow]")
+                console.print("[bold yellow][✓] Model thinking display hidden.[/bold yellow]")
             else:
                 status = "ON" if self.show_thinking else "OFF"
                 console.print(f"[dim]Thinking display is currently [bold]{status}[/bold]. Usage: /thinking on|off[/dim]")
@@ -153,17 +163,17 @@ class ThanatosCLI:
             if arg:
                 if os.path.isdir(arg):
                     stats = memory_service.user_profile.set_profile_directory(arg)
-                    console.print(f"[bold green]✔ Configured profile repository folder: {os.path.abspath(arg)}[/bold green]")
+                    console.print(f"[bold green][✓] Configured profile repository folder: {os.path.abspath(arg)}[/bold green]")
                     console.print(f"[dim]Sync Results: {stats.get('added', 0)} added, {stats.get('updated', 0)} updated, {stats.get('skipped', 0)} unchanged.[/dim]")
                 elif os.path.isfile(arg):
                     self.user_resume_path = os.path.abspath(arg)
-                    console.print(f"[bold green]✔ Configured custom resume file: {self.user_resume_path}[/bold green]")
+                    console.print(f"[bold green][✓] Configured custom resume file: {self.user_resume_path}[/bold green]")
                 else:
                     console.print(f"[bold red]Path not found: {arg}[/bold red]")
             else:
                 stats = memory_service.user_profile.sync()
                 p = memory_service.user_profile.get_profile()
-                console.print(f"\n[bold cyan]👤 Candidate Profile & Knowledge Directory:[/bold cyan]")
+                console.print(f"\n[bold cyan]• Candidate Profile & Knowledge Directory:[/bold cyan]")
                 console.print(f"  [dim]Name:[/dim]      [bold white]{p.name}[/bold white] ({p.title})")
                 console.print(f"  [dim]Contact:[/dim]   {p.email} │ {p.location}")
                 console.print(f"  [dim]Links:[/dim]     GitHub: [cyan]{p.github_url or 'N/A'}[/cyan] │ LinkedIn: [cyan]{p.linkedin_url or 'N/A'}[/cyan]")
@@ -176,7 +186,7 @@ class ThanatosCLI:
             from services.email.email_service import email_service
             if not arg:
                 conf = email_service.is_configured()
-                console.print(f"\n[bold cyan]✉️ SMTP Email Configuration Status:[/bold cyan]")
+                console.print(f"\n[bold cyan]• SMTP Email Configuration Status:[/bold cyan]")
                 console.print(f"  [dim]Configured:[/dim] [{'green' if conf else 'red'}]{'YES' if conf else 'NO'}[/]")
                 console.print(f"  [dim]Host:[/dim]       {email_service.host or 'Not set'}")
                 console.print(f"  [dim]Port:[/dim]       {email_service.port}")
@@ -188,13 +198,16 @@ class ThanatosCLI:
                     status_col = "green" if res.success else "red"
                     console.print(f"  [dim]Test Result:[/dim] [{status_col}]{res.message}[/{status_col}]\n")
                 else:
-                    console.print("[dim yellow]To configure, type: /smtp set <host> <port> <user> <password>[/dim yellow]\n")
+                    console.print("[dim yellow]Setup Instructions for Gmail / Custom SMTP:[/dim yellow]")
+                    console.print("[dim white]1. Go to: [underline cyan]https://myaccount.google.com/apppasswords?st_source=ai_mode[/underline cyan][/dim white]")
+                    console.print("[dim white]2. Generate your 16-character App Password.[/dim white]")
+                    console.print("[dim white]3. Run in Thanatos: [bold yellow]/smtp set smtp.gmail.com 587 your_email@gmail.com YOUR_16_CHAR_CODE[/bold yellow]\n[/dim white]")
             elif arg.startswith("set "):
                 parts = arg.split(maxsplit=4)
                 if len(parts) >= 5:
                     _, h, po, u, pw = parts
                     email_service.update_credentials(host=h, port=int(po), user=u, password=pw)
-                    console.print(f"[bold green]✔ SMTP credentials updated for {u}@{h}:{po}[/bold green]")
+                    console.print(f"[bold green][✓] SMTP credentials updated for {u}@{h}:{po}[/bold green]")
                     res = email_service.verify_connection()
                     status_col = "green" if res.success else "red"
                     console.print(f"[{status_col}]{res.message}[/{status_col}]")
@@ -203,7 +216,7 @@ class ThanatosCLI:
 
         elif cmd == "/audit":
             target = arg or "127.0.0.1"
-            console.print(f"\n[bold cyan]🛡️ Running Defensive Port & Service Audit on: {target}[/bold cyan]")
+            console.print(f"\n[bold cyan]• Running Defensive Port & Service Audit on: {target}[/bold cyan]")
             audit_res = await registry.dispatch("audit_authorized_services", {"host": target})
             if audit_res.success:
                 data = audit_res.content
@@ -217,7 +230,7 @@ class ThanatosCLI:
 
         elif cmd == "/audit-web":
             url = arg or "http://localhost:8000"
-            console.print(f"\n[bold cyan]🛡️ Auditing Web Security Headers: {url}[/bold cyan]")
+            console.print(f"\n[bold cyan]• Auditing Web Security Headers: {url}[/bold cyan]")
             res = await registry.dispatch("audit_web_security_headers", {"url": url})
             if res.success:
                 data = res.content
@@ -227,14 +240,68 @@ class ThanatosCLI:
                 if present:
                     console.print("[bold green]Present Security Headers:[/bold green]")
                     for p in present:
-                        console.print(f"  ✔ [green]{p['header']}[/green]: {p['purpose']}")
+                        console.print(f"  [✓] [green]{p['header']}[/green]: {p['purpose']}")
                 if missing:
                     console.print("[bold yellow]Missing Hardening Headers:[/bold yellow]")
                     for m in missing:
-                        console.print(f"  ⚠ [yellow]{m['header']}[/yellow]: {m['purpose']}")
+                        console.print(f"  [!] [yellow]{m['header']}[/yellow]: {m['purpose']}")
                 console.print()
             else:
                 console.print(f"[red]Error: {res.error}[/red]")
+
+        elif cmd == "/nodes":
+            from services.mesh.node_manager import mesh_manager
+            sub = arg.split(maxsplit=1)
+            action = sub[0].lower() if sub else "list"
+            extra = sub[1].strip() if len(sub) > 1 else ""
+
+            if action in ("list", ""):
+                nodes = mesh_manager.list_nodes()
+                console.print(f"\n[bold cyan]• Distributed LAN Mesh Nodes ({len(nodes)} Registered):[/bold cyan]")
+                if not nodes:
+                    console.print("  [dim yellow]No external nodes registered. Add peers with: /nodes add <ip>:<port> [node_id][/dim yellow]")
+                for n in nodes:
+                    status_col = "green" if n.get("status") == "online" else "red"
+                    console.print(f"  • [bold white]{n.get('node_id')}[/bold white] ({n.get('endpoint')}): [{status_col}]{n.get('status').upper()}[/{status_col}] [dim]Role: {n.get('role')}[/dim]")
+                specs = mesh_manager.get_local_specs()
+                console.print(f"\n  [dim]Local Coordinator Host:[/dim] [green]{specs.get('hostname')}[/green] ({specs.get('os')} {specs.get('machine')})\n")
+
+            elif action == "add":
+                parts = extra.split()
+                if not parts:
+                    console.print("[red]Usage: /nodes add <host:port> [node_id] [role][/red]")
+                else:
+                    target = parts[0]
+                    nid = parts[1] if len(parts) > 1 else target.replace(":", "_")
+                    role = parts[2] if len(parts) > 2 else "worker"
+                    if ":" in target:
+                        h, p = target.split(":", 1)
+                        port_num = int(p)
+                    else:
+                        h = target
+                        port_num = 8002
+                    entry = mesh_manager.register_node(node_id=nid, host=h, port=port_num, role=role)
+                    console.print(f"[bold green][✓] Registered node {nid} ({entry['endpoint']})[/bold green]")
+                    # Immediate ping check
+                    ping_res = await mesh_manager.ping_node(nid)
+                    status_col = "green" if ping_res.get("status") == "online" else "yellow"
+                    console.print(f"  Status: [{status_col}]{ping_res.get('status').upper()}[/{status_col}]")
+
+            elif action == "remove":
+                if not extra:
+                    console.print("[red]Usage: /nodes remove <node_id>[/red]")
+                else:
+                    if mesh_manager.unregister_node(extra):
+                        console.print(f"[bold green][✓] Removed node: {extra}[/bold green]")
+                    else:
+                        console.print(f"[yellow]Node not found: {extra}[/yellow]")
+
+            elif action == "ping":
+                console.print("[dim]Pinging registered mesh nodes...[/dim]")
+                results = await mesh_manager.ping_all()
+                for r in results:
+                    col = "green" if r.get("status") == "online" else "red"
+                    console.print(f"  • {r.get('node_id')} ({r.get('endpoint')}): [{col}]{r.get('status').upper()}[/{col}]")
 
         else:
             console.print(f"[red]Unknown command '{cmd}'. Type [bold white]/help[/bold white] for assistance.[/red]")
