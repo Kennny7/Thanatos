@@ -8,6 +8,7 @@ from .routes.health import router as health_router
 from .routes.speech import router as speech_router
 from .routes.config import router as config_router
 from .routes.system_metrics import router as system_metrics_router
+from .routes.mesh import router as mesh_router
 from .middleware.auth import ApiAuthMiddleware
 from services.os_automation.router import os_automation_router
 from plugins.base.registry import init_default_skills
@@ -22,12 +23,12 @@ async def lifespan(app: FastAPI):
     init_default_skills()
     diag = memory_service.vector_store.verify_and_diagnose()
     print(f"\n========================================================")
-    print(f"🚀 Thanatos AI Server Engine Starting Up")
-    print(f"📦 Vector Store Backend : {diag.get('backend')}")
-    print(f"📂 Persistence Path     : {diag.get('persist_directory')}")
-    print(f"🗂️  Collection Name      : {diag.get('collection')}")
-    print(f"📄 Indexed Documents    : {diag.get('doc_count')}")
-    print(f"✨ New DB Created?      : {'Yes (Empty initialized)' if diag.get('is_new') else 'No (Existing store loaded)'}")
+    print(f"• Thanatos AI Server Engine Starting Up")
+    print(f"• Vector Store Backend : {diag.get('backend')}")
+    print(f"• Persistence Path     : {diag.get('persist_directory')}")
+    print(f"• Collection Name      : {diag.get('collection')}")
+    print(f"• Indexed Documents    : {diag.get('doc_count')}")
+    print(f"• New DB Created?      : {'Yes (Empty initialized)' if diag.get('is_new') else 'No (Existing store loaded)'}")
     print(f"========================================================\n")
     yield
 
@@ -59,4 +60,5 @@ app.include_router(speech_router)
 app.include_router(config_router)
 app.include_router(system_metrics_router)
 app.include_router(os_automation_router)
+app.include_router(mesh_router)
 
