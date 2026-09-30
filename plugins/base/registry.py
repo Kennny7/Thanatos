@@ -3,7 +3,7 @@
 """Singleton skill registry for Thanatos with lazy skill resolution."""
 
 import logging
-from typing import Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from shared.models.tool_definition import ToolDefinition
 from shared.models.tool_result import ToolResult
