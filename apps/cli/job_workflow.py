@@ -93,28 +93,55 @@ class JobWorkflowRunner:
         # Save generated LaTeX and Markdown resumes to disk for user
         out_dir = os.path.join("logs", "generated_resumes")
         os.makedirs(out_dir, exist_ok=True)
-        tex_path = os.path.join(out_dir, f"{target_job['company'].lower().replace(' ', '_')}_resume.tex")
-        md_path = os.path.join(out_dir, f"{target_job['company'].lower().replace(' ', '_')}_resume.md")
+        slug = target_job['company'].lower().replace(' ', '_')
+        tex_path = os.path.join(out_dir, f"{slug}_resume.tex")
+        md_path = os.path.join(out_dir, f"{slug}_resume.md")
+        resume_pdf_path = os.path.join(out_dir, f"{slug}_resume.pdf")
+        cover_letter_pdf_path = os.path.join(out_dir, f"{slug}_cover_letter.pdf")
 
         with open(tex_path, "w", encoding="utf-8") as f:
             f.write(resume_tex)
         with open(md_path, "w", encoding="utf-8") as f:
             f.write(resume_md)
 
+        # Autonomously convert to high-impact PDF attachments (Resume + Cover Letter)
+        from services.document.pdf_generator import pdf_generator
+        from services.memory.memory_manager import memory_service
+        prof = memory_service.user_profile.get_profile()
+
+        pdf_generator.generate_resume_pdf(
+            source_tex_or_md=resume_tex or resume_md,
+            output_pdf_path=resume_pdf_path,
+            candidate_name=prof.name or "Khushal Pareta",
+            candidate_title=prof.title or "AI Developer | Machine Learning Engineer",
+            candidate_contacts={"email": prof.email, "phone": "+91 96604 64021", "location": prof.location},
+        )
+
+        pdf_generator.generate_cover_letter_pdf(
+            cover_letter_text=cover_letter,
+            applicant_name=prof.name or "Khushal Pareta",
+            job_title=target_job["title"],
+            company=target_job["company"],
+            output_pdf_path=cover_letter_pdf_path,
+            contact_info={"email": prof.email, "phone": "+91 96604 64021", "location": prof.location},
+        )
+
         if self.show_thinking:
-            print_thought(f"Successfully compiled tailored documents with verified links:\n- LaTeX source: `{tex_path}`\n- Markdown source: `{md_path}`\n- Included profile links: Portfolio, GitHub, LinkedIn.")
+            print_thought(f"Successfully compiled tailored documents & official PDF attachments:\n- Resume PDF: `{resume_pdf_path}`\n- Cover Letter PDF: `{cover_letter_pdf_path}`\n- TeX source backup: `{tex_path}`\n- Included candidate links: Portfolio, GitHub, LinkedIn.")
 
         # 4. Check Email Transmission Preference and Credentials
         from services.email.email_service import email_service
         is_configured = email_service.is_configured()
 
-        console.print(f"\n[bold yellow]✉️ Email Delivery Verification Check[/bold yellow]")
+        console.print(f"\n[bold yellow]• Email Delivery Verification Check[/bold yellow]")
         if not is_configured:
             console.print(f"[dim red]Notice: SMTP credentials are not configured. The email will be drafted and staged.[/dim red]")
             console.print(f"[dim]Tip: You can configure SMTP anytime using [bold white]/smtp[/bold white] to enable verified live sending.[/dim]")
 
         # 5. Application Packaging & Optional Sending
-        print_agent_breadcrumb("Job Applicator Agent", f"Formulating humanized email outreach and tracking dispatch record...", 0.85)
+        # Resumes and cover letters are attached exclusively as PDFs
+        pdf_attachments = [resume_pdf_path, cover_letter_pdf_path]
+        print_agent_breadcrumb("Job Applicator Agent", f"Packaging PDF attachments and formatting outreach dispatch record...", 0.85)
         apply_res = await registry.dispatch("prepare_job_application", {
             "job_id": target_job.get("id"),
             "job_title": target_job["title"],
@@ -123,7 +150,7 @@ class JobWorkflowRunner:
             "hiring_manager": target_job.get("hiring_manager"),
             "tailored_resume": resume_md,
             "cover_letter": cover_letter,
-            "resume_attachments": [tex_path, md_path],
+            "resume_attachments": pdf_attachments,
             "send_email_now": is_configured,
         })
 
@@ -134,10 +161,12 @@ class JobWorkflowRunner:
         verification_note = apply_res.content.get("verification_note", "")
         status_color = "green" if apply_res.content.get("verified_delivery") else ("yellow" if "Staged" in status_text else "red")
 
-        email_preview = f"""### ✉️ Humanized Outreach Email
+        email_preview = f"""### • Humanized Outreach Email
 **To:** `{target_job.get('apply_email')}`  
 **Hiring Lead:** `{target_job.get('hiring_manager')}`  
-**Attachments:** `{tex_path}`, `{md_path}`  
+**Verified Attachments (PDF):**  
+  • `{os.path.basename(resume_pdf_path)}`  
+  • `{os.path.basename(cover_letter_pdf_path)}`  
 **Delivery Verification Status:** **[{status_text}]**  
 *{verification_note or 'Application staged and verified locally.'}*
 
@@ -146,5 +175,5 @@ class JobWorkflowRunner:
 ```
 """
         console.print()
-        console.print(Panel(Markdown(email_preview), title=f"📨 [{status_color}]Application Package - {status_text}[/{status_color}]", box=ROUNDED, border_style=status_color))
-        console.print(f"[bold green]✔ Persistent audit entry saved in: [white]logs/job_applications.jsonl[/white][/bold green]\n")
+        console.print(Panel(Markdown(email_preview), title=f"[{status_color}]• Application Package — {status_text}[/{status_color}]", box=ROUNDED, border_style=status_color))
+        console.print(f"[bold green][✓] Persistent audit entry saved in: [white]logs/job_applications.jsonl[/white][/bold green]\n")
