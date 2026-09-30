@@ -32,7 +32,7 @@ class JobWorkflowRunner:
         source_resume_path: Optional[str] = None,
     ) -> None:
         """Runs end-to-end autonomous job workflow with live terminal feedback."""
-        console.print(f"\n[bold green]🚀 Initiating Autonomous Job Hunt & Application Dispatch[/bold green]")
+        console.print(f"\n[bold green]• Initiating Autonomous Job Hunt & Application Dispatch[/bold green]")
         console.print(f"[dim]Role:[/dim] [cyan]{query}[/cyan] │ [dim]Location:[/dim] [cyan]{location}[/cyan] │ [dim]Experience Target:[/dim] [yellow]{experience}[/yellow]\n")
 
         # 1. Sync Profile Directory and verify available portfolio/links
@@ -60,11 +60,11 @@ class JobWorkflowRunner:
         })
 
         if not search_res.success or not search_res.content.get("jobs"):
-            console.print(f"[bold red]❌ No vacancies found matching '{query}' with email application channel.[/bold red]")
+            console.print(f"[bold red][!] No vacancies found matching '{query}' with email application channel.[/bold red]")
             return
 
         jobs = search_res.content["jobs"]
-        console.print(f"[bold green]✔ Located {len(jobs)} high-match openings with direct email application routes![/bold green]\n")
+        console.print(f"[bold green][+] Located {len(jobs)} high-match openings with direct email application routes.[/bold green]\n")
 
         # Print quick summary of jobs found
         for idx, j in enumerate(jobs, 1):
@@ -73,7 +73,7 @@ class JobWorkflowRunner:
 
         # 3. Process top matching job application
         target_job = jobs[0]
-        console.print(f"\n[bold cyan]🎯 Targeting Top Opportunity: {target_job['title']} at {target_job['company']}[/bold cyan]")
+        console.print(f"\n[bold cyan]• Target Opportunity: {target_job['title']} at {target_job['company']}[/bold cyan]")
 
         # Resume Tailoring
         print_agent_breadcrumb("Resume Tailor Agent", f"Calibrating qualifications to {experience} & generating LaTeX/MD for {target_job['company']}...", 0.60)
@@ -106,7 +106,6 @@ class JobWorkflowRunner:
 
         # Autonomously convert to high-impact PDF attachments (Resume + Cover Letter)
         from services.document.pdf_generator import pdf_generator
-        from services.memory.memory_manager import memory_service
         prof = memory_service.user_profile.get_profile()
 
         pdf_generator.generate_resume_pdf(
