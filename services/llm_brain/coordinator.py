@@ -162,7 +162,7 @@ COLLABORATIVE OPERATING GUIDELINES:
             }
             error_msg = response.text or "Unknown LLM error."
             diagnostic = (
-                f"⚠ **System Diagnostic — LLM Connection Failure**\n\n"
+                f"[!] **System Diagnostic — LLM Connection Failure**\n\n"
                 f"{error_msg}\n\n"
                 f"**Recommended actions:**\n"
                 f"1. Verify Ollama is running: `ollama serve`\n"
@@ -290,9 +290,9 @@ COLLABORATIVE OPERATING GUIDELINES:
         }
 
         # Build clean summary
-        summary_md = f"""### 🎯 Autonomous Job Hunt & Email Outreach Dispatch
+        summary_md = f"""### • Autonomous Job Hunt & Email Outreach Dispatch
 
-**1. 🔍 Suitable Matched Jobs ({location_target} | Experience: {exp_target}):**
+**1. Suitable Matched Jobs ({location_target} | Experience: {exp_target}):**
 """
         for j in jobs:
             email_info = f"`{j.get('apply_email')}`" if j.get('apply_email') else "Portal"
@@ -300,7 +300,7 @@ COLLABORATIVE OPERATING GUIDELINES:
 
         summary_md += f"""
 ---
-**2. ✉️ Humanized Outreach Email Prepared for `{first_job['company']}`:**
+**2. Humanized Outreach Email Prepared for `{first_job['company']}`:**
 ```text
 To: {first_job.get('apply_email', 'talent@company.com')}
 Subject: Application: {first_job['title']} - {hybrid_memory.profile.name or 'Applicant'}
@@ -309,13 +309,13 @@ Subject: Application: {first_job['title']} - {hybrid_memory.profile.name or 'App
 ```
 
 ---
-**3. 📄 Tailored Resume Preview (Calibrated to {exp_target}):**
+**3. Tailored Resume Preview (Calibrated to {exp_target}):**
 ```markdown
 {tailored_resume_md[:700]}...
 ```
 
 ---
-**4. 📋 Application Log & Audit Trail:**
+**4. Application Log & Audit Trail:**
 - **Application ID**: `{apply_res.content.get('application_id', 'N/A') if apply_res.success else 'N/A'}`
 - **Company**: `{first_job['company']}`
 - **Status**: `{apply_res.content.get('status', 'Staged') if apply_res.success else 'Staged'}`
