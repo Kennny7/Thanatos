@@ -41,15 +41,59 @@ class MeshWorkerHandler(BaseHTTPRequestHandler):
             self.end_headers()
 
     def do_POST(self) -> None:
-        if self.path in ("/api/mesh/task", "/task"):
-            content_length = int(self.headers.get("Content-Length", 0))
-            body = self.rfile.read(content_length).decode("utf-8")
-            try:
-                task_data = json.loads(body)
-            except Exception:
-                task_data = {"raw": body}
+        content_length = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(content_length).decode("utf-8")
+        try:
+            payload = json.loads(body)
+        except Exception:
+            payload = {}
 
-            # Return receipt confirmation
+        if self.path in ("/api/mesh/exec", "/exec"):
+            import subprocess
+            cmd = payload.get("command", "")
+            try:
+                proc = subprocess.run(
+                    cmd,
+                    shell=True,
+                    capture_output=True,
+                    text=True,
+                    timeout=300,
+                )
+                res = {
+                    "status": "success",
+                    "stdout": proc.stdout,
+                    "stderr": proc.stderr,
+                    "exit_code": proc.returncode,
+                }
+            except Exception as e:
+                res = {"status": "error", "error": str(e)}
+
+            data = json.dumps(res).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
+        elif self.path in ("/api/mesh/file/write", "/file/write"):
+            rel_path = payload.get("path", "")
+            content = payload.get("content", "")
+            try:
+                os.makedirs(os.path.dirname(os.path.abspath(rel_path)), exist_ok=True)
+                with open(rel_path, "w", encoding="utf-8") as f:
+                    f.write(content)
+                res = {"status": "written", "path": rel_path}
+            except Exception as e:
+                res = {"status": "error", "error": str(e)}
+
+            data = json.dumps(res).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
+        elif self.path in ("/api/mesh/task", "/task"):
             response_payload = {
                 "status": "received",
                 "message": "Task queued on worker node",
