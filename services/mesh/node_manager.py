@@ -67,6 +67,9 @@ class MeshNodeManager:
             },
             "status": "online",
             "last_seen": time.time(),
+            "last_connected": time.time(),
+            "auto_reconnect": True,
+            "connection_count": (self.nodes.get(node_id, {}).get("connection_count", 0)) + 1,
         }
         self.nodes[node_id] = node_entry
         self._save_state()
