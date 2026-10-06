@@ -17,7 +17,7 @@ USER_DATA_FILE = os.path.join(app_config.memory_persist_dir, "user_facts.json")
 
 class DynamicUserProfile(BaseModel):
     name: Optional[str] = None
-    assistant_name: str = "Aegis"
+    assistant_name: Optional[str] = None
     traits: List[str] = Field(default_factory=list)
     skills: List[str] = Field(default_factory=list)
     preferences: Dict[str, Any] = Field(default_factory=dict)
