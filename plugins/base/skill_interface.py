@@ -17,6 +17,7 @@ class BaseSkill(ABC):
     """
 
     skill_name: str = "base_skill"
+    category: str = "system"  # system, career, creative, ui, mesh
 
     @abstractmethod
     async def execute(self, tool_name: str, params: dict) -> ToolResult:
