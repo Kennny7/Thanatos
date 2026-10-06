@@ -140,6 +140,9 @@ config/secrets.env
 # Local audit database
 audit/storage/*.db
 
+# Local data
+*.tex
+*.pdf
 
 .metadata
 .env
