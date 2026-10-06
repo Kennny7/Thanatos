@@ -120,6 +120,7 @@ def print_help() -> None:
     table.add_row("/status", "Display active LLM model, provider, and settings")
     table.add_row("/vector-db", "Verify and inspect vector database health & collections")
     table.add_row("/thinking on|off", "Toggle visibility of model reasoning / thought blocks")
+    table.add_row("/preview on|off", "Toggle interactive draft review gate (WPS/Word/terminal editing)")
     table.add_row("/history", "View recent autonomous job applications & email logs")
     table.add_row("/jobs [query]", "Run autonomous job hunter & verified email workflow")
     table.add_row("/profile [folder]", "Inspect or set path to profile directory & sync files")
