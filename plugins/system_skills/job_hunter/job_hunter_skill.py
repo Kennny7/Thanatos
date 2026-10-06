@@ -111,12 +111,47 @@ class JobHunterSkill(BaseSkill):
                 },
             ]
 
-            # Filter jobs based on user criteria
+            # Load previously applied jobs to avoid duplicate applications / spam
+            applied_keys = set()
+            applied_emails = set()
+            log_file = os.path.join("logs", "job_applications.jsonl")
+            if os.path.exists(log_file):
+                try:
+                    with open(log_file, "r", encoding="utf-8") as f:
+                        for line in f:
+                            if not line.strip():
+                                continue
+                            rec = json.loads(line)
+                            comp = (rec.get("company") or "").strip().lower()
+                            title = (rec.get("job_title") or "").strip().lower()
+                            em = (rec.get("recipient_email") or "").strip().lower()
+                            if comp:
+                                applied_keys.add(comp)
+                                applied_keys.add(f"{comp}:{title}")
+                            if em:
+                                applied_emails.add(em)
+                except Exception as e:
+                    logger.debug("Could not read application log for deduplication: %s", e)
+
+            # Filter jobs based on user criteria and duplicate history
             matched_jobs = []
+            skipped_already_applied = 0
+
             for j in all_jobs:
                 email = (j.get("apply_email") or "").strip()
                 if require_email_apply and (not email or "@" not in email):
                     continue
+
+                comp_name = (j.get("company") or "").strip().lower()
+                role_title = (j.get("title") or "").strip().lower()
+                comp_key = f"{comp_name}:{role_title}"
+                low_email = email.lower()
+
+                # Check if already applied to this company/job or recipient email
+                if comp_name in applied_keys or comp_key in applied_keys or low_email in applied_emails:
+                    skipped_already_applied += 1
+                    continue
+
                 matched_jobs.append(j)
 
             return ToolResult.success_result(
@@ -124,6 +159,7 @@ class JobHunterSkill(BaseSkill):
                 content={
                     "total": len(matched_jobs[:limit]),
                     "jobs": matched_jobs[:limit],
+                    "skipped_already_applied": skipped_already_applied,
                     "location_filter": location,
                     "experience_target": experience,
                     "require_email_apply": require_email_apply,
