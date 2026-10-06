@@ -71,108 +71,118 @@ class JobWorkflowRunner:
             console.print(f"  [bold cyan]{idx}. {j['title']}[/bold cyan] at [bold white]{j['company']}[/bold white]")
             console.print(f"     [dim]Mode:[/dim] {j.get('work_mode')} │ [dim]Exp:[/dim] {j.get('experience_required')} │ [dim]Email:[/dim] [yellow]{j.get('apply_email')}[/yellow]")
 
-        # 3. Process top matching job application
-        target_job = jobs[0]
-        console.print(f"\n[bold cyan]• Target Opportunity: {target_job['title']} at {target_job['company']}[/bold cyan]")
+        # 3. Process all high-match job applications with interactive review/preview
+        console.print(f"[bold cyan]• Processing {len(jobs)} Verified Opportunities...[/bold cyan]\n")
 
-        # Resume Tailoring
-        print_agent_breadcrumb("Resume Tailor Agent", f"Calibrating qualifications to {experience} & generating LaTeX/MD for {target_job['company']}...", 0.60)
-        tailor_res = await registry.dispatch("tailor_resume", {
-            "job_title": target_job["title"],
-            "company": target_job["company"],
-            "job_description": target_job.get("description", ""),
-            "experience_level": experience,
-            "source_file_path": source_resume_path if source_resume_path and os.path.exists(source_resume_path) else None,
-        })
-
-        tailor_data = tailor_res.content if tailor_res.success else {}
-        resume_md = tailor_data.get("resume_markdown", "")
-        resume_tex = tailor_data.get("resume_latex", "")
-        cover_letter = tailor_data.get("cover_letter", "")
-
-        # Save generated LaTeX and Markdown resumes to disk for user
-        out_dir = os.path.join("logs", "generated_resumes")
-        os.makedirs(out_dir, exist_ok=True)
-        slug = target_job['company'].lower().replace(' ', '_')
-        tex_path = os.path.join(out_dir, f"{slug}_resume.tex")
-        md_path = os.path.join(out_dir, f"{slug}_resume.md")
-        resume_pdf_path = os.path.join(out_dir, f"{slug}_resume.pdf")
-        cover_letter_pdf_path = os.path.join(out_dir, f"{slug}_cover_letter.pdf")
-
-        with open(tex_path, "w", encoding="utf-8") as f:
-            f.write(resume_tex)
-        with open(md_path, "w", encoding="utf-8") as f:
-            f.write(resume_md)
-
-        # Autonomously convert to high-impact PDF attachments (Resume + Cover Letter)
         from services.document.pdf_generator import pdf_generator
-        prof = memory_service.user_profile.get_profile()
-
-        pdf_generator.generate_resume_pdf(
-            source_tex_or_md=resume_tex or resume_md,
-            output_pdf_path=resume_pdf_path,
-            candidate_name=prof.name or "Khushal Pareta",
-            candidate_title=prof.title or "AI Developer | Machine Learning Engineer",
-            candidate_contacts={"email": prof.email, "phone": "+91 96604 64021", "location": prof.location},
-        )
-
-        pdf_generator.generate_cover_letter_pdf(
-            cover_letter_text=cover_letter,
-            applicant_name=prof.name or "Khushal Pareta",
-            job_title=target_job["title"],
-            company=target_job["company"],
-            output_pdf_path=cover_letter_pdf_path,
-            contact_info={"email": prof.email, "phone": "+91 96604 64021", "location": prof.location},
-        )
-
-        if self.show_thinking:
-            print_thought(f"Successfully compiled tailored documents & official PDF attachments:\n- Resume PDF: `{resume_pdf_path}`\n- Cover Letter PDF: `{cover_letter_pdf_path}`\n- TeX source backup: `{tex_path}`\n- Included candidate links: Portfolio, GitHub, LinkedIn.")
-
-        # 4. Check Email Transmission Preference and Credentials
         from services.email.email_service import email_service
+        import subprocess
         is_configured = email_service.is_configured()
 
-        console.print(f"\n[bold yellow]• Email Delivery Verification Check[/bold yellow]")
         if not is_configured:
-            console.print(f"[dim red]Notice: SMTP credentials are not configured. The email will be drafted and staged.[/dim red]")
-            console.print(f"[dim]Tip: You can configure SMTP anytime using [bold white]/smtp[/bold white] to enable verified live sending.[/dim]")
+            console.print(f"[dim red]Notice: SMTP credentials are not configured. Emails will be drafted and staged locally.[/dim red]")
+            console.print(f"[dim]Tip: Configure SMTP anytime using [bold white]/smtp[/bold white] to enable verified live sending.[/dim]\n")
 
-        # 5. Application Packaging & Optional Sending
-        # Resumes and cover letters are attached exclusively as PDFs
-        pdf_attachments = [resume_pdf_path, cover_letter_pdf_path]
-        print_agent_breadcrumb("Job Applicator Agent", f"Packaging PDF attachments and formatting outreach dispatch record...", 0.85)
-        apply_res = await registry.dispatch("prepare_job_application", {
-            "job_id": target_job.get("id"),
-            "job_title": target_job["title"],
-            "company": target_job["company"],
-            "recipient_email": target_job.get("apply_email"),
-            "hiring_manager": target_job.get("hiring_manager"),
-            "tailored_resume": resume_md,
-            "cover_letter": cover_letter,
-            "resume_attachments": pdf_attachments,
-            "send_email_now": is_configured,
-        })
+        for idx, target_job in enumerate(jobs, 1):
+            console.print(f"\n[bold cyan]━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[/bold cyan]")
+            console.print(f"[bold cyan]• [{idx}/{len(jobs)}] Target Opportunity: {target_job['title']} at {target_job['company']}[/bold cyan]")
+            console.print(f"  [dim]Contact:[/dim] {target_job.get('hiring_manager')} │ [dim]Email:[/dim] [yellow]{target_job.get('apply_email')}[/yellow]")
 
-        print_agent_breadcrumb("Coordinator", "Workflow evaluation completed!", 1.0)
+            # Resume Tailoring
+            print_agent_breadcrumb("Resume Tailor Agent", f"Calibrating qualifications to {experience} & formatting LaTeX/MD for {target_job['company']}...", 0.40)
+            tailor_res = await registry.dispatch("tailor_resume", {
+                "job_title": target_job["title"],
+                "company": target_job["company"],
+                "job_description": target_job.get("description", ""),
+                "experience_level": experience,
+                "source_file_path": source_resume_path if source_resume_path and os.path.exists(source_resume_path) else None,
+            })
 
-        # 6. Display Outreach Email and Verified Status
-        status_text = apply_res.content.get("status", "Staged")
-        verification_note = apply_res.content.get("verification_note", "")
-        status_color = "green" if apply_res.content.get("verified_delivery") else ("yellow" if "Staged" in status_text else "red")
+            tailor_data = tailor_res.content if tailor_res.success else {}
+            resume_md = tailor_data.get("resume_markdown", "")
+            resume_tex = tailor_data.get("resume_latex", "")
+            cover_letter = tailor_data.get("cover_letter", "")
+            tmpl_name = tailor_data.get("template_source", "default")
 
-        email_preview = f"""### • Humanized Outreach Email
-**To:** `{target_job.get('apply_email')}`  
-**Hiring Lead:** `{target_job.get('hiring_manager')}`  
-**Verified Attachments (PDF):**  
-  • `{os.path.basename(resume_pdf_path)}`  
-  • `{os.path.basename(cover_letter_pdf_path)}`  
-**Delivery Verification Status:** **[{status_text}]**  
-*{verification_note or 'Application staged and verified locally.'}*
+            # Save generated files to disk
+            out_dir = os.path.join("logs", "generated_resumes")
+            os.makedirs(out_dir, exist_ok=True)
+            slug = target_job['company'].lower().replace(' ', '_').replace('.', '_')
+            tex_path = os.path.join(out_dir, f"{slug}_resume.tex")
+            md_path = os.path.join(out_dir, f"{slug}_resume.md")
+            resume_pdf_path = os.path.join(out_dir, f"{slug}_resume.pdf")
+            cover_letter_pdf_path = os.path.join(out_dir, f"{slug}_cover_letter.pdf")
 
-```text
-{cover_letter}
-```
-"""
-        console.print()
-        console.print(Panel(Markdown(email_preview), title=f"[{status_color}]• Application Package — {status_text}[/{status_color}]", box=ROUNDED, border_style=status_color))
-        console.print(f"[bold green][✓] Persistent audit entry saved in: [white]logs/job_applications.jsonl[/white][/bold green]\n")
+            with open(tex_path, "w", encoding="utf-8") as f:
+                f.write(resume_tex)
+            with open(md_path, "w", encoding="utf-8") as f:
+                f.write(resume_md)
+
+            prof = memory_service.user_profile.get_profile()
+
+            # Compile PDFs
+            pdf_generator.generate_resume_pdf(
+                source_tex_or_md=resume_tex or resume_md,
+                output_pdf_path=resume_pdf_path,
+                candidate_name=prof.name or "Khushal Pareta",
+                candidate_title=prof.title or "AI Developer | Machine Learning Engineer",
+                candidate_contacts={"email": prof.email, "phone": "+91 96604 64021", "location": prof.location},
+            )
+
+            pdf_generator.generate_cover_letter_pdf(
+                cover_letter_text=cover_letter,
+                applicant_name=prof.name or "Khushal Pareta",
+                job_title=target_job["title"],
+                company=target_job["company"],
+                output_pdf_path=cover_letter_pdf_path,
+                contact_info={"email": prof.email, "phone": "+91 96604 64021", "location": prof.location},
+            )
+
+            # Interactive Draft Review / Preview Stage
+            preview_enabled = os.getenv("THANATOS_DRAFT_PREVIEW", "true").lower() in ("true", "1", "yes", "on")
+            if preview_enabled:
+                console.print(f"\n[bold yellow]• Interactive Draft & Permission Gate[/bold yellow]")
+                console.print(f"  [dim]Template Used:[/dim] [cyan]{tmpl_name}[/cyan]")
+                console.print(f"  [dim]Draft Resume PDF:[/dim]  [underline white]{os.path.abspath(resume_pdf_path)}[/underline white]")
+                console.print(f"  [dim]Draft Cover PDF:[/dim]   [underline white]{os.path.abspath(cover_letter_pdf_path)}[/underline white]")
+                console.print(f"  [dim]Draft LaTeX Code:[/dim]  [underline white]{os.path.abspath(tex_path)}[/underline white]")
+                
+                # Show quick terminal cover letter preview
+                console.print(Panel(cover_letter, title="[cyan]Cover Letter Preview[/cyan]", box=ROUNDED, border_style="dim cyan"))
+                console.print("[dim]Options: [bold white]Enter[/bold white] = Approve & Dispatch  │  [bold white]o[/bold white] = Open in WPS/Word/Reader  │  [bold white]s[/bold white] = Skip opening[/dim]")
+
+                try:
+                    user_action = input("  Proceed with dispatch? [Y/o/s]: ").strip().lower()
+                    if user_action == "o":
+                        # Open resume in default system viewer (Word, WPS, or PDF viewer)
+                        if os.name == "nt":
+                            os.startfile(os.path.abspath(resume_pdf_path))
+                            os.startfile(os.path.abspath(cover_letter_pdf_path))
+                        input("  Press Enter after reviewing or editing drafts to continue...")
+                    elif user_action == "s":
+                        console.print(f"[yellow]Skipped dispatch for {target_job['company']}.[/yellow]")
+                        continue
+                except (EOFError, KeyboardInterrupt):
+                    pass
+
+            # Application Packaging & Dispatch
+            pdf_attachments = [resume_pdf_path, cover_letter_pdf_path]
+            print_agent_breadcrumb("Job Applicator Agent", f"Packaging attachments and recording outreach log...", 0.85)
+            apply_res = await registry.dispatch("prepare_job_application", {
+                "job_id": target_job.get("id"),
+                "job_title": target_job["title"],
+                "company": target_job["company"],
+                "recipient_email": target_job.get("apply_email"),
+                "hiring_manager": target_job.get("hiring_manager"),
+                "tailored_resume": resume_md,
+                "cover_letter": cover_letter,
+                "resume_attachments": pdf_attachments,
+                "send_email_now": is_configured,
+            })
+
+            status_text = apply_res.content.get("status", "Staged")
+            status_color = "green" if apply_res.content.get("verified_delivery") else ("yellow" if "Staged" in status_text else "red")
+            console.print(f"  [bold {status_color}][✓] Application {status_text} for {target_job['company']} -> {target_job.get('apply_email')}[/bold {status_color}]")
+
+        print_agent_breadcrumb("Coordinator", "All qualified job applications processed successfully!", 1.0)
+        console.print(f"\n[bold green][✓] Audit ledger updated in: [white]logs/job_applications.jsonl[/white][/bold green]\n")
