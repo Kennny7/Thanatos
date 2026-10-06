@@ -366,6 +366,38 @@ class ThanatosCLI:
         """Handle standard user conversational and natural language task prompts."""
         lower = user_text.lower()
 
+        # 1. Autonomous Natural Language Setting & Slash Command Translation
+        # Allows user to speak naturally without typing slash commands manually
+        if any(phrase in lower for phrase in ["scan network", "scan wifi", "find devices", "search devices", "discover nodes", "scan nodes"]):
+            console.print("[dim cyan]❯ [Autonomous Action Gate][/dim cyan] [yellow]Triggering subnet UDP node discovery...[/yellow]")
+            await self._handle_command("/nodes scan")
+            return
+
+        if any(phrase in lower for phrase in ["sync mesh", "sync nodes", "sync files across devices", "sync profile to laptop"]):
+            console.print("[dim cyan]❯ [Autonomous Action Gate][/dim cyan] [yellow]Triggering manifest-based delta file synchronization across LAN mesh...[/yellow]")
+            await self._handle_command("/nodes sync")
+            return
+
+        if any(phrase in lower for phrase in ["turn on preview", "enable preview", "turn on draft preview", "enable draft check"]):
+            console.print("[dim cyan]❯ [Autonomous Action Gate][/dim cyan] [yellow]Enabling interactive draft review gate...[/yellow]")
+            await self._handle_command("/preview on")
+            return
+
+        if any(phrase in lower for phrase in ["turn off preview", "disable preview", "autopilot", "auto pilot", "disable draft check"]):
+            console.print("[dim cyan]❯ [Autonomous Action Gate][/dim cyan] [yellow]Disabling draft preview (Auto-Pilot active)...[/yellow]")
+            await self._handle_command("/preview off")
+            return
+
+        if any(phrase in lower for phrase in ["turn on thinking", "show thinking", "enable thinking", "display reasoning"]):
+            console.print("[dim cyan]❯ [Autonomous Action Gate][/dim cyan] [yellow]Enabling model reasoning / think traces...[/yellow]")
+            await self._handle_command("/thinking on")
+            return
+
+        if any(phrase in lower for phrase in ["turn off thinking", "hide thinking", "disable thinking", "hide reasoning"]):
+            console.print("[dim cyan]❯ [Autonomous Action Gate][/dim cyan] [yellow]Hiding model reasoning blocks...[/yellow]")
+            await self._handle_command("/thinking off")
+            return
+
         # Check if the user is naturally instructing a job workflow
         is_job_request = any(k in lower for k in ["job", "apply", "resume"]) and any(k in lower for k in ["search", "find", "hunt", "mail", "email", "pune", "remote"])
 
