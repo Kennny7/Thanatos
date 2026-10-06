@@ -142,6 +142,17 @@ class ThanatosCLI:
                 status = "ON" if self.show_thinking else "OFF"
                 console.print(f"[dim]Thinking display is currently [bold]{status}[/bold]. Usage: /thinking on|off[/dim]")
 
+        elif cmd == "/preview":
+            if arg.lower() in ("on", "true", "1"):
+                os.environ["THANATOS_DRAFT_PREVIEW"] = "true"
+                console.print("[bold green][✓] Interactive draft review & preview gate enabled.[/bold green]")
+            elif arg.lower() in ("off", "false", "0"):
+                os.environ["THANATOS_DRAFT_PREVIEW"] = "false"
+                console.print("[bold yellow][✓] Draft preview gate disabled (Autonomous Auto-Pilot mode active).[/bold yellow]")
+            else:
+                curr = os.getenv("THANATOS_DRAFT_PREVIEW", "true")
+                console.print(f"[dim]Draft preview gate is currently [bold]{'ON' if curr == 'true' else 'OFF'}[/bold]. Usage: /preview on|off[/dim]")
+
         elif cmd == "/history":
             history_res = await registry.dispatch("get_application_history", {"limit": 10})
             if history_res.success:
@@ -302,6 +313,51 @@ class ThanatosCLI:
                 for r in results:
                     col = "green" if r.get("status") == "online" else "red"
                     console.print(f"  • {r.get('node_id')} ({r.get('endpoint')}): [{col}]{r.get('status').upper()}[/{col}]")
+
+            elif action == "scan":
+                from services.mesh.discovery import discovery_service
+                console.print("[dim]Broadcasting UDP discovery beacon across local subnet...[/dim]")
+                await discovery_service.start(role="coordinator", http_port=8000)
+                await asyncio.sleep(2.0)
+                nodes = mesh_manager.list_nodes()
+                console.print(f"[bold green][✓] Discovery scan complete. {len(nodes)} node(s) discovered on LAN.[/bold green]")
+
+            elif action == "exec":
+                from services.mesh.remote_control import remote_controller
+                parts = extra.split(maxsplit=1)
+                if len(parts) < 2:
+                    console.print("[red]Usage: /nodes exec <node_id> <command>[/red]")
+                else:
+                    nid, remote_cmd = parts
+                    console.print(f"[dim]Dispatching command to {nid}: {remote_cmd}[/dim]")
+                    res = await remote_controller.exec_on_node(nid, remote_cmd)
+                    if res.get("status") == "success":
+                        console.print(f"[bold green]Output from {nid}:[/bold green]\n{res.get('stdout', '')}")
+                    else:
+                        console.print(f"[bold red]Remote execution failed:[/bold red] {res.get('error', '')}")
+
+            elif action == "pull":
+                from services.mesh.remote_control import remote_controller
+                parts = extra.split(maxsplit=1)
+                if len(parts) < 2:
+                    console.print("[red]Usage: /nodes pull <node_id> <model_name>[/red]")
+                else:
+                    nid, model_name = parts
+                    console.print(f"[bold cyan]Instructing node {nid} to pull Ollama model {model_name}...[/bold cyan]")
+                    res = await remote_controller.pull_model_on_node(nid, model_name)
+                    if res.get("status") == "success":
+                        console.print(f"[bold green][✓] Model {model_name} successfully downloaded on {nid}.[/bold green]")
+                    else:
+                        console.print(f"[bold red]Pull failed:[/bold red] {res.get('error', '')}")
+
+            elif action == "sync":
+                from services.mesh.sync import sync_service
+                console.print("[bold cyan]• Synchronizing Profile, Resumes & Config across all mesh nodes...[/bold cyan]")
+                results = await sync_service.sync_profile_to_all_nodes()
+                for r in results:
+                    nid = r.get("node_id")
+                    console.print(f"  [✓] Node {nid}: {r.get('synced_files')} files updated, {r.get('skipped')} unchanged.")
+                console.print("[bold green][✓] Mesh synchronization complete![/bold green]\n")
 
         else:
             console.print(f"[red]Unknown command '{cmd}'. Type [bold white]/help[/bold white] for assistance.[/red]")
