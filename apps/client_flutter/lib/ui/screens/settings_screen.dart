@@ -22,7 +22,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   String _selectedProvider = 'ollama';
   String _selectedModel = 'qwen2.5:7b';
   final _serverUrlController = TextEditingController(text: 'http://localhost:8000');
-  final _assistantNameController = TextEditingController(text: 'Aegis');
+  final _assistantNameController = TextEditingController(text: '');
   final _pullModelController = TextEditingController();
   double _temperature = 0.2;
 
@@ -243,8 +243,39 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const SizedBox(height: 18),
 
-          // Section 2: Assistant Persona
-          _buildSectionHeader('ASSISTANT PERSONA & IDENTITY', primaryAccent),
+          // Section 2: Gateway Network IP & Server Endpoint
+          _buildSectionHeader('LAN GATEWAY & SERVER ENDPOINT', primaryAccent),
+          HoloPanel(
+            accentColor: primaryAccent,
+            surfaceColor: surfaceColor,
+            classificationTag: 'NET // GATEWAY_CONN',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Connect to Thanatos Primary Coordinator on Wi-Fi without rebuilding app:', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _serverUrlController,
+                  decoration: InputDecoration(
+                    labelText: 'Server Gateway Address (IP:Port)',
+                    labelStyle: TextStyle(color: primaryAccent.withValues(alpha: 0.8), fontFamily: 'Courier'),
+                    hintText: 'e.g. http://192.168.1.15:8000',
+                    prefixIcon: Icon(Icons.wifi_tethering, color: primaryAccent),
+                    enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: primaryAccent.withValues(alpha: 0.4))),
+                    focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: primaryAccent)),
+                  ),
+                  style: const TextStyle(color: Colors.white, fontFamily: 'Courier'),
+                  onChanged: (val) {
+                    AppConfig.setGatewayUrl(val);
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+
+          // Section 3: Assistant Persona
+          _buildSectionHeader('AGENT PERSONA & IDENTITY', primaryAccent),
           HoloPanel(
             accentColor: primaryAccent,
             surfaceColor: surfaceColor,
@@ -252,9 +283,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: TextField(
               controller: _assistantNameController,
               decoration: InputDecoration(
-                labelText: 'Assistant Custom Name',
+                labelText: 'Active Agent Persona Name',
                 labelStyle: TextStyle(color: primaryAccent.withValues(alpha: 0.8), fontFamily: 'Courier'),
-                hintText: 'e.g. Aegis, Jarvis, Thanatos, Athena',
+                hintText: 'Leave empty for neutral multi-agent assistant',
                 prefixIcon: Icon(Icons.psychology, color: primaryAccent),
                 enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: primaryAccent.withValues(alpha: 0.4))),
                 focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: primaryAccent)),
