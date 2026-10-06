@@ -49,6 +49,22 @@ class SkillRegistry:
     def get_skill(self, skill_name: str) -> Optional[BaseSkill]:
         return self._ensure_skill(skill_name)
 
+    def get_skills_by_category(self, category: str) -> List[BaseSkill]:
+        """Return all skills belonging to a given category."""
+        for name in list(self._lazy_factories.keys()):
+            self._ensure_skill(name)
+        return [s for s in self._skills.values() if getattr(s, "category", "system") == category]
+
+    def list_categories(self) -> Dict[str, List[str]]:
+        """Return all categories and their registered skill names."""
+        for name in list(self._lazy_factories.keys()):
+            self._ensure_skill(name)
+        cat_map: Dict[str, List[str]] = {}
+        for skill in self._skills.values():
+            cat = getattr(skill, "category", "system")
+            cat_map.setdefault(cat, []).append(skill.skill_name)
+        return cat_map
+
     def get_all_tools(self) -> List[ToolDefinition]:
         """Aggregate tool definitions from every registered and lazy skill."""
         # Ensure lazy skills are instantiated so their schemas are known
