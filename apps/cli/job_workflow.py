@@ -64,7 +64,9 @@ class JobWorkflowRunner:
             return
 
         jobs = search_res.content["jobs"]
-        console.print(f"[bold green][+] Located {len(jobs)} high-match openings with direct email application routes.[/bold green]\n")
+        skipped_dup = search_res.content.get("skipped_already_applied", 0)
+        dup_msg = f" ([dim]{skipped_dup} previously applied openings excluded to avoid spamming[/dim])" if skipped_dup else ""
+        console.print(f"[bold green][+] Located {len(jobs)} fresh openings with direct email routes.{dup_msg}[/bold green]\n")
 
         # Print quick summary of jobs found
         for idx, j in enumerate(jobs, 1):
