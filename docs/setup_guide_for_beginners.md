@@ -76,25 +76,61 @@ Thanatos is pre-configured with zero-configuration local vector databases:
 
 ---
 
-## 5. Multi-Device Mesh: Linking Secondary Laptops & Android (Termux)
+## 5. Multi-Device Mesh: Auto-Discovery & Wi-Fi Compute Clustering
 
-You can turn secondary computers or Android phones on the same Wi-Fi into worker nodes:
+Thanatos lets you pool the computational power of other laptops and Android devices on the same Wi-Fi.
 
-### On the Secondary Device (Laptop or Termux):
-1. Copy Thanatos or unbundle the portable archive (`python tools/pack_bundle.py`).
-2. Run:
-   ```bash
-   python -m services.mesh.worker --port 8002
-   ```
-
-### On the Primary Thanatos Machine:
-In the Thanatos CLI, link the node by IP address:
-```text
-thanatos> /nodes add 192.168.1.50:8002 PhoneWorker
-[✓] Registered node PhoneWorker (http://192.168.1.50:8002)
-  Status: ONLINE
+### Step 1: Start a Worker on Your Other Device
+On your secondary laptop or Android phone (via Termux):
+```bash
+python -m services.mesh.worker --port 8002 --role worker
 ```
-Now Thanatos can offload sub-agent tasks and background compute across your local network.
+
+### Step 2: Auto-Discovery & Remote Control from Primary Machine
+You don't even need to type IP addresses manually! From your main Thanatos terminal:
+```text
+thanatos> /nodes scan
+[✓] Discovery scan complete. Discovered LAN mesh nodes automatically!
+
+thanatos> /nodes
+• Distributed LAN Mesh Nodes (1 Registered):
+  • LAPTOP-WORKER (http://192.168.1.15:8002): ONLINE Role: worker
+```
+
+### Step 3: Controlling Secondary Nodes from Primary Terminal
+You can manage models and run commands on the secondary device directly:
+```text
+# Instruct secondary node to pull an SLM model (e.g. Qwen, Phi-3, LLaMA)
+thanatos> /nodes pull LAPTOP-WORKER qwen2.5:3b
+
+# Run remote shell commands on the secondary node
+thanatos> /nodes exec LAPTOP-WORKER "ollama list"
+
+# Sync resumes, profile documents, and settings to all connected nodes
+thanatos> /nodes sync
+```
+
+---
+
+## 6. Job Applications, Authentic LaTeX Resumes & Draft Previews
+
+When running autonomous job applications:
+1. Thanatos searches positions matching your preferences and **strictly filters out** any openings without direct email addresses.
+2. It ingests your authentic LaTeX resumes (`AI_Engineer.tex` / `AI_Developer.tex` from `data/profile_dir/` or any custom folder) and generates comprehensive, tailored applications preserving your real career achievements (C-DAC, Maritime Knowledge Cluster, PySpark, Airflow, MLflow).
+3. **Interactive Draft Review Gate**:
+   Thanatos provides an interactive draft review stage where you can view or open drafts in WPS / Microsoft Word / PDF reader before sending:
+   ```text
+   Proceed with dispatch? [Y/o/s]:
+   - Enter (Y) = Approve and dispatch
+   - 'o' = Open PDF in WPS / Word / default viewer for quick review
+   - 's' = Skip this opportunity
+   ```
+4. **Auto-Pilot Mode**:
+   Once you trust the system completely, toggle off the manual review gate:
+   ```text
+   thanatos> /preview off
+   [✓] Draft preview gate disabled (Autonomous Auto-Pilot mode active).
+   ```
 
 ---
 
