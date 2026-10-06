@@ -29,15 +29,23 @@
 
 ### Core Capabilities
 
-1. **Unified LLM Brain & Deep Thinking**: Local Ollama execution (`qwen2.5:7b`, `deepseek-r1:7b/14b`, `llama3.1:8b`, `phi3`) with real-time `<think>` reasoning streaming and robust tool parsing.
-2. **Multi-Agent Supervisor / Coordinator**: Decomposes high-level natural language goals into sub-agent Directed Acyclic Graphs (DAGs).
-3. **Speech Intelligence & Speaker Diarization**:
-   - **ASR & TTS**: Powered by `faster-whisper` and neural `edge-tts`.
+1. **Distributed LAN Mesh & Multi-Device Compute Clustering**:
+   - Turn secondary laptops and Android devices (via Termux) into compute and inference worker nodes over Wi-Fi.
+   - **Zero-Config UDP Auto-Discovery**: Automatic subnet beacon scanning on UDP port 47470 with HMAC token authentication.
+   - **Remote Node Control & Model Offloading**: Remotely dispatch shell commands, pull models on remote Ollama instances, and trigger manifest-based delta file sync across the LAN.
+2. **Targeted SLM & Model Selection Agent**:
+   - Assign specialized, lightweight Small Language Models ($\le 8\text{--}9\text{B}$) like `qwen2.5:3b/7b`, `phi3:mini`, `deepseek-r1:7b`, or `llama3.2:3b` tailored to specific agent tasks.
+   - Automatically detects missing models and triggers automated Ollama pulls on local or secondary mesh nodes.
+3. **External Action Execution & OS Automation**:
+   - Real-time command-line dispatch, desktop automation, port/service auditing, and live web scraping with safety gates and SHA-256 Merkle audit logs.
+4. **Speech Intelligence & Speaker Diarization**:
+   - **ASR & Neural TTS**: Powered by `faster-whisper` and `edge-tts`.
    - **Acoustic Echo Cancellation (AEC)**: Real-time spectral subtraction and noise suppression.
-   - **Speaker Diarization**: Distinguishes between "Owner (You)" and "Guest Speaker" using pitch and spectral embeddings.
-4. **Hybrid Memory & Career RAG**: ChromaDB vector search integrated with a structured candidate profile manager for context-aware workflows.
-5. **Cross-Platform Flutter Client**: Responsive desktop (Windows, macOS, Linux) and mobile (Android, iOS) UI with deep thinking traces, animated voice visualizer, and live agent status tracking.
-6. **Zero-Trust Sandbox & Merkle Audit Trail**: Subprocess timeouts, isolated test runners, and SHA-256 tamper-evident cryptographic event logging.
+   - **Multi-Speaker Diarization**: Distinguishes between Owner and Guest speakers.
+5. **Cross-Platform Flutter Client & Terminal Shell**:
+   - Responsive Holographic HUD client (Desktop & Mobile) and interactive Linux-style CLI shell with live thinking traces and dynamic gateway switching.
+6. **Extensible Modular Agent Skills**:
+   - Organized skill categories (`system`, `career`, `creative`, `ui`, `mesh`) including Wuxia/Xianxia novel architecture, code refactoring, and career RAG.
 
 ---
 
@@ -210,35 +218,35 @@ flowchart TB
 
 ## Key Workflows
 
-### 1. Autonomous Job Hunting & Resume Tailoring Pipeline
+### 1. Distributed Multi-Device LAN Mesh & Compute Offloading
 ```text
-User Prompt ──► Agent Coordinator ──► JobHunter (finds matching tech openings)
-                                  ──► ResumeTailor (queries UserProfile RAG & generates custom resume)
-                                  ──► JobApplicator (packages application & logs entry)
-                                  ──► Streams live progress to Flutter UI
+Primary Coordinator ──► UDP Broadcast (:47470) ──► Auto-discovers Worker Nodes on Wi-Fi
+                    ──► Dispatches `/nodes pull` ──► Triggers SLM downloads on Secondary Laptop
+                    ──► Distributes Inference ──► Offloads embeddings & sub-agent execution
+                    ──► Manifest Sync ──► Pushes profile & documents across LAN
 ```
 
-### 2. Web Novel Translation & Glossary Polish Pipeline
+### 2. Targeted SLM & Automated Model Selection
 ```text
-Chapter Raw Text ──► NovelAgent ──► Translates with glossary term enforcement
-                                ──► Polishes prose style & tone
-                                ──► Returns structured bilingual chapter output
+Agent Directives ──► ModelSelectorAgent (evaluates role, RAM/GPU specs)
+                 ──► Inspects Ollama (:11434) on Local & Remote Nodes
+                 ──► Autonomous `ollama pull` (pulls <= 9B models e.g. Qwen, Phi-3)
+                 ──► Deploys model into active agent execution loop
 ```
 
-### 3. Self-Improvement Code Reflection Pipeline
+### 3. External Action & OS Automation Pipeline
 ```text
-Codebase Inspection ──► SelfImprovement Agent ──► Analyzes target file
-                                              ──► Proposes fix / refactor
-                                              ──► Runs tests inside Sandbox
-                                              ──► Commits verified patch
+Natural Language Goal ──► Coordinator / Tool Executor ──► Audits targets & validates safety gate
+                      ──► Subprocess & CLI Dispatch ──► Executes command in isolated environment
+                      ──► Merkle Audit Trail ──► Records tamper-evident SHA-256 event leaf
 ```
 
-### 4. Multi-Speaker Voice Intelligence & Diarization
+### 4. Long-Form Wuxia / Xianxia Novel Architecture
 ```text
-Microphone Audio ──► AEC Processor (removes acoustic echo & noise)
-                 ──► Speaker Identifier (extracts pitch/spectral features vs Owner profile)
-                 ──► Faster-Whisper ASR (transcribes multi-speaker audio with timestamps)
-                 ──► Agent Loop (handles directives like "summarize what others said")
+Novel Chapter Folder ──► NovelManager (detects chapter ordering & filters unindexed spam)
+                     ──► SQLite / Character Arc DB (tracks cultivation realms & evolution)
+                     ──► Chinese Novelist Xianxia Style Engine (polishes Dao, Qi, dialogue)
+                     ──► In-Place Editing with Snapshot History (instant rollback on demand)
 ```
 
 ---
