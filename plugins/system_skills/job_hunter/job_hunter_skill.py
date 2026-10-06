@@ -114,7 +114,8 @@ class JobHunterSkill(BaseSkill):
             # Filter jobs based on user criteria
             matched_jobs = []
             for j in all_jobs:
-                if require_email_apply and not j.get("apply_email"):
+                email = (j.get("apply_email") or "").strip()
+                if require_email_apply and (not email or "@" not in email):
                     continue
                 matched_jobs.append(j)
 
