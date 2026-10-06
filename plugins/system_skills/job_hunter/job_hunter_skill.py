@@ -1,6 +1,8 @@
 # Thanatos/plugins/system_skills/job_hunter/job_hunter_skill.py
 
+import json
 import logging
+import os
 from typing import Any, Dict, List
 import uuid
 
