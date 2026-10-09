@@ -23,8 +23,8 @@ Welcome to **Thanatos**. This guide walks you through setting up, configuring, a
 | :--- | :--- | :--- |
 | **OS** | Windows 10/11, macOS 12+, or Ubuntu 20.04+ | Windows 11 / Ubuntu 22.04 LTS |
 | **Python** | Python 3.12+ | Python 3.12 or 3.13 |
-| **RAM** | 8 GB (for 7B models) | 16 GB - 32 GB (for 14B/32B models) |
-| **GPU** | Optional (CPU inference supported) | NVIDIA GPU (6GB+ VRAM) or Apple Silicon (M1/M2/M3) |
+| **RAM** | 16 GB (for 14B models) | 32 GB – 64 GB (for 32B–70B models) |
+| **GPU** | Optional (CPU inference supported, slow) | NVIDIA GPU (16 GB+ VRAM) or Apple Silicon (M2 Pro/Max/Ultra) |
 | **Flutter** | Flutter SDK 3.x | Latest Flutter Stable Channel |
 
 ---
@@ -100,18 +100,33 @@ LLM_BASE_URL=http://localhost:11434
 
 Thanatos runs completely offline using local models managed by Ollama.
 
-### Pull Recommended Models
+> [!IMPORTANT]
+> Thanatos orchestrates multiple agents with planning, RAG retrieval, tool execution, and multi-step reasoning chains. **7B–8B models will struggle** with this complexity. The practical minimum for coherent multi-agent behaviour is **14B**; **32B is the recommended sweet spot**.
+
+### Model Tier Guide
+
+| Tier | Model | RAM Required | Notes |
+|:--|:--|:--|:--|
+| 🟡 Minimum | `qwen2.5:14b` | ~12 GB | Works for simple tasks; struggles with deep reasoning |
+| 🟢 Recommended | `qwen2.5:32b` | ~20 GB | Strong reasoning, excellent tool use |
+| 🟢 Recommended | `deepseek-r1:32b` | ~20 GB | Best local choice for planning-heavy tasks |
+| 🔵 Best | `qwen2.5:72b` | ~45 GB | Near-frontier quality locally |
+| 🔵 Best | `deepseek-r1:70b` | ~45 GB | Top open-source reasoning model |
+| ☁️ Cloud fallback | GPT-4o / Claude / Gemini | — | Set `LLM_PROVIDER=openai` or `deepseek`, add API key |
+
+### Pull Models
+
 ```bash
-# Lightweight & fast (Recommended for 8GB RAM laptops)
+# Recommended: strong reasoning & planning
+ollama pull qwen2.5:32b
+ollama pull deepseek-r1:32b
+
+# Constrained hardware minimum (14B)
+ollama pull qwen2.5:14b
+
+# Optional: lightweight sub-agent models for delegated skills
 ollama pull qwen2.5:7b
-
-# Deep reasoning model (Recommended for 16GB RAM / GPU)
 ollama pull deepseek-r1:7b
-# or
-ollama pull deepseek-r1:14b
-
-# General purpose assistant
-ollama pull llama3.1:8b
 ```
 
 Ensure the Ollama daemon is running in the background (`ollama serve` or system service).
