@@ -84,7 +84,7 @@ class ThanatosCLI:
                 if not user_input:
                     continue
 
-                if user_input.lower() in ("/exit", "/quit", "exit", "quit"):
+                if user_input.lower() in ("/exit", "/quit", "/bye", r"\exit", r"\quit", r"\bye", "exit", "quit", "bye"):
                     console.print("[bold yellow]Exiting Thanatos CLI. Have a productive day![/bold yellow]")
                     break
 
