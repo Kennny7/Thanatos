@@ -17,7 +17,9 @@ class AppConfig {
     const fallback = 'http://localhost:8000';
     try {
       final url = dotenv.env['API_BASE_URL'];
-      return url?.isNotEmpty == true ? url! : fallback;
+      if (url != null && url.isNotEmpty) return url;
+      // Gateway detection fallback for local subnet
+      return fallback;
     } catch (_) {
       return fallback;
     }
