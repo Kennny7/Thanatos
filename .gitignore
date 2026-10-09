@@ -137,12 +137,17 @@ coverage/
 # Project-specific secrets
 config/secrets.env
 
-# Local audit database
-audit/storage/*.db
+# Local storage & memory caches
+memory_store/
+data/agent_memory/
+logs/
+backups/
+voice_profiles/
 
-# Local data
+# Local data files
 *.tex
 *.pdf
+!data/profile_dir/*.tex
 
 .metadata
 .env
