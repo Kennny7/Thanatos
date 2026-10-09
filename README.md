@@ -354,20 +354,64 @@ ollama pull qwen2.5:7b
 ollama pull deepseek-r1:7b
 ```
 
-### 5. Flutter Client Setup
+### 5. Flutter Client Setup & Cross-Platform Run
+
 ```bash
 cd apps/client_flutter
 
 # Install Flutter dependencies
 flutter pub get
 
-# Run on your desktop platform
+# Run directly on your desktop / browser platform
 flutter run -d windows    # Windows Desktop
 # or
 flutter run -d macos      # macOS Desktop
 # or
 flutter run -d chrome     # Web Browser
 ```
+
+#### Building & Deploying the Android App
+
+Thanatos runs on Android devices both as a portable mobile UI and as a wireless mesh compute node.
+
+**Option A: Direct Run & Debug on Connected Android Device**
+1. Enable **Developer Options** and **USB Debugging** on your Android device (or connect via Wireless ADB on the same Wi-Fi: `adb connect <android-ip>:5555`).
+2. Verify device connection:
+   ```bash
+   flutter devices
+   ```
+3. Run directly on Android:
+   ```bash
+   flutter run -d android
+   ```
+
+**Option B: Build Standalone Release APK & Transfer to Phone**
+1. Build the optimized release APK:
+   ```bash
+   # Build universal release APK
+   flutter build apk --release
+
+   # Or build split per-ABI APKs (smaller file size for arm64-v8a devices)
+   flutter build apk --split-per-abi --release
+   ```
+2. Locate the generated APK at:
+   - Universal: `apps/client_flutter/build/app/outputs/flutter-apk/app-release.apk`
+   - Split ABI: `apps/client_flutter/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`
+
+3. Transfer and install onto your Android device:
+   - **Via ADB (Instant Cable / Wireless Command)**:
+     ```bash
+     adb install -r build/app/outputs/flutter-apk/app-release.apk
+     ```
+   - **Manual Transfer (Without ADB)**:
+     - Connect your Android phone to your PC via USB cable in **File Transfer (MTP)** mode.
+     - Copy `app-release.apk` to your phone's `Download/` or internal storage folder.
+     - Open the Files / File Manager app on your Android phone, tap `app-release.apk`, and tap **Install** (allow installation from unknown sources if prompted).
+     - Alternatively, send the `.apk` file to your phone via local Wi-Fi sharing (e.g. LocalSend, KDE Connect, or Python HTTP server: `python -m http.server 8080` in the APK directory).
+
+4. **Connecting Android to Thanatos Backend**:
+   - Ensure your phone is connected to the same Wi-Fi network as the Thanatos host machine.
+   - In the Thanatos Android app, open Settings and point the Gateway URL to your host's local IP (e.g. `http://192.168.1.X:8000`), or let the built-in UDP beacon discovery auto-link to the primary machine.
 
 ### 6. Running the Test Suite
 ```bash
