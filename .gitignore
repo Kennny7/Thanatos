@@ -145,9 +145,7 @@ backups/
 voice_profiles/
 
 # Local data files
-*.tex
-*.pdf
-!data/profile_dir/*.tex
+data/profile_dir/*.tex
 
 .metadata
 .env
