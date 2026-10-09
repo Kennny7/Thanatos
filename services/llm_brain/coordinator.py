@@ -55,12 +55,26 @@ class AgentCoordinator:
         is_novel_workflow = any(k in lower_prompt for k in ["novel", "translate novel", "raw chapter"])
         is_code_workflow = any(k in lower_prompt for k in ["improve code", "fix bug in thanatos", "refactor thanatos", "self-improve"])
 
-        # Yield status: Thinking & Planning
+        # Determine meaningful real-time task status
+        if is_job_workflow:
+            task_desc = "Inspecting career profile & scanning verified job channels"
+        elif is_novel_workflow:
+            task_desc = "Loading chapter structure & character development database"
+        elif is_code_workflow:
+            task_desc = "Analyzing repository codebase & test suites in sandbox"
+        elif any(k in lower_prompt for k in ["search", "browse", "news", "google", "web"]):
+            task_desc = "Initiating live web search & external network query"
+        elif any(k in lower_prompt for k in ["node", "mesh", "wifi", "device"]):
+            task_desc = "Scanning subnet UDP ports & pinging mesh nodes"
+        elif any(k in lower_prompt for k in ["database", "db", "memory", "vector", "postgres", "mongo"]):
+            task_desc = "Querying hybrid vector & relational database stores"
+        else:
+            task_desc = f"Synthesizing knowledge context for '{user_prompt[:35]}...'"
+
         yield {
             "type": "agent_status",
             "agent": asst_name,
-            "status": "Analyzing request & structuring response...",
-            "progress": 0.1,
+            "status": task_desc,
         }
 
         if is_job_workflow and ("search" in lower_prompt or "apply" in lower_prompt or "resume" in lower_prompt):
@@ -132,12 +146,12 @@ COLLABORATIVE OPERATING GUIDELINES:
         if not history_payload or history_payload[-1].get("content") != user_prompt:
             history_payload.append({"role": "user", "content": user_prompt})
 
-        # Step-by-step reasoning with live keepalive
+        # Emitting real neural model invocation status
+        model_name = getattr(self.provider.settings, "model", "Ollama")
         yield {
             "type": "agent_status",
             "agent": asst_name,
-            "status": "Generating response via neural engine...",
-            "progress": 0.3,
+            "status": f"Querying neural model `{model_name}`...",
         }
 
         response = await self.provider.generate_response(
