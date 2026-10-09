@@ -33,9 +33,10 @@ Welcome to **Thanatos**. This guide walks you through setting up, configuring, a
 
 Ensure you have installed:
 1. **Python 3.12+**: [Download Python](https://www.python.org/downloads/)
-2. **Git**: [Download Git](https://git-scm.com/)
-3. **Ollama** (for local LLM inference): [Download Ollama](https://ollama.com)
-4. **Flutter SDK** (for UI client): [Install Flutter](https://docs.flutter.dev/get-started/install)
+2. **uv** (Python package manager): [Install uv](https://docs.astral.sh/uv/getting-started/installation/)
+3. **Git**: [Download Git](https://git-scm.com/)
+4. **Ollama** (for local LLM inference): [Download Ollama](https://ollama.com)
+5. **Flutter SDK** (for UI client): [Install Flutter](https://docs.flutter.dev/get-started/install)
 
 ---
 
@@ -47,22 +48,40 @@ git clone https://github.com/Kennny7/Thanatos.git
 cd Thanatos
 ```
 
-### Step 2: Create a Virtual Environment
-```bash
-# On Windows
-python -m venv venv
-venv\Scripts\activate
+### Step 2: Install `uv` (Python Package Manager)
 
-# On Linux / macOS
-python3 -m venv venv
-source venv/bin/activate
+Thanatos uses [`uv`](https://docs.astral.sh/uv/) for deterministic, lock-file-based dependency management.
+
+```bash
+# Windows (PowerShell)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+# macOS / Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-### Step 3: Install Dependencies
+Restart your shell after installation so `uv` is on your PATH.
+
+### Step 3: Install Dependencies (reproducible via lock file)
+
 ```bash
-pip install --upgrade pip
-pip install -r requirements.txt
+# Install all runtime deps from the committed uv.lock (exact versions)
+uv sync
+
+# Include dev/test extras
+uv sync --extra dev
 ```
+
+> **Why `uv sync` instead of `pip install`?**  
+> `uv sync` reads `uv.lock` — a committed, cross-platform lock file — and installs
+> the **exact same versions** on every machine. This prevents the `>=` version drift
+> problem where a new library release could silently break the project.
+
+> **Fallback (if `uv` is unavailable)**  
+> ```bash
+> python -m venv venv && venv\Scripts\activate   # Windows
+> pip install -r requirements.txt
+> ```
 
 ### Step 4: Configure Environment Variables
 Create a `.env` file in the root directory (or copy from sample):
