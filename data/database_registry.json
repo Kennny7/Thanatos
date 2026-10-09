@@ -1,0 +1,44 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2026-10-09T14:11:37Z",
+  "engines": {
+    "postgresql": {
+      "container": "thanatos-postgres",
+      "port": 5432,
+      "database": "thanatos_memory",
+      "user": "thanatos",
+      "role": "Relational Data, Structured Profiles, Jobs & Deduplication Audit",
+      "volume": "thanatos_postgres_data",
+      "health_cmd": "pg_isready -U thanatos"
+    },
+    "mongodb": {
+      "container": "thanatos-mongodb",
+      "port": 27017,
+      "database": "thanatos_docs",
+      "user": "thanatos_admin",
+      "role": "Agent Transcripts, Dynamic Raw Dossiers, Unstructured Memory",
+      "volume": "thanatos_mongo_data",
+      "health_cmd": "mongosh --eval \"db.adminCommand('ping')\""
+    },
+    "milvus": {
+      "container": "milvus-standalone",
+      "port": 19530,
+      "health_port": 9091,
+      "role": "High-Dimensional Vector Memory, Semantic Similarity, RAG",
+      "dependencies": [
+        "milvus-etcd",
+        "milvus-minio"
+      ],
+      "volume": "thanatos_milvus_data"
+    },
+    "neo4j": {
+      "container": "thanatos-neo4j",
+      "http_port": 7474,
+      "bolt_port": 7687,
+      "user": "neo4j",
+      "role": "Social Graph, Interpersonal Dossiers, Multi-Agent Knowledge Topology",
+      "volume": "thanatos_neo4j_data"
+    }
+  },
+  "status_history": []
+}
