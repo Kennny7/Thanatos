@@ -30,22 +30,25 @@
 ### Core Capabilities
 
 1. **Distributed LAN Mesh & Multi-Device Compute Clustering**:
-   - Turn secondary laptops and Android devices (via Termux) into compute and inference worker nodes over Wi-Fi.
-   - **Zero-Config UDP Auto-Discovery**: Automatic subnet beacon scanning on UDP port 47470 with HMAC token authentication.
+   - Turn secondary laptops and Android devices (via Termux or directly through the Thanatos Flutter client) into compute and inference worker nodes over Wi-Fi.
+   - **Zero-Config UDP Discovery**: Automatic subnet beacon scanning on UDP port 47470 with persistent node caching and dynamic Wi-Fi gateway auto-detection.
    - **Remote Node Control & Model Offloading**: Remotely dispatch shell commands, pull models on remote Ollama instances, and trigger manifest-based delta file sync across the LAN.
-2. **Targeted SLM & Model Selection Agent**:
+2. **Enterprise Multi-Engine Database Architecture**:
+   - Production-grade hybrid persistence stack: **PostgreSQL 16** (relational & career deduplication), **MongoDB 7.0** (unstructured transcripts & dossiers), **Milvus 2.4.13 Standalone** (high-dimensional vector search), and **Neo4j 5.20** (knowledge graph & social relationships).
+   - Automated Docker supervisor ([`services/database/db_orchestrator.py`](./services/database/db_orchestrator.py)) provides on-demand container startup, health checks, RAM guardrails, and backup recovery.
+3. **Specialized Multi-Agent Personas & Isolated Memory**:
+   - Distinct agent personas with segregated memory partitions:
+     - **Butler Agent**: Tracks character dossiers, evaluates interpersonal social dynamics, and evaluates long-term strategic alignment.
+     - **Secretary & Wingman Agent**: Daily agenda management, active workout/jogging routines, and personalized taste preference tracking.
+4. **Hands-Free Call Mode & Cross-Platform Tactical UI**:
+   - High-contrast minimal black terminal mode and hands-free **Call Mode** across Windows and Android.
+   - Real-time acoustic frequency spectrum visualizer reacting directly to microphone input decibels rather than synthetic waveforms.
+5. **Targeted SLM & Model Selection Agent**:
    - Assign specialized, lightweight Small Language Models ($\le 8\text{--}9\text{B}$) like `qwen2.5:3b/7b`, `phi3:mini`, `deepseek-r1:7b`, or `llama3.2:3b` tailored to specific agent tasks.
    - Automatically detects missing models and triggers automated Ollama pulls on local or secondary mesh nodes.
-3. **External Action Execution & OS Automation**:
+6. **External Action Execution & Autonomous Tool Creation**:
    - Real-time command-line dispatch, desktop automation, port/service auditing, and live web scraping with safety gates and SHA-256 Merkle audit logs.
-4. **Speech Intelligence & Speaker Diarization**:
-   - **ASR & Neural TTS**: Powered by `faster-whisper` and `edge-tts`.
-   - **Acoustic Echo Cancellation (AEC)**: Real-time spectral subtraction and noise suppression.
-   - **Multi-Speaker Diarization**: Distinguishes between Owner and Guest speakers.
-5. **Cross-Platform Flutter Client & Terminal Shell**:
-   - Responsive Holographic HUD client (Desktop & Mobile) and interactive Linux-style CLI shell with live thinking traces and dynamic gateway switching.
-6. **Extensible Modular Agent Skills**:
-   - Organized skill categories (`system`, `career`, `creative`, `ui`, `mesh`) including Wuxia/Xianxia novel architecture, code refactoring, and career RAG.
+   - Dynamic tool synthesis allowing agents to generate and execute custom tools on the fly.
 
 ---
 
@@ -61,9 +64,10 @@ Explore the comprehensive technical documentation suite in the [`docs/`](./docs)
 | **Master Architecture & Workflows** | Authoritative 7-module blueprint with sequence diagrams and execution contracts. | [![Read Blueprint](https://img.shields.io/badge/Open-Blueprint-007ACC?style=flat-square)](./docs/system_architecture_and_workflow.md) |
 | **API Specification** | Full REST endpoints and WebSocket streaming protocol (`/ws`) reference. | [![Read API Spec](https://img.shields.io/badge/Open-API%20Spec-009688?style=flat-square)](./docs/api_spec.md) |
 | **Plugin Development Guide** | Tutorial on creating, registering, and testing custom sub-agent skills. | [![Read Guide](https://img.shields.io/badge/Open-Dev%20Guide-F39C12?style=flat-square)](./docs/plugin_dev_guide.md) |
+| **Database Infrastructure** | Enterprise 4-engine database stack (PostgreSQL, MongoDB, Milvus, Neo4j) with Docker supervisor & recovery. | [![Read DB Spec](https://img.shields.io/badge/Open-DB%20Spec-009688?style=flat-square)](./docs/database_infrastructure.md) |
 | **Speech Intelligence & AEC** | Voice pipeline, acoustic echo cancellation, and speaker diarization details. | [![Read Voice Spec](https://img.shields.io/badge/Open-Voice%20Spec-3776AB?style=flat-square)](./docs/speech_intelligence.md) |
 | **Voice Mode & Speaker Verification** | Separate Voice Mode, ECG frequency line, VAD, multi-speaker authorization, and optional camera lip-sync. | [![Read Voice Mode Guide](https://img.shields.io/badge/Open-Voice%20Mode-00E5FF?style=flat-square)](./docs/voice_mode_speaker_verification.md) |
-| **Memory & RAG Subsystem** | ChromaDB vector store, semantic embeddings, and career profile matching. | [![Read RAG Guide](https://img.shields.io/badge/Open-RAG%20Guide-4B8BBE?style=flat-square)](./docs/memory_and_rag.md) |
+| **Memory & RAG Subsystem** | ChromaDB & Milvus vector store, semantic embeddings, and career profile matching. | [![Read RAG Guide](https://img.shields.io/badge/Open-RAG%20Guide-4B8BBE?style=flat-square)](./docs/memory_and_rag.md) |
 | **Vector Database Setup Guide** | Detailed setup for embedded ChromaDB, Docker ChromaDB, Qdrant, and Ollama embedding models. | [![Read Setup Guide](https://img.shields.io/badge/Open-Vector%20DB%20Guide-4B8BBE?style=flat-square)](./docs/vector_database_setup.md) |
 | **Security & Isolation Model** | Sandbox boundaries, OS safety confirmation gates, and Merkle audit logs. | [![Read Model](https://img.shields.io/badge/Open-Security%20Model-E74C3C?style=flat-square)](./docs/security_model.md) |
 | **Security & Network Intelligence** | Authentication gates, network scanning capabilities, OSINT pipelines, and defence mechanisms. | [![Read Security Guide](https://img.shields.io/badge/Open-Network%20Security-E74C3C?style=flat-square)](./docs/security_and_network.md) |
@@ -241,30 +245,30 @@ Natural Language Goal ──► Coordinator / Tool Executor ──► Audits tar
                       ──► Merkle Audit Trail ──► Records tamper-evident SHA-256 event leaf
 ```
 
-### 4. Long-Form Wuxia / Xianxia Novel Architecture
+### 4. Enterprise Multi-Engine Database & Autonomous Orchestration
 ```text
-Novel Chapter Folder ──► NovelManager (detects chapter ordering & filters unindexed spam)
-                     ──► SQLite / Character Arc DB (tracks cultivation realms & evolution)
-                     ──► Chinese Novelist Xianxia Style Engine (polishes Dao, Qi, dialogue)
-                     ──► In-Place Editing with Snapshot History (instant rollback on demand)
+State / Data Ingestion ──► DatabaseOrchestrator (checks container health, RAM guardrails)
+                       ──► PostgreSQL 16 (relational schema, transactional history, dedup audit)
+                       ──► MongoDB 7.0 (unstructured agent transcripts & dynamic raw dossiers)
+                       ──► Milvus 2.4.13 (high-dimensional semantic vectors via MinIO/etcd)
+                       ──► Neo4j 5.20 (interpersonal entity graphs & multi-agent topologies)
 ```
 
 ---
 
 ## Sub-Agent Skills & Plugin Ecosystem
 
-Thanatos features a pluggable skill architecture where every domain agent implements `BaseSkill` and registers with `SkillRegistry`:
+Thanatos features an extensible, modular architecture organized into clean categories (`system`, `memory`, `mesh`, `automation`, `creative`, `career`). Any agent tool or skill can be synthesized dynamically or plugged in by implementing `BaseSkill` and registering with `SkillRegistry`:
 
-| Skill Identifier | Tools Provided | Functional Scope |
+| Category | Primary Skills | Capabilities & Functional Scope |
 | :--- | :--- | :--- |
-| `job_hunter` | `search_jobs` | Scrapes tech openings by role and location (e.g. Pune freshers). |
-| `resume_tailor` | `tailor_resume` | Queries RAG career memory and generates tailored resumes and cover letters. |
-| `job_applicator` | `prepare_job_application` | Formulates application submission packages and logs history. |
-| `novel_agent` | `translate_and_edit_novel` | Translates raw novel chapters with glossary consistency. |
-| `self_improvement` | `self_improve_code` | Inspects architecture, runs sandbox tests, and validates code improvements. |
-| `web_search` | `search_web`, `search_news` | Live internet queries and breaking news via Google News RSS & DuckDuckGo. |
+| **System & Security** | `security_auditor`, `self_improvement` | Port auditing, process sandboxing, code self-inspection, automated test runs. |
+| **Network & Mesh** | `mesh_worker`, `network_discovery` | Subnet node broadcasting, remote command dispatch, distributed inference pooling. |
+| **Web & Intelligence**| `web_search`, `os_automation` | Live DuckDuckGo queries, Google News RSS, shell dispatch, desktop automation. |
+| **Specialized Personas**| `butler_persona`, `secretary_persona` | Contact dossiers, interpersonal social dynamics, daily agendas, taste preference learning. |
+| **Modular Domain Tasks**| `novel_agent`, `job_hunter`, `resume_tailor` | *Sample domain skills*: Chapter outline polishing, automated role discovery, and resume tailoring. Countless similar domain skills can be registered seamlessly. |
 
-*To build a custom skill, refer to the [Plugin Development Guide](./docs/plugin_dev_guide.md).*
+*To build a custom skill or domain agent, refer to the [Plugin Development Guide](./docs/plugin_dev_guide.md).*
 
 ---
 
