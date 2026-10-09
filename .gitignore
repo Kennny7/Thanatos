@@ -83,7 +83,8 @@ Thumbs.db
 
 # Flutter
 build/
-**/pubspec.lock
+# pubspec.lock is intentionally committed — it pins exact Flutter/Dart package
+# versions for reproducible installs. Do NOT add it back to .gitignore.
 .flutter-plugins
 .flutter-plugins-dependencies
 .flutter-versions
