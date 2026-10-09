@@ -107,7 +107,20 @@ class SkillRegistry:
             if any(word in lower_task for word in t.name.split("_")):
                 return None
 
-        # Determine what capability is missing
+        # Conversational, knowledge, philosophical, or greetings NEVER need tool creation
+        conversational_markers = [
+            "quote", "saying", "proverb", "who is", "what is", "why", "how", "tell me",
+            "explain", "translate", "write a", "poem", "story", "joke", "hello", "hi",
+            "hey", "bye", "goodbye", "help", "thanks", "thank you", "meaning of"
+        ]
+        if any(marker in lower_task for marker in conversational_markers):
+            return None
+
+        # Slash commands or escape commands are shell actions, not missing plugin requests
+        if task_description.startswith(("/", "\\")):
+            return None
+
+        # Only suggest missing capability if the user is explicitly requesting system/infra actions
         if any(w in lower_task for w in ["database backup", "export database", "dump db"]):
             return {
                 "capability": "Database Export & Backup Skill",
@@ -115,20 +128,16 @@ class SkillRegistry:
                 "tool_name": "backup_vector_and_sqlite_stores",
                 "reason": "Thanatos currently has memory search and profiling tools, but lacks automated database export/snapshot capabilities.",
             }
-        elif any(w in lower_task for w in ["docker", "container", "containerize"]):
+        elif any(w in lower_task for w in ["docker", "container", "containerize", "kubernetes", "k8s"]):
             return {
                 "capability": "Docker Container Management Skill",
                 "suggested_skill_name": "docker_manager",
                 "tool_name": "manage_docker_containers",
-                "reason": "Thanatos lacks direct Docker Engine socket orchestration tools.",
+                "reason": "Direct container lifecycle management requires a specialized Docker daemon skill.",
             }
 
-        return {
-            "capability": f"Specialized Tool for '{task_description[:40]}...'",
-            "suggested_skill_name": "custom_extension",
-            "tool_name": "execute_custom_task",
-            "reason": f"No existing skill currently covers: {task_description}",
-        }
+        # For all other general queries, let the LLM brain answer directly with its vast intrinsic knowledge!
+        return None
 
 
 # Module-level singleton
