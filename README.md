@@ -59,6 +59,7 @@ Explore the comprehensive technical documentation suite in the [`docs/`](./docs)
 | Document | Description | Action |
 | :--- | :--- | :---: |
 | **Getting Started Guide** | Step-by-step setup guide for Python backend, Ollama models, and Flutter client. | [![Read Guide](https://img.shields.io/badge/Open-Guide-2EA44F?style=flat-square)](./docs/getting_started.md) |
+| **Dependency Management** | How `uv` lock files, `~=` pins, and `pubspec.lock` guarantee reproducible installs across Python and Flutter. | [![Read Guide](https://img.shields.io/badge/Open-Guide-F39C12?style=flat-square)](./docs/dependency_management.md) |
 | **Production Deployment Guide** | Step-by-step VPS server deployment, port mappings, Caddy auto-HTTPS, and systemd service templates. | [![Read Deployment Guide](https://img.shields.io/badge/Open-Deployment%20Guide-2EA44F?style=flat-square)](./docs/production_deployment.md) |
 | **System Architecture** | Component breakdown, supervisor-worker topology, and layer interactions. | [![Read Spec](https://img.shields.io/badge/Open-Spec-6F42C1?style=flat-square)](./docs/architecture.md) |
 | **Master Architecture & Workflows** | Authoritative 7-module blueprint with sequence diagrams and execution contracts. | [![Read Blueprint](https://img.shields.io/badge/Open-Blueprint-007ACC?style=flat-square)](./docs/system_architecture_and_workflow.md) |
@@ -295,9 +296,10 @@ Thanatos features a dedicated **Voice Mode** alongside standard Text Mode, desig
 
 ### 1. Prerequisites
 - **Python 3.12+**
+- **[uv](https://docs.astral.sh/uv/)** — fast, lock-file-based Python package manager
 - **Flutter SDK 3.x** (for desktop/mobile/web client)
 - **Ollama** (for local LLM execution: `ollama run qwen2.5:7b` or `deepseek-r1:7b`)
-- *(Optional)* **OpenCV** for camera facial tracking: `pip install opencv-python`
+- *(Optional)* **OpenCV** for camera facial tracking
 
 ### 2. Backend Setup
 ```bash
@@ -305,17 +307,21 @@ Thanatos features a dedicated **Voice Mode** alongside standard Text Mode, desig
 git clone https://github.com/Kennny7/Thanatos.git
 cd Thanatos
 
-# Create and activate virtual environment
-python -m venv venv
-venv\Scripts\activate      # On Windows
-source venv/bin/activate    # On Linux/macOS
+# Install uv (if not already installed)
+# Windows (PowerShell):
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+# macOS / Linux:
+# curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Install dependencies
-pip install -r requirements.txt
+# Install exact, locked dependencies (reads uv.lock — no version drift)
+uv sync --extra dev
 
 # Start the FastAPI server
-uvicorn apps.api_server.main:app --host 0.0.0.0 --port 8000 --reload
+uv run uvicorn apps.api_server.main:app --host 0.0.0.0 --port 8000 --reload
 ```
+
+> **Why `uv sync` instead of `pip install`?**  
+> `uv.lock` is committed to the repo and pins **exact versions** for all 100+ packages including transitive deps, so every developer and CI run gets an identical environment. See [Dependency Management](./docs/dependency_management.md) for details.
 ### 3. Environment & Variable Configuration
 
 Copy `.env.example` to `.env` in the root directory to customize configuration settings:
