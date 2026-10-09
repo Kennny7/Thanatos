@@ -1,0 +1,199 @@
+# Thanatos Enterprise Scalable Multi-Engine Database Stack
+# Engines:
+# 1. PostgreSQL 16 (Scalable Relational Database - schema, logs, jobs, contacts, profiles)
+# 2. MongoDB 7.0 (Document Database - unstructured memories, agent transcripts, dossiers)
+# 3. Milvus 2.4.13 Standalone + etcd + MinIO (Distributed Vector Search - high-dimensional embeddings)
+# 4. Neo4j 5.20 Community (Knowledge Graph - entity links, social relations, character arcs)
+#
+# Usage:
+#   docker compose -f docker-compose.enterprise.yml up -d
+#   docker compose -f docker-compose.enterprise.yml down
+
+services:
+  # ---------------------------------------------------------------------------
+  # 1. Relational Database: PostgreSQL 16
+  # ---------------------------------------------------------------------------
+  thanatos-postgres:
+    container_name: thanatos-postgres
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-thanatos}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-thanatos_password}
+      POSTGRES_DB: ${POSTGRES_DB:-thanatos_memory}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - thanatos_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-thanatos}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+    networks:
+      - thanatos_enterprise_net
+
+  # ---------------------------------------------------------------------------
+  # 2. Document Store: MongoDB 7.0
+  # ---------------------------------------------------------------------------
+  thanatos-mongodb:
+    container_name: thanatos-mongodb
+    image: mongo:7.0
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-thanatos_admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-thanatos_mongo_secret}
+    ports:
+      - "27017:27017"
+    volumes:
+      - thanatos_mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+    networks:
+      - thanatos_enterprise_net
+
+  # ---------------------------------------------------------------------------
+  # 3. Distributed Vector Engine: Milvus Standalone (etcd + MinIO + Standalone)
+  # ---------------------------------------------------------------------------
+  milvus-etcd:
+    container_name: milvus-etcd
+    image: quay.io/coreos/etcd:v3.5.5
+    restart: unless-stopped
+    environment:
+      - ETCD_AUTO_COMPACTION_MODE=revision
+      - ETCD_AUTO_COMPACTION_RETENTION=1000
+      - ETCD_QUOTA_BACKEND_BYTES=4294967296
+      - ETCD_SNAPSHOT_COUNT=50000
+    volumes:
+      - thanatos_etcd_data:/etcd
+    command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls=http://0.0.0.0:2379 --data-dir=/etcd
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - thanatos_enterprise_net
+
+  milvus-minio:
+    container_name: milvus-minio
+    image: minio/minio:RELEASE.2023-03-20T20-16-18Z
+    restart: unless-stopped
+    environment:
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+    ports:
+      - "9001:9001"
+      - "9000:9000"
+    volumes:
+      - thanatos_minio_data:/minio_data
+    command: minio server /minio_data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - thanatos_enterprise_net
+
+  milvus-standalone:
+    container_name: milvus-standalone
+    image: milvusdb/milvus:v2.4.13
+    restart: unless-stopped
+    command: ["milvus", "run", "standalone"]
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      ETCD_ENDPOINTS: milvus-etcd:2379
+      MINIO_ADDRESS: milvus-minio:9000
+    volumes:
+      - thanatos_milvus_data:/var/lib/milvus
+    ports:
+      - "19530:19530"
+      - "9091:9091"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
+      interval: 10s
+      start_period: 30s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      - milvus-etcd
+      - milvus-minio
+    deploy:
+      resources:
+        limits:
+          memory: 2048M
+    networks:
+      - thanatos_enterprise_net
+
+  # ---------------------------------------------------------------------------
+  # 4. Knowledge Graph: Neo4j 5.20 Community
+  # ---------------------------------------------------------------------------
+  thanatos-neo4j:
+    container_name: thanatos-neo4j
+    image: neo4j:5.20-community
+    restart: unless-stopped
+    environment:
+      NEO4J_AUTH: ${NEO4J_AUTH:-neo4j/thanatos_graph_secret}
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_memory_heap_initial__size: 512m
+      NEO4J_dbms_memory_heap_max__size: 1024m
+    ports:
+      - "7474:7474" # HTTP Browser
+      - "7687:7687" # Bolt Protocol
+    volumes:
+      - thanatos_neo4j_data:/data
+      - thanatos_neo4j_logs:/logs
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+    networks:
+      - thanatos_enterprise_net
+
+networks:
+  thanatos_enterprise_net:
+    name: thanatos_enterprise_net
+    driver: bridge
+
+volumes:
+  thanatos_postgres_data:
+    name: thanatos_postgres_data
+  thanatos_mongo_data:
+    name: thanatos_mongo_data
+  thanatos_etcd_data:
+    name: thanatos_etcd_data
+  thanatos_minio_data:
+    name: thanatos_minio_data
+  thanatos_milvus_data:
+    name: thanatos_milvus_data
+  thanatos_neo4j_data:
+    name: thanatos_neo4j_data
+  thanatos_neo4j_logs:
+    name: thanatos_neo4j_logs
