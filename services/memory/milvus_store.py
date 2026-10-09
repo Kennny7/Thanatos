@@ -63,6 +63,12 @@ class MilvusVectorStore:
             else:
                 is_new = False
 
+            # Ensure collection is loaded into memory for query/search operations
+            try:
+                self._client.load_collection(self.collection_name)
+            except Exception as e:
+                logger.debug("Milvus load_collection notice: %s", e)
+
             stats = self._client.get_collection_stats(self.collection_name)
             row_count = stats.get("row_count", 0)
 
@@ -74,7 +80,7 @@ class MilvusVectorStore:
                 "doc_count": row_count,
                 "is_new": is_new,
             }
-            logger.info("Milvus client initialized on %s (Collection: %s)", self.uri, self.collection_name)
+            logger.info("Milvus client initialized and loaded on %s (Collection: %s)", self.uri, self.collection_name)
         except Exception as e:
             logger.warning("Milvus connection failed (%s). Milvus requires pymilvus or running server.", e)
             self._status = {
@@ -133,12 +139,29 @@ class MilvusVectorStore:
 
         query_emb = _simple_text_embedding(query, dim=self.dim)
         try:
-            res = self._client.search(
-                collection_name=self.collection_name,
-                data=[query_emb],
-                limit=k,
-                output_fields=["text", "metadata"],
-            )
+            try:
+                res = self._client.search(
+                    collection_name=self.collection_name,
+                    data=[query_emb],
+                    limit=k,
+                    output_fields=["text", "metadata"],
+                )
+            except Exception as search_err:
+                # If collection was released, reload and retry once
+                if "released" in str(search_err).lower() or "load()" in str(search_err).lower():
+                    try:
+                        self._client.load_collection(self.collection_name)
+                        res = self._client.search(
+                            collection_name=self.collection_name,
+                            data=[query_emb],
+                            limit=k,
+                            output_fields=["text", "metadata"],
+                        )
+                    except Exception as reload_err:
+                        logger.warning("Milvus reload attempt failed: %s", reload_err)
+                        return []
+                else:
+                    raise search_err
             formatted = []
             if res and len(res) > 0:
                 for hit in res[0]:
