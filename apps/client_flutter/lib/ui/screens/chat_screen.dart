@@ -28,7 +28,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _textController = TextEditingController();
   final _scrollController = ScrollController();
   final _modelService = ModelService();
-  String _assistantName = 'AEGIS';
+  String _assistantName = 'THANATOS';
   String _activeModel = 'qwen2.5:7b';
   String _activeMode = 'AUTONOMOUS';
   bool _isVoiceMode = false;
