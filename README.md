@@ -44,7 +44,8 @@
    - High-contrast minimal black terminal mode and hands-free **Call Mode** across Windows and Android.
    - Real-time acoustic frequency spectrum visualizer reacting directly to microphone input decibels rather than synthetic waveforms.
 5. **Targeted SLM & Model Selection Agent**:
-   - Assign specialized, lightweight Small Language Models ($\le 8\text{--}9\text{B}$) like `qwen2.5:3b/7b`, `phi3:mini`, `deepseek-r1:7b`, or `llama3.2:3b` tailored to specific agent tasks.
+   - The **primary orchestrator** benefits from larger, more capable models (32B–70B+ or reasoning-class models like `deepseek-r1:32b`, `qwen2.5:72b`, or cloud APIs like GPT-4o / Claude).
+   - Specialized sub-agents can be assigned lightweight Small Language Models (7B–14B) like `qwen2.5:7b/14b`, `deepseek-r1:7b/14b`, or `phi4:14b` to keep latency low on constrained hardware.
    - Automatically detects missing models and triggers automated Ollama pulls on local or secondary mesh nodes.
 6. **External Action Execution & Autonomous Tool Creation**:
    - Real-time command-line dispatch, desktop automation, port/service auditing, and live web scraping with safety gates and SHA-256 Merkle audit logs.
@@ -235,7 +236,8 @@ Primary Coordinator ──► UDP Broadcast (:47470) ──► Auto-discovers Wo
 ```text
 Agent Directives ──► ModelSelectorAgent (evaluates role, RAM/GPU specs)
                  ──► Inspects Ollama (:11434) on Local & Remote Nodes
-                 ──► Autonomous `ollama pull` (pulls <= 9B models e.g. Qwen, Phi-3)
+                 ──► Assigns best-fit model tier (32B–70B for orchestrator; 7B–14B for sub-agents)
+                 ──► Autonomous `ollama pull` if model not present
                  ──► Deploys model into active agent execution loop
 ```
 
@@ -298,7 +300,7 @@ Thanatos features a dedicated **Voice Mode** alongside standard Text Mode, desig
 - **Python 3.12+**
 - **[uv](https://docs.astral.sh/uv/)** — fast, lock-file-based Python package manager
 - **Flutter SDK 3.x** (for desktop/mobile/web client)
-- **Ollama** (for local LLM execution: `ollama run qwen2.5:7b` or `deepseek-r1:7b`)
+- **Ollama** (for local LLM inference — larger models strongly recommended, e.g. `qwen2.5:32b`, `deepseek-r1:32b`; minimum `qwen2.5:14b`)
 - *(Optional)* **OpenCV** for camera facial tracking
 
 ### 2. Backend Setup
@@ -354,8 +356,29 @@ Key configuration parameters handled via `.env` file or environment variables:
   - `SPEAKER_ENROLLMENT_DIR`: Storage path for speaker enrollment profiles (default: `./voice_profiles`).
 
 ### 4. Local Model Setup (Ollama)
+
+> **Note**: Thanatos is a multi-agent system with a planning orchestrator, RAG, tool execution, and reasoning chains. 7B models can run but will noticeably struggle with complex tasks. **14B–32B is the practical sweet spot**; 70B+ delivers the best results if your hardware allows.
+
+| Tier | Model | RAM Required | Use Case |
+|:--|:--|:--|:--|
+| 🟡 Minimum | `qwen2.5:14b` | ~12 GB | Functional but limited on complex reasoning |
+| 🟢 Recommended | `qwen2.5:32b` | ~20 GB | Strong reasoning, great tool use |
+| 🟢 Recommended | `deepseek-r1:32b` | ~20 GB | Best for deep reasoning & planning tasks |
+| 🔵 Best | `qwen2.5:72b` | ~45 GB | Near-frontier local quality |
+| 🔵 Best | `deepseek-r1:70b` | ~45 GB | Best open-source reasoning available |
+| ☁️ Cloud | GPT-4o / Claude / Gemini | — | Maximum quality, requires API key |
+
 ```bash
-# Pull recommended models
+# Recommended starting point (good balance of quality & RAM)
+ollama pull qwen2.5:32b
+
+# Best local reasoning model
+ollama pull deepseek-r1:32b
+
+# Budget / constrained hardware (14B minimum for decent results)
+ollama pull qwen2.5:14b
+
+# Lightweight sub-agent models (assign via config for specific skills)
 ollama pull qwen2.5:7b
 ollama pull deepseek-r1:7b
 ```
