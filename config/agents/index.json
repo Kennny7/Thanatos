@@ -1,0 +1,36 @@
+{
+  "system_version": "2.0",
+  "active_agent_id": "auto",
+  "index": [
+    {
+      "id": "site_engineer",
+      "name": "Velma Sinclair",
+      "display_name": "Velma Sinclair (Site Reliability & Systems Engineer)",
+      "role": "Site Reliability & Systems Engineer",
+      "persona_title": "Velma",
+      "voice": "en-US-JennyNeural",
+      "profile_path": "config/agents/site_engineer.json",
+      "memory_partition": "data/agent_memory/site_engineer"
+    },
+    {
+      "id": "secretary",
+      "name": "Amelia Sterling",
+      "display_name": "Amelia Sterling (Executive Secretary & Wingman)",
+      "role": "Executive Secretary & Lifestyle Wingman",
+      "persona_title": "Amelia",
+      "voice": "en-US-AriaNeural",
+      "profile_path": "config/agents/secretary.json",
+      "memory_partition": "data/agent_memory/secretary"
+    },
+    {
+      "id": "butler",
+      "name": "Alfred Vance",
+      "display_name": "Alfred Vance (Autonomous Social Butler & Strategist)",
+      "role": "Autonomous Social Butler & Strategic Counselor",
+      "persona_title": "Alfred",
+      "voice": "en-GB-RyanNeural",
+      "profile_path": "config/agents/butler.json",
+      "memory_partition": "data/agent_memory/butler"
+    }
+  ]
+}
