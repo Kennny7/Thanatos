@@ -37,9 +37,10 @@
    - Production-grade hybrid persistence stack: **PostgreSQL 16** (relational & career deduplication), **MongoDB 7.0** (unstructured transcripts & dossiers), **Milvus 2.4.13 Standalone** (high-dimensional vector search), and **Neo4j 5.20** (knowledge graph & social relationships).
    - Automated Docker supervisor ([`services/database/db_orchestrator.py`](./services/database/db_orchestrator.py)) provides on-demand container startup, health checks, RAM guardrails, and backup recovery.
 3. **Specialized Multi-Agent Personas & Isolated Memory**:
-   - Distinct agent personas with segregated memory partitions:
-     - **Butler Agent**: Tracks character dossiers, evaluates interpersonal social dynamics, and evaluates long-term strategic alignment.
-     - **Secretary & Wingman Agent**: Daily agenda management, active workout/jogging routines, and personalized taste preference tracking.
+   - Distinct agent personas with segregated memory partitions and dedicated profiles in `config/agents/`:
+     - **Site Engineer Agent (Velma Sinclair)**: Real-time OS telemetry, hardware resource allocation, error triage, and automated self-repair.
+     - **Secretary & Wingman Agent (Amelia Sterling)**: Daily agenda management, active workout/jogging routines, and personalized taste preference tracking.
+     - **Butler Agent (Alfred Vance)**: Tracks character dossiers, evaluates interpersonal social dynamics, and evaluates long-term strategic alignment.
 4. **Hands-Free Call Mode & Cross-Platform Tactical UI**:
    - High-contrast minimal black terminal mode and hands-free **Call Mode** across Windows and Android.
    - Real-time acoustic frequency spectrum visualizer reacting directly to microphone input decibels rather than synthetic waveforms.
@@ -71,6 +72,7 @@ Explore the comprehensive technical documentation suite in the [`docs/`](./docs)
 | **Voice Mode & Speaker Verification** | Separate Voice Mode, ECG frequency line, VAD, multi-speaker authorization, and optional camera lip-sync. | [![Read Voice Mode Guide](https://img.shields.io/badge/Open-Voice%20Mode-00E5FF?style=flat-square)](./docs/voice_mode_speaker_verification.md) |
 | **Memory & RAG Subsystem** | ChromaDB & Milvus vector store, semantic embeddings, and career profile matching. | [![Read RAG Guide](https://img.shields.io/badge/Open-RAG%20Guide-4B8BBE?style=flat-square)](./docs/memory_and_rag.md) |
 | **Vector Database Setup Guide** | Detailed setup for embedded ChromaDB, Docker ChromaDB, Qdrant, and Ollama embedding models. | [![Read Setup Guide](https://img.shields.io/badge/Open-Vector%20DB%20Guide-4B8BBE?style=flat-square)](./docs/vector_database_setup.md) |
+| **Multi-Agent Personas & Architecture** | Modular agent roster (`config/agents/`), lazy loading, isolated partitions, and Velma/Amelia/Alfred roles. | [![Read Guide](https://img.shields.io/badge/Open-Agent%20Guide-6F42C1?style=flat-square)](./docs/agents_architecture.md) |
 | **Security & Isolation Model** | Sandbox boundaries, OS safety confirmation gates, and Merkle audit logs. | [![Read Model](https://img.shields.io/badge/Open-Security%20Model-E74C3C?style=flat-square)](./docs/security_model.md) |
 | **Security & Network Intelligence** | Authentication gates, network scanning capabilities, OSINT pipelines, and defence mechanisms. | [![Read Security Guide](https://img.shields.io/badge/Open-Network%20Security-E74C3C?style=flat-square)](./docs/security_and_network.md) |
 | **Model Context Protocol (MCP)** | Exposing Thanatos OS tools to Claude Desktop, Cursor IDE, and MCP hosts. | [![Read MCP Guide](https://img.shields.io/badge/Open-MCP%20Guide-555555?style=flat-square)](./docs/mcp_server.md) |
