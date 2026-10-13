@@ -89,21 +89,29 @@ class ResumeTailorSkill(BaseSkill):
                 # We have an authentic LaTeX resume! Calibrate it for the company & role
                 tailored_resume_latex = template_content
                 # Update title line in header if present
+                safe_title_header = f"{{\\normalsize\\textbf{{{job_title} | Generative AI, LLM & RAG Systems}}}}"
                 tailored_resume_latex = re.sub(
                     r"\{\\normalsize\\textbf\{[^}]+\}\}",
-                    f"{{\\normalsize\\textbf{{{job_title} | Generative AI, LLM & RAG Systems}}}}",
+                    lambda m: safe_title_header,
                     tailored_resume_latex,
                     count=1
                 )
                 # Calibrate experience in profile section
+                safe_exp_text = f"\\textbf{{{exp_duration} of experience}}"
                 tailored_resume_latex = re.sub(
                     r"\\textbf\{3\+? years of experience\}",
-                    f"\\textbf{{{exp_duration} of experience}}",
+                    lambda m: safe_exp_text,
                     tailored_resume_latex
                 )
                 # Ensure candidate name and contact align
                 if profile.name:
-                    tailored_resume_latex = re.sub(r"\{\\LARGE\\textbf\{[^}]+\}\}", f"{{\\LARGE\\textbf{{{profile.name}}}}}", tailored_resume_latex, count=1)
+                    safe_name_header = f"{{\\LARGE\\textbf{{{profile.name}}}}}"
+                    tailored_resume_latex = re.sub(
+                        r"\{\\LARGE\\textbf\{[^}]+\}\}",
+                        lambda m: safe_name_header,
+                        tailored_resume_latex,
+                        count=1
+                    )
                 
                 # Derive comprehensive markdown version from authentic LaTeX
                 from services.document.pdf_generator import clean_latex_to_text
