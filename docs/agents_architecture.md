@@ -4,15 +4,17 @@ Thanatos employs an autonomous multi-agent model with decoupled identities, pers
 
 ---
 
-## 1. Personas Overview
+## 1. Targeted Directory Architecture & Indexing
 
-All persona profiles, names, and parameters are centrally stored and editable in [`config/agents.json`](file:///c:/Users/ACER/Desktop/Self-Projects/Thanatos/config/agents.json).
+Agent profiles are decoupled into a dedicated directory: [`config/agents/`](file:///c:/Users/ACER/Desktop/Self-Projects/Thanatos/config/agents/).
+- **Lightweight Index (`config/agents/index.json`)**: Contains fast routing metadata (immutable `id`, `name`, `role`, `voice`, `profile_path`, `memory_partition`). The system only reads this index for general routing, without loading full profiles.
+- **On-Demand Lazy Loading**: Full personality descriptions, traits, preferences, and avatar configurations live in separate JSON files and are loaded **only when that specific agent is invoked**, preventing context bloat and saving compute power.
 
-| Agent ID | Assigned Identity | Role | Voice Profile | Memory Partition |
-| :--- | :--- | :--- | :--- | :--- |
-| `site_engineer` | **Velma Sinclair** | Site Reliability & Systems Engineer | `en-US-JennyNeural` | `data/agent_memory/site_engineer/` |
-| `secretary` | **Amelia Sterling** | Executive Secretary & Lifestyle Wingman | `en-US-AriaNeural` | `data/agent_memory/secretary/` |
-| `butler` | **Alfred Vance** | Autonomous Social Butler & Strategist | `en-GB-RyanNeural` | `data/agent_memory/butler/` |
+| Agent ID | Assigned Identity | Role | Voice Profile | Dedicated Profile File | Memory Partition |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `site_engineer` | **Velma Sinclair** | Site Reliability & Systems Engineer | `en-US-JennyNeural` | [`config/agents/site_engineer.json`](file:///c:/Users/ACER/Desktop/Self-Projects/Thanatos/config/agents/site_engineer.json) | `data/agent_memory/site_engineer/` |
+| `secretary` | **Amelia Sterling** | Executive Secretary & Lifestyle Wingman | `en-US-AriaNeural` | [`config/agents/secretary.json`](file:///c:/Users/ACER/Desktop/Self-Projects/Thanatos/config/agents/secretary.json) | `data/agent_memory/secretary/` |
+| `butler` | **Alfred Vance** | Autonomous Social Butler & Strategist | `en-GB-RyanNeural` | [`config/agents/butler.json`](file:///c:/Users/ACER/Desktop/Self-Projects/Thanatos/config/agents/butler.json) | `data/agent_memory/butler/` |
 
 ---
 
