@@ -161,14 +161,54 @@ class ThanatosCLI:
                 console.print(f"[bold red]Could not fetch history: {history_res.error}[/bold red]")
 
         elif cmd == "/jobs":
-            # Default or customized query
-            query = arg if arg else "AI / ML Engineer remote or Pune"
-            await self.job_runner.execute_job_workflow(
-                query=query,
-                location="Pune (Hybrid/Office) & Remote",
-                experience="3 years and 8 months",
-                source_resume_path=self.user_resume_path,
-            )
+            sub_parts = arg.split(maxsplit=1)
+            sub_cmd = sub_parts[0].lower() if sub_parts else ""
+            sub_query = sub_parts[1].strip() if len(sub_parts) > 1 else ""
+
+            if not arg or sub_cmd in ("help", "status", "info"):
+                p = memory_service.user_profile.get_profile()
+                acc = getattr(p, "accounts", {}) if hasattr(p, "accounts") else {}
+                console.print(f"\n[bold cyan]• Autonomous Job Hunter & Application Suite[/bold cyan]")
+                console.print(f"  [dim]Target Role:[/dim]       [bold white]{p.title or 'AI / ML Engineer'}[/bold white]")
+                console.print(f"  [dim]Preferred Locations:[/dim] [yellow]{', '.join(p.open_to_relocation or ['Pune', 'Remote', 'Mumbai'])}[/yellow]")
+                console.print(f"  [dim]Experience Level:[/dim]   [green]3 years and 8 months[/green]")
+                console.print(f"  [dim]Integrated Portals:[/dim] [cyan]LinkedIn, Naukri, Direct Corporate Careers[/cyan]")
+                console.print(f"  [dim]ATS Quality Gating:[/dim] [green]Active (Auditing & Auto-Calibrating)[/green]\n")
+                console.print("[dim]Commands:[/dim]")
+                console.print("  • [bold yellow]/jobs run [query][/bold yellow]    - Scan LinkedIn & Naukri, tailor ATS resumes, and stage applications")
+                console.print("  • [bold yellow]/jobs search [query][/bold yellow] - Search openings without dispatching applications")
+                console.print("  • [bold yellow]/jobs history[/bold yellow]        - View logged application audit ledger\n")
+            elif sub_cmd == "history":
+                history_res = await registry.dispatch("get_application_history", {"limit": 10})
+                if history_res.success:
+                    print_application_history_table(history_res.content.get("recent_applications", []))
+            elif sub_cmd == "search":
+                search_q = sub_query or "AI / ML Engineer remote or Pune"
+                console.print(f"[dim]Scanning LinkedIn & Naukri for: {search_q}...[/dim]")
+                search_res = await registry.dispatch("search_jobs", {
+                    "location": "Pune & Remote",
+                    "keywords": search_q,
+                    "experience": "3 years and 8 months",
+                    "require_email_apply": True,
+                    "limit": 5,
+                })
+                if search_res.success and search_res.content.get("jobs"):
+                    jobs_found = search_res.content["jobs"]
+                    console.print(f"[bold green][✓] Found {len(jobs_found)} matching openings with recruiter email route:[/bold green]")
+                    for idx, j in enumerate(jobs_found, 1):
+                        portal_tag = f"[{j.get('portal', 'Job')}] " if j.get('portal') else ""
+                        console.print(f"  {idx}. [bold cyan]{portal_tag}{j['title']}[/bold cyan] at [bold white]{j['company']}[/bold white] -> [yellow]{j.get('apply_email')}[/yellow]")
+                else:
+                    console.print("[yellow]No direct recruiter email openings located for this search query.[/yellow]")
+            else:
+                # User ran /jobs run or provided a query
+                query = sub_query if sub_cmd == "run" else arg
+                await self.job_runner.execute_job_workflow(
+                    query=query if query else "AI / ML Engineer remote or Pune",
+                    location="Pune (Hybrid/Office) & Remote",
+                    experience="3 years and 8 months",
+                    source_resume_path=self.user_resume_path,
+                )
 
         elif cmd == "/profile":
             if arg:
@@ -358,6 +398,88 @@ class ThanatosCLI:
                     nid = r.get("node_id")
                     console.print(f"  [✓] Node {nid}: {r.get('synced_files')} files updated, {r.get('skipped')} unchanged.")
                 console.print("[bold green][✓] Mesh synchronization complete![/bold green]\n")
+
+        elif cmd == "/agents":
+            from services.agents.agent_roster import roster
+            sub_parts = arg.split(maxsplit=2)
+            sub_action = sub_parts[0].lower() if sub_parts else "list"
+            target_agent = sub_parts[1].lower() if len(sub_parts) > 1 else ""
+            msg = sub_parts[2].strip() if len(sub_parts) > 2 else ""
+
+            if sub_action in ("list", ""):
+                table = Table(title="• Thanatos Autonomous Multi-Agent Personas", box=ROUNDED, border_style="cyan")
+                table.add_column("Agent ID", style="bold yellow")
+                table.add_column("Assigned Name", style="bold white")
+                table.add_column("Role / Specialization", style="cyan")
+                table.add_column("Voice Profile", style="magenta")
+                table.add_column("Memory Partition", style="dim green")
+
+                for ag in roster.list_agents():
+                    table.add_row(
+                        ag.id,
+                        ag.name,
+                        ag.role,
+                        ag.voice,
+                        ag.memory_partition,
+                    )
+                console.print(table)
+                console.print(f"[dim]Active Persona Mode:[/dim] [bold green]{roster.active_agent_id.upper()}[/bold green] [dim](auto = intelligent coordinator delegation)[/dim]\n")
+                console.print("[dim]Commands:[/dim]")
+                console.print("  • [bold yellow]/agents dm <agent_id> <message>[/bold yellow] - Direct private message to a specific agent")
+                console.print("  • [bold yellow]/agents set <agent_id|auto>[/bold yellow]     - Set default conversation persona")
+                console.print("  • [bold yellow]/agents rename <agent_id> <new_name>[/bold yellow] - Update persona name safely without data loss\n")
+
+            elif sub_action == "dm":
+                if not target_agent or not msg:
+                    console.print("[red]Usage: /agents dm <site_engineer|secretary|butler> <message>[/red]")
+                else:
+                    agent = roster.get_agent(target_agent)
+                    if not agent:
+                        console.print(f"[red]Agent '{target_agent}' not found. Valid IDs: site_engineer, secretary, butler[/red]")
+                    else:
+                        console.print(f"[bold cyan]❯ [Private DM -> {agent.name}][/bold cyan] [dim]{msg}[/dim]")
+                        # Run tailored execution
+                        if agent.id == "site_engineer":
+                            from services.agents.site_engineer_agent import site_engineer_agent
+                            diag = site_engineer_agent.collect_system_telemetry()
+                            prompt = f"{site_engineer_agent.build_system_prompt()}\n\nUser Question: {msg}\n\nLive System Telemetry:\n{json.dumps(diag, indent=2)}\n\nRespond with your charming, willful Velma persona."
+                            ans = await self.provider.generate(prompt=prompt, stream=False)
+                            print_agent_breadcrumb(f"{agent.name} [Velma]", "Hardware & System Diagnosis Complete", 1.0)
+                            print_assistant_response(ans.content)
+                        elif agent.id == "secretary":
+                            from services.agents.secretary_agent import SecretaryAgent
+                            sec = SecretaryAgent()
+                            prompt = f"{sec.build_system_prompt()}\n\nUser Agenda/Schedule Question: {msg}\n\nRespond in your Amelia Sterling persona."
+                            ans = await self.provider.generate(prompt=prompt, stream=False)
+                            print_agent_breadcrumb(f"{agent.name} [Amelia]", "Agenda & Routine Checked", 1.0)
+                            print_assistant_response(ans.content)
+                        elif agent.id == "butler":
+                            from services.agents.butler_agent import ButlerAgent
+                            butler = ButlerAgent()
+                            prompt = f"{butler.build_system_prompt()}\n\nUser Question: {msg}\n\nRespond in your Alfred Vance persona."
+                            ans = await self.provider.generate(prompt=prompt, stream=False)
+                            print_agent_breadcrumb(f"{agent.name} [Alfred]", "Social Counsel Formulated", 1.0)
+                            print_assistant_response(ans.content)
+
+            elif sub_action == "set":
+                if not target_agent:
+                    console.print("[red]Usage: /agents set <site_engineer|secretary|butler|auto>[/red]")
+                elif target_agent in ("auto", "site_engineer", "secretary", "butler"):
+                    roster.active_agent_id = target_agent
+                    roster.save()
+                    console.print(f"[bold green][✓] Active default agent persona switched to: {target_agent.upper()}[/bold green]")
+                else:
+                    console.print(f"[red]Invalid agent ID '{target_agent}'. Choose: site_engineer, secretary, butler, or auto.[/red]")
+
+            elif sub_action == "rename":
+                new_name = sub_parts[2] if len(sub_parts) > 2 else ""
+                if not target_agent or not new_name:
+                    console.print("[red]Usage: /agents rename <agent_id> <new_name>[/red]")
+                else:
+                    if roster.update_agent_name(target_agent, new_name):
+                        console.print(f"[bold green][✓] Agent {target_agent} updated to name: '{new_name}'. Private & shared memories remain safely intact.[/bold green]")
+                    else:
+                        console.print(f"[red]Agent '{target_agent}' not found.[/red]")
 
         else:
             console.print(f"[red]Unknown command '{cmd}'. Type [bold white]/help[/bold white] for assistance.[/red]")
