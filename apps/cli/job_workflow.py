@@ -106,6 +106,26 @@ class JobWorkflowRunner:
             cover_letter = tailor_data.get("cover_letter", "")
             tmpl_name = tailor_data.get("template_source", "default")
 
+            # 4. Multi-Agent ATS Validation & Quality Loop
+            from services.document.ats_auditor import ats_auditor
+            print_agent_breadcrumb("ATS Quality Auditor Agent", f"Analyzing resume keyword alignment & ATS compatibility against {target_job['company']} requirements...", 0.60)
+            ats_res = ats_auditor.audit_resume(
+                resume_text=resume_md or resume_tex,
+                job_description=target_job.get("description", ""),
+                required_skills=target_job.get("skills_required", []),
+                target_role=target_job["title"],
+            )
+
+            ats_color = "green" if ats_res.passed else ("yellow" if ats_res.score >= 60 else "red")
+            console.print(f"  [bold {ats_color}]• ATS Match Score: {ats_res.score}%[/bold {ats_color}] [dim]({ats_res.feedback})[/dim]")
+            if ats_res.matched_keywords:
+                console.print(f"    [dim]Verified Skills ({len(ats_res.matched_keywords)}):[/dim] [green]{', '.join(ats_res.matched_keywords[:6])}[/green]")
+
+            # Self-Correction Check: If ATS score is too low and missing critical qualifications, flag or skip
+            if not ats_res.passed and ats_res.score < 50:
+                console.print(f"[bold yellow][!] ATS score ({ats_res.score}%) below threshold and significant skill gap detected. Skipping to maintain application quality.[/bold yellow]")
+                continue
+
             # Save generated files to disk
             out_dir = os.path.join("logs", "generated_resumes")
             os.makedirs(out_dir, exist_ok=True)
