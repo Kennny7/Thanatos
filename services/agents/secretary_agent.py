@@ -7,6 +7,8 @@ import time
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
+from services.agents.agent_roster import roster
+
 logger = logging.getLogger(__name__)
 
 
@@ -31,20 +33,35 @@ class AgendaItem(BaseModel):
 
 class SecretaryAgent:
     """
-    Autonomous Secretary & Wingman Agent:
+    Autonomous Secretary & Wingman Agent (Amelia Sterling):
     - Oversees daily agendas, proactive reminders, workout/jogging routines.
     - Curates user taste preferences and lifestyle habits.
     - Operates with an isolated memory partition distinct from Butler and Career agents.
     """
 
-    def __init__(self, storage_dir: Optional[str] = None) -> None:
-        self.storage_dir = storage_dir or os.path.join("data", "agent_memory", "secretary")
+    def __init__(self, agent_id: str = "secretary", storage_dir: Optional[str] = None) -> None:
+        self.agent_id = agent_id
+        identity = roster.get_agent(agent_id)
+        self.storage_dir = storage_dir or (identity.memory_partition if identity else os.path.join("data", "agent_memory", "secretary"))
         os.makedirs(self.storage_dir, exist_ok=True)
         self.agenda_file = os.path.join(self.storage_dir, "agenda.json")
         self.taste_file = os.path.join(self.storage_dir, "taste_profile.json")
         
         self.agenda: List[AgendaItem] = self._load_agenda()
         self.taste: TasteProfile = self._load_taste()
+
+    def get_identity(self):
+        return roster.get_agent(self.agent_id)
+
+    def build_system_prompt(self) -> str:
+        ident = self.get_identity()
+        name = ident.name if ident else "Amelia Sterling"
+        personality = ident.personality if ident else "Refined, proactive, highly organized executive secretary."
+        return f"""You are {name}, the Executive Secretary & Lifestyle Wingman of Thanatos.
+Personality: {personality}
+Voice & Tone: Highly efficient, composed, supportive, impeccably organized, with warm executive clarity.
+You manage the user's agenda, milestones, taste preferences, workouts, and calendar focus.
+Keep the user disciplined and operating at peak productivity."""
 
     def _load_agenda(self) -> List[AgendaItem]:
         if not os.path.exists(self.agenda_file):
