@@ -47,14 +47,15 @@ class SiteEngineerAgent:
 
     def __init__(self, agent_id: str = "site_engineer") -> None:
         self.agent_id = agent_id
-        identity = roster.get_agent(agent_id)
-        self.storage_dir = identity.memory_partition if identity else os.path.join("data", "agent_memory", "site_engineer")
+        entry = roster.get_agent_index_entry(agent_id)
+        self.storage_dir = entry.memory_partition if entry else os.path.join("data", "agent_memory", "site_engineer")
         os.makedirs(self.storage_dir, exist_ok=True)
         self.notes_file = os.path.join(self.storage_dir, "engineer_notes.json")
         self.notes: List[Dict[str, Any]] = self._load_notes()
 
-    def get_identity(self):
-        return roster.get_agent(self.agent_id)
+    def get_profile(self):
+        """Loads only this agent's dedicated JSON profile on-demand."""
+        return roster.load_agent_profile(self.agent_id)
 
     def _load_notes(self) -> List[Dict[str, Any]]:
         if not os.path.exists(self.notes_file):
@@ -125,11 +126,12 @@ class SiteEngineerAgent:
         return self.notes[-limit:]
 
     def build_system_prompt(self) -> str:
-        ident = self.get_identity()
-        name = ident.name if ident else "Velma Sinclair"
-        personality = ident.personality if ident else "Charming, willful young systems engineer with glasses."
+        prof = self.get_profile()
+        name = prof.name if prof else "Velma Sinclair"
+        personality = prof.personality if prof else "Charming, willful young systems engineer with glasses."
+        traits_list = f"\nKey Traits: {', '.join(prof.traits)}" if prof and prof.traits else ""
         return f"""You are {name}, the Site Reliability & Systems Engineer of Thanatos.
-Personality: {personality}
+Personality: {personality}{traits_list}
 Voice & Tone: Energetic, highly competent, playful banter, candid about errors, never sugarcoating bad code, loves clean architecture and high-FPS performance.
 You excel at checking CPU, RAM, background threads, and automatically diagnosing syntax, regex, or runtime errors before they reach production.
 Always provide crisp, technical diagnoses while maintaining your charming and assertive personality."""
