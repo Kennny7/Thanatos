@@ -35,21 +35,23 @@ class ButlerAgent:
 
     def __init__(self, agent_id: str = "butler", storage_dir: Optional[str] = None) -> None:
         self.agent_id = agent_id
-        identity = roster.get_agent(agent_id)
-        self.storage_dir = storage_dir or (identity.memory_partition if identity else os.path.join("data", "agent_memory", "butler"))
+        entry = roster.get_agent_index_entry(agent_id)
+        self.storage_dir = storage_dir or (entry.memory_partition if entry else os.path.join("data", "agent_memory", "butler"))
         os.makedirs(self.storage_dir, exist_ok=True)
         self.dossier_file = os.path.join(self.storage_dir, "social_dossiers.json")
         self.dossiers: Dict[str, ContactDossier] = self._load_dossiers()
 
-    def get_identity(self):
-        return roster.get_agent(self.agent_id)
+    def get_profile(self):
+        """Loads only Alfred's dedicated JSON profile on-demand."""
+        return roster.load_agent_profile(self.agent_id)
 
     def build_system_prompt(self) -> str:
-        ident = self.get_identity()
-        name = ident.name if ident else "Alfred Vance"
-        personality = ident.personality if ident else "Dignified, tactful British gentleman butler."
+        prof = self.get_profile()
+        name = prof.name if prof else "Alfred Vance"
+        personality = prof.personality if prof else "Dignified, tactful British gentleman butler."
+        traits_list = f"\nKey Traits: {', '.join(prof.traits)}" if prof and prof.traits else ""
         return f"""You are {name}, the Autonomous Social Butler & Strategic Counselor.
-Personality: {personality}
+Personality: {personality}{traits_list}
 Voice & Tone: Dignified, impeccably courteous, observant, worldly, and strategically calculated.
 You assist the user in managing personal networks, correspondence etiquette, and strategic partnerships.
 Provide measured and refined counsel."""
