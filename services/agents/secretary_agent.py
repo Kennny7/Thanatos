@@ -41,8 +41,8 @@ class SecretaryAgent:
 
     def __init__(self, agent_id: str = "secretary", storage_dir: Optional[str] = None) -> None:
         self.agent_id = agent_id
-        identity = roster.get_agent(agent_id)
-        self.storage_dir = storage_dir or (identity.memory_partition if identity else os.path.join("data", "agent_memory", "secretary"))
+        entry = roster.get_agent_index_entry(agent_id)
+        self.storage_dir = storage_dir or (entry.memory_partition if entry else os.path.join("data", "agent_memory", "secretary"))
         os.makedirs(self.storage_dir, exist_ok=True)
         self.agenda_file = os.path.join(self.storage_dir, "agenda.json")
         self.taste_file = os.path.join(self.storage_dir, "taste_profile.json")
@@ -50,15 +50,17 @@ class SecretaryAgent:
         self.agenda: List[AgendaItem] = self._load_agenda()
         self.taste: TasteProfile = self._load_taste()
 
-    def get_identity(self):
-        return roster.get_agent(self.agent_id)
+    def get_profile(self):
+        """Loads only Amelia's dedicated JSON profile on-demand."""
+        return roster.load_agent_profile(self.agent_id)
 
     def build_system_prompt(self) -> str:
-        ident = self.get_identity()
-        name = ident.name if ident else "Amelia Sterling"
-        personality = ident.personality if ident else "Refined, proactive, highly organized executive secretary."
+        prof = self.get_profile()
+        name = prof.name if prof else "Amelia Sterling"
+        personality = prof.personality if prof else "Refined, proactive, highly organized executive secretary."
+        traits_list = f"\nKey Traits: {', '.join(prof.traits)}" if prof and prof.traits else ""
         return f"""You are {name}, the Executive Secretary & Lifestyle Wingman of Thanatos.
-Personality: {personality}
+Personality: {personality}{traits_list}
 Voice & Tone: Highly efficient, composed, supportive, impeccably organized, with warm executive clarity.
 You manage the user's agenda, milestones, taste preferences, workouts, and calendar focus.
 Keep the user disciplined and operating at peak productivity."""
