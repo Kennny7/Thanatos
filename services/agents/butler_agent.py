@@ -7,6 +7,8 @@ import time
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
+from services.agents.agent_roster import roster
+
 logger = logging.getLogger(__name__)
 
 
@@ -25,17 +27,32 @@ class ContactDossier(BaseModel):
 
 class ButlerAgent:
     """
-    Autonomous Butler Agent:
+    Autonomous Butler Agent (Alfred Vance):
     - Maintains character dossiers and social dynamics from past interactions.
     - Evaluates social leverage, long-term strategic alignment, and interpersonal etiquette.
     - Operates with an isolated memory store to keep personal dossier intelligence segregated.
     """
 
-    def __init__(self, storage_dir: Optional[str] = None) -> None:
-        self.storage_dir = storage_dir or os.path.join("data", "agent_memory", "butler")
+    def __init__(self, agent_id: str = "butler", storage_dir: Optional[str] = None) -> None:
+        self.agent_id = agent_id
+        identity = roster.get_agent(agent_id)
+        self.storage_dir = storage_dir or (identity.memory_partition if identity else os.path.join("data", "agent_memory", "butler"))
         os.makedirs(self.storage_dir, exist_ok=True)
         self.dossier_file = os.path.join(self.storage_dir, "social_dossiers.json")
         self.dossiers: Dict[str, ContactDossier] = self._load_dossiers()
+
+    def get_identity(self):
+        return roster.get_agent(self.agent_id)
+
+    def build_system_prompt(self) -> str:
+        ident = self.get_identity()
+        name = ident.name if ident else "Alfred Vance"
+        personality = ident.personality if ident else "Dignified, tactful British gentleman butler."
+        return f"""You are {name}, the Autonomous Social Butler & Strategic Counselor.
+Personality: {personality}
+Voice & Tone: Dignified, impeccably courteous, observant, worldly, and strategically calculated.
+You assist the user in managing personal networks, correspondence etiquette, and strategic partnerships.
+Provide measured and refined counsel."""
 
     def _load_dossiers(self) -> Dict[str, ContactDossier]:
         if not os.path.exists(self.dossier_file):
