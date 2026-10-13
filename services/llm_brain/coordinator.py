@@ -49,8 +49,49 @@ class AgentCoordinator:
         rag_context = hybrid_memory.get_context(user_prompt)
         asst_name = hybrid_memory.profile.assistant_name or "Thanatos Assistant"
 
-        # 3. Check if this is a composite multi-agent workflow
-        lower_prompt = user_prompt.lower()
+        # 3. Check persona delegation from AgentRoster
+        from services.agents.agent_roster import roster
+        active_persona = roster.active_agent_id
+
+        # Check explicit persona invocations or domain triggers
+        is_systems_eng = active_persona == "site_engineer" or any(w in lower_prompt for w in ["velma", "system resource", "cpu usage", "ram usage", "server health", "telemetry", "hardware usage", "diagnose system", "debug error"])
+        is_secretary_req = active_persona == "secretary" or any(w in lower_prompt for w in ["amelia", "my agenda", "schedule", "routine", "workout", "remind me", "coffee preference"])
+        is_butler_req = active_persona == "butler" or any(w in lower_prompt for w in ["alfred", "dossier", "networking", "etiquette", "strategic leverage", "character notes"])
+
+        if is_systems_eng:
+            from services.agents.site_engineer_agent import site_engineer_agent
+            asst_name = "Velma Sinclair"
+            diag = site_engineer_agent.collect_system_telemetry()
+            task_desc = "Inspecting OS hardware metrics, processes & telemetry"
+            yield {"type": "agent_status", "agent": asst_name, "status": task_desc}
+            prompt = f"{site_engineer_agent.build_system_prompt()}\n\nUser Question/Task: {user_prompt}\n\nLive System Telemetry:\n{json.dumps(diag, indent=2)}\n\nRespond with your charming, willful Velma persona."
+            ans = await self.provider.generate(prompt=prompt, stream=False)
+            yield {"type": "assistant_chunk", "content": ans.content}
+            return
+
+        if is_secretary_req:
+            from services.agents.secretary_agent import SecretaryAgent
+            asst_name = "Amelia Sterling"
+            sec = SecretaryAgent()
+            task_desc = "Accessing daily schedule, routines & executive agenda"
+            yield {"type": "agent_status", "agent": asst_name, "status": task_desc}
+            prompt = f"{sec.build_system_prompt()}\n\nUser Question/Task: {user_prompt}\n\nPending Agenda:\n{json.dumps(sec.list_pending_agenda(), indent=2)}\n\nRespond with your Amelia persona."
+            ans = await self.provider.generate(prompt=prompt, stream=False)
+            yield {"type": "assistant_chunk", "content": ans.content}
+            return
+
+        if is_butler_req:
+            from services.agents.butler_agent import ButlerAgent
+            asst_name = "Alfred Vance"
+            butler = ButlerAgent()
+            task_desc = "Consulting character dossiers & strategic intelligence"
+            yield {"type": "agent_status", "agent": asst_name, "status": task_desc}
+            prompt = f"{butler.build_system_prompt()}\n\nUser Question/Task: {user_prompt}\n\nRespond with your Alfred Vance persona."
+            ans = await self.provider.generate(prompt=prompt, stream=False)
+            yield {"type": "assistant_chunk", "content": ans.content}
+            return
+
+        # 4. Check if this is a composite multi-agent workflow
         is_job_workflow = any(k in lower_prompt for k in ["job", "freshers", "apply for job", "tailor resume"])
         is_novel_workflow = any(k in lower_prompt for k in ["novel", "translate novel", "raw chapter"])
         is_code_workflow = any(k in lower_prompt for k in ["improve code", "fix bug in thanatos", "refactor thanatos", "self-improve"])
