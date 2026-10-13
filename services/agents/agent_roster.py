@@ -1,10 +1,12 @@
 # Thanatos/services/agents/agent_roster.py
 """
-Central Agent Roster & Identity Registry.
-Decouples agent personas and identities from static code so that:
-- Agent names, display names, and avatars can be changed freely in config/agents.json.
-- Memory partitions and databases remain permanently stable by immutable agent_id.
-- Agents maintain both private memory partitions and synchronized shared team memories.
+Scalable Multi-Agent Registry & Lazy-Loading Persona Service.
+Architecture:
+- Index registry in config/agents/index.json provides lightweight routing metadata.
+- Detailed agent profiles live in dedicated files: config/agents/<agent_id>.json.
+- Lazy-loads full personality & prompt context ONLY when that specific agent is invoked,
+  preventing context bloat, token wastage, and unnecessary memory consumption.
+- Immutable agent_id decouples persistent memory stores from cosmetic name changes.
 """
 
 import json
@@ -15,12 +17,26 @@ from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
-CONFIG_PATH = os.path.join("config", "agents.json")
+AGENTS_DIR = os.path.join("config", "agents")
+INDEX_PATH = os.path.join(AGENTS_DIR, "index.json")
 
 
-class AgentIdentity(BaseModel):
+class AgentIndexEntry(BaseModel):
     id: str
     name: str
+    display_name: str
+    role: str
+    persona_title: str
+    voice: str = "en-US-JennyNeural"
+    profile_path: str
+    memory_partition: str
+
+
+class FullAgentProfile(BaseModel):
+    schema_version: str = "1.0"
+    id: str
+    name: str
+    full_name: Optional[str] = None
     display_name: str
     role: str
     persona_title: str
@@ -28,119 +44,182 @@ class AgentIdentity(BaseModel):
     avatar_style: str = ""
     personality: str = ""
     specialization: List[str] = Field(default_factory=list)
+    traits: List[str] = Field(default_factory=list)
+    preferences: Dict[str, Any] = Field(default_factory=dict)
     memory_partition: str
     shared_memory_access: bool = True
 
 
 class AgentRoster:
-    """Singleton Manager for Thanatos Multi-Agent Identities and Active Personas."""
+    """
+    Scalable Agent Registry that maintains a lightweight directory index
+    and loads full individual agent profiles on-demand.
+    """
 
-    def __init__(self, config_file: str = CONFIG_PATH) -> None:
-        self.config_file = config_file
+    def __init__(self, index_file: str = INDEX_PATH, agents_dir: str = AGENTS_DIR) -> None:
+        self.index_file = index_file
+        self.agents_dir = agents_dir
         self.active_agent_id: str = "auto"
-        self.agents: Dict[str, AgentIdentity] = {}
-        self.load()
+        self.index: Dict[str, AgentIndexEntry] = {}
+        self._loaded_profiles: Dict[str, FullAgentProfile] = {}
+        self.load_index()
 
-    def load(self) -> None:
-        """Load identities from config or initialize defaults."""
-        if os.path.exists(self.config_file):
+    def load_index(self) -> None:
+        """Load the lightweight agent directory index without parsing all full profiles."""
+        os.makedirs(self.agents_dir, exist_ok=True)
+        if os.path.exists(self.index_file):
             try:
-                with open(self.config_file, "r", encoding="utf-8") as f:
+                with open(self.index_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     self.active_agent_id = data.get("active_agent_id", "auto")
-                    self.agents = {
-                        aid: AgentIdentity(**cfg)
-                        for aid, cfg in data.get("agents", {}).items()
+                    self.index = {
+                        entry["id"]: AgentIndexEntry(**entry)
+                        for entry in data.get("index", [])
                     }
                     return
             except Exception as e:
-                logger.error("Failed loading %s: %s", self.config_file, e)
+                logger.error("Failed loading %s: %s", self.index_file, e)
 
-        # Fallback default definitions
+        # Fallback index initialization if index.json is absent
         self.active_agent_id = "auto"
-        self.agents = {
-            "site_engineer": AgentIdentity(
+        self.index = {
+            "site_engineer": AgentIndexEntry(
                 id="site_engineer",
                 name="Velma Sinclair",
                 display_name="Velma Sinclair (Site Reliability & Systems Engineer)",
                 role="Site Reliability & Systems Engineer",
                 persona_title="Velma",
                 voice="en-US-JennyNeural",
-                avatar_style="Sharp, charismatic, willful young female engineer with glasses, cyberpunk techwear",
-                personality="Charming, exceptionally quick-witted, slightly cynical yet affectionate, deeply obsessed with kernel performance, thermal headroom, clean system architectures, and zero latency.",
-                specialization=["OS Telemetry", "Process Auditing", "Self-Improvement", "Resource Allocation"],
+                profile_path=os.path.join(self.agents_dir, "site_engineer.json"),
                 memory_partition="data/agent_memory/site_engineer",
-                shared_memory_access=True,
             ),
-            "secretary": AgentIdentity(
+            "secretary": AgentIndexEntry(
                 id="secretary",
                 name="Amelia Sterling",
                 display_name="Amelia Sterling (Executive Secretary & Wingman)",
                 role="Executive Secretary & Lifestyle Wingman",
                 persona_title="Amelia",
                 voice="en-US-AriaNeural",
-                avatar_style="Elegantly dressed, polished modern professional, impeccably organized tablet",
-                personality="Refined, proactive, highly organized, attentive to personal well-being, dietary preferences, schedules, workout routines, and high-priority milestones.",
-                specialization=["Daily Agenda", "Taste Profile", "Reminders", "Task Prep"],
+                profile_path=os.path.join(self.agents_dir, "secretary.json"),
                 memory_partition="data/agent_memory/secretary",
-                shared_memory_access=True,
             ),
-            "butler": AgentIdentity(
+            "butler": AgentIndexEntry(
                 id="butler",
                 name="Alfred Vance",
                 display_name="Alfred Vance (Autonomous Social Butler & Strategist)",
                 role="Autonomous Social Butler & Strategic Counselor",
                 persona_title="Alfred",
                 voice="en-GB-RyanNeural",
-                avatar_style="Classic British gentleman butler, tailored three-piece suit, wise discerning gaze",
-                personality="Dignified, courteous, tactful, highly perceptive of interpersonal leverage, social dynamics, networking opportunities, and long-term strategic alignment.",
-                specialization=["Character Dossiers", "Social Dynamics", "Etiquette", "Strategic Alignment"],
+                profile_path=os.path.join(self.agents_dir, "butler.json"),
                 memory_partition="data/agent_memory/butler",
-                shared_memory_access=True,
             ),
         }
-        self.save()
+        self.save_index()
 
-    def save(self) -> None:
-        """Persist identities to disk."""
-        os.makedirs(os.path.dirname(os.path.abspath(self.config_file)), exist_ok=True)
+    def save_index(self) -> None:
+        """Persist directory index."""
+        os.makedirs(os.path.dirname(os.path.abspath(self.index_file)), exist_ok=True)
         try:
             payload = {
-                "system_version": "1.0",
+                "system_version": "2.0",
                 "active_agent_id": self.active_agent_id,
-                "agents": {aid: agent.model_dump() for aid, agent in self.agents.items()},
+                "index": [entry.model_dump() for entry in self.index.values()],
             }
-            with open(self.config_file, "w", encoding="utf-8") as f:
+            with open(self.index_file, "w", encoding="utf-8") as f:
                 json.dump(payload, f, indent=2)
         except Exception as e:
-            logger.error("Failed saving agent config: %s", e)
+            logger.error("Failed saving index to %s: %s", self.index_file, e)
 
-    def get_agent(self, agent_id_or_name: str) -> Optional[AgentIdentity]:
-        """Lookup agent by internal ID, persona title, or full name."""
+    def list_agents(self) -> List[AgentIndexEntry]:
+        """Returns lightweight directory index entries for fast listing with zero profile overhead."""
+        return list(self.index.values())
+
+    def get_agent_index_entry(self, agent_id_or_name: str) -> Optional[AgentIndexEntry]:
+        """Quick lookup in lightweight index."""
         target = agent_id_or_name.lower().strip()
-        if target in self.agents:
-            return self.agents[target]
-        for aid, agent in self.agents.items():
-            if target in (agent.name.lower(), agent.persona_title.lower(), agent.role.lower()):
-                return agent
-            # Check prefix e.g. "velma"
-            if target == agent.persona_title.lower().split()[0]:
-                return agent
+        if target in self.index:
+            return self.index[target]
+        for aid, entry in self.index.items():
+            if target in (entry.name.lower(), entry.persona_title.lower(), entry.role.lower()):
+                return entry
+            if target == entry.persona_title.lower().split()[0]:
+                return entry
         return None
 
-    def list_agents(self) -> List[AgentIdentity]:
-        return list(self.agents.values())
+    def load_agent_profile(self, agent_id_or_name: str) -> Optional[FullAgentProfile]:
+        """
+        Targeted on-demand loader:
+        Picks up ONLY the requested agent's individual JSON file.
+        Caches in-memory to prevent repeated disk I/O.
+        """
+        entry = self.get_agent_index_entry(agent_id_or_name)
+        if not entry:
+            return None
+
+        # Return cached profile if already loaded
+        if entry.id in self._loaded_profiles:
+            return self._loaded_profiles[entry.id]
+
+        profile_file = entry.profile_path
+        if not os.path.exists(profile_file):
+            # Try path relative to workspace
+            profile_file = os.path.join(self.agents_dir, f"{entry.id}.json")
+
+        if os.path.exists(profile_file):
+            try:
+                with open(profile_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    profile = FullAgentProfile(**data)
+                    self._loaded_profiles[entry.id] = profile
+                    return profile
+            except Exception as e:
+                logger.error("Failed loading agent profile %s: %s", profile_file, e)
+
+        # Fallback minimal profile if file missing
+        fallback = FullAgentProfile(
+            id=entry.id,
+            name=entry.name,
+            display_name=entry.display_name,
+            role=entry.role,
+            persona_title=entry.persona_title,
+            voice=entry.voice,
+            memory_partition=entry.memory_partition,
+        )
+        self._loaded_profiles[entry.id] = fallback
+        return fallback
 
     def update_agent_name(self, agent_id: str, new_name: str, new_title: Optional[str] = None) -> bool:
-        """Safely updates name without disrupting memory partitions."""
-        agent = self.get_agent(agent_id)
-        if not agent:
+        """
+        Safely update agent name across index and individual profile.
+        Preserves memory partition and historical records without data loss.
+        """
+        entry = self.get_agent_index_entry(agent_id)
+        if not entry:
             return False
-        agent.name = new_name
+
+        entry.name = new_name
         if new_title:
-            agent.persona_title = new_title
-        agent.display_name = f"{new_name} ({agent.role})"
-        self.save()
+            entry.persona_title = new_title
+        entry.display_name = f"{new_name} ({entry.role})"
+        self.save_index()
+
+        # Update specific profile JSON file if present
+        profile = self.load_agent_profile(entry.id)
+        if profile:
+            profile.name = new_name
+            profile.full_name = new_name
+            if new_title:
+                profile.persona_title = new_title
+            profile.display_name = entry.display_name
+            self._loaded_profiles[entry.id] = profile
+
+            target_path = entry.profile_path if os.path.exists(entry.profile_path) else os.path.join(self.agents_dir, f"{entry.id}.json")
+            try:
+                with open(target_path, "w", encoding="utf-8") as f:
+                    json.dump(profile.model_dump(), f, indent=2)
+            except Exception as e:
+                logger.error("Could not write updated profile to %s: %s", target_path, e)
+
         return True
 
 
