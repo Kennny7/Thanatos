@@ -433,7 +433,7 @@ class ThanatosCLI:
                 if not target_agent or not msg:
                     console.print("[red]Usage: /agents dm <site_engineer|secretary|butler> <message>[/red]")
                 else:
-                    agent = roster.get_agent(target_agent)
+                    agent = roster.load_agent_profile(target_agent)
                     if not agent:
                         console.print(f"[red]Agent '{target_agent}' not found. Valid IDs: site_engineer, secretary, butler[/red]")
                     else:
