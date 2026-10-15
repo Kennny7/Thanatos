@@ -13,6 +13,10 @@ from services.llm_brain.coordinator import AgentCoordinator
 from services.memory.memory_manager import memory_service
 from plugins.base.registry import init_default_skills, registry
 
+from rich.table import Table
+from rich.panel import Panel
+from rich.box import ROUNDED
+
 from .ui import (
     console,
     print_banner,
@@ -445,21 +449,21 @@ class ThanatosCLI:
                             prompt = f"{site_engineer_agent.build_system_prompt()}\n\nUser Question: {msg}\n\nLive System Telemetry:\n{json.dumps(diag, indent=2)}\n\nRespond with your charming, willful Velma persona."
                             ans = await self.provider.generate(prompt=prompt, stream=False)
                             print_agent_breadcrumb(f"{agent.name} [Velma]", "Hardware & System Diagnosis Complete", 1.0)
-                            print_assistant_response(ans.content)
+                            print_assistant_response(ans.text or "Velma completed telemetry analysis.")
                         elif agent.id == "secretary":
                             from services.agents.secretary_agent import SecretaryAgent
                             sec = SecretaryAgent()
                             prompt = f"{sec.build_system_prompt()}\n\nUser Agenda/Schedule Question: {msg}\n\nRespond in your Amelia Sterling persona."
                             ans = await self.provider.generate(prompt=prompt, stream=False)
                             print_agent_breadcrumb(f"{agent.name} [Amelia]", "Agenda & Routine Checked", 1.0)
-                            print_assistant_response(ans.content)
+                            print_assistant_response(ans.text or "Amelia checked your schedule.")
                         elif agent.id == "butler":
                             from services.agents.butler_agent import ButlerAgent
                             butler = ButlerAgent()
                             prompt = f"{butler.build_system_prompt()}\n\nUser Question: {msg}\n\nRespond in your Alfred Vance persona."
                             ans = await self.provider.generate(prompt=prompt, stream=False)
                             print_agent_breadcrumb(f"{agent.name} [Alfred]", "Social Counsel Formulated", 1.0)
-                            print_assistant_response(ans.content)
+                            print_assistant_response(ans.text or "Alfred prepared his assessment.")
 
             elif sub_action == "set":
                 if not target_agent:
