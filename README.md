@@ -300,27 +300,41 @@ Thanatos features a dedicated **Voice Mode** alongside standard Text Mode, desig
 
 ### 1. Prerequisites
 - **Python 3.12+**
+- **Docker Desktop & Docker Compose** (Ensure Docker is started prior to launching database services to mount persistent data volumes)
 - **[uv](https://docs.astral.sh/uv/)** — fast, lock-file-based Python package manager
 - **Flutter SDK 3.x** (for desktop/mobile/web client)
 - **Ollama** (for local LLM inference — larger models strongly recommended, e.g. `qwen2.5:32b`, `deepseek-r1:32b`; minimum `qwen2.5:14b`)
 - *(Optional)* **OpenCV** for camera facial tracking
 
-### 2. Backend Setup
+> [!IMPORTANT]
+> **Docker Daemon & Port Verification**:
+> Before starting services or database dependencies, launch Docker Desktop.
+> Velma (Site Reliability Agent) scans your system ports on launch to prevent port collisions:
+> - **PostgreSQL**: `5436:5432` (avoids conflicts with host PostgreSQL on default port 5432)
+> - **MongoDB**: `27018:27017` (avoids conflicts with default port 27017)
+> - **Milvus Standalone**: `19530:19530`
+> - **Neo4j**: `7474:7474` (HTTP) / `7687:7687` (Bolt)
+> All database volumes (`thanatos_postgres_data`, `thanatos_mongo_data`, `thanatos_milvus_data`, `thanatos_neo4j_data`) are mounted to Docker volumes so your data, jobs, and vector embeddings are permanently preserved across restarts.
+
+### 2. Backend & Enterprise Databases Setup
 ```bash
 # Clone the repository
 git clone https://github.com/Kennny7/Thanatos.git
 cd Thanatos
 
-# Install uv (if not already installed)
+# 1. Start Docker enterprise database containers (mounts persistent volumes)
+docker compose -f docker-compose.enterprise.yml up -d
+
+# 2. Install uv (if not already installed)
 # Windows (PowerShell):
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 # macOS / Linux:
 # curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Install exact, locked dependencies (reads uv.lock — no version drift)
+# 3. Install exact, locked dependencies (reads uv.lock — no version drift)
 uv sync --extra dev
 
-# Start the FastAPI server
+# 4. Start the FastAPI server
 uv run uvicorn apps.api_server.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
