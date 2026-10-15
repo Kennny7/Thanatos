@@ -83,7 +83,7 @@ services:
       POSTGRES_PASSWORD: thanatos_password
       POSTGRES_DB: thanatos_memory
     ports:
-      - "5432:5432"
+      - "5436:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
