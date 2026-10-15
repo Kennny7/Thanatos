@@ -171,21 +171,25 @@ class JobWorkflowRunner:
                 
                 # Show quick terminal cover letter preview
                 console.print(Panel(cover_letter, title="[cyan]Cover Letter Preview[/cyan]", box=ROUNDED, border_style="dim cyan"))
-                console.print("[dim]Options: [bold white]Enter[/bold white] = Approve & Dispatch  │  [bold white]o[/bold white] = Open in WPS/Word/Reader  │  [bold white]s[/bold white] = Skip opening[/dim]")
+                console.print("[dim]Options: [bold white]Enter / Y[/bold white] = Approve & Dispatch  │  [bold white]e / o[/bold white] = Edit in WPS/Word  │  [bold white]s[/bold white] = Skip job  │  [bold white]c[/bold white] = Cancel hunt[/dim]")
 
                 try:
-                    user_action = input("  Proceed with dispatch? [Y/o/s]: ").strip().lower()
-                    if user_action == "o":
+                    user_action = input("  Proceed with dispatch? [Y/e/s/c]: ").strip().lower()
+                    if user_action in ("e", "o"):
                         # Open resume in default system viewer (Word, WPS, or PDF viewer)
                         if os.name == "nt":
                             os.startfile(os.path.abspath(resume_pdf_path))
                             os.startfile(os.path.abspath(cover_letter_pdf_path))
-                        input("  Press Enter after reviewing or editing drafts to continue...")
+                        input("  Files opened in system editor. Press Enter after reviewing or saving your edits...")
                     elif user_action == "s":
-                        console.print(f"[yellow]Skipped dispatch for {target_job['company']}.[/yellow]")
+                        console.print(f"[yellow]Skipped dispatch for {target_job['company']}. Moving to next opening...[/yellow]")
                         continue
+                    elif user_action == "c":
+                        console.print(f"[yellow]Job application workflow cancelled by user.[/yellow]")
+                        return
                 except (EOFError, KeyboardInterrupt):
-                    pass
+                    console.print(f"\n[yellow]Draft review interrupted. Cancelling dispatch.[/yellow]")
+                    return
 
             # Application Packaging & Dispatch
             pdf_attachments = [resume_pdf_path, cover_letter_pdf_path]
