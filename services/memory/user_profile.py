@@ -14,13 +14,13 @@ logger = logging.getLogger(__name__)
 
 
 class UserProfile(BaseModel):
-    name: str = app_config.user_name
-    email: str = app_config.user_email
-    location: str = app_config.user_location
-    title: str = app_config.user_title
-    portfolio_url: Optional[str] = "https://khushal-portfolio.dev"
+    name: str = "Khushal Pareta"
+    email: str = "khushalpareta9@gmail.com"
+    location: str = "Navi Mumbai, Maharashtra, India"
+    title: str = "AI / ML Engineer"
+    portfolio_url: Optional[str] = "https://kennny7.github.io"
     github_url: Optional[str] = "https://github.com/Kennny7"
-    linkedin_url: Optional[str] = "https://linkedin.com/in/khushal-pareta"
+    linkedin_url: Optional[str] = "https://www.linkedin.com/in/khushal-pareta-704355338"
     education: List[Dict[str, str]] = Field(default_factory=lambda: [
         {"degree": "Bachelor of Technology in Computer Science", "institution": "University of Pune", "year": "2024"}
     ])
@@ -164,24 +164,43 @@ class UserProfileManager:
             try:
                 data = json.loads(content)
                 if isinstance(data, dict):
-                    if "name" in data and data["name"]:
-                        self.profile.name = data["name"]
-                    if "email" in data and data["email"]:
-                        self.profile.email = data["email"]
-                    if "location" in data and data["location"]:
-                        self.profile.location = data["location"]
+                    # Check nested personal block if present (e.g. Master Profile schema 2.0)
+                    personal = data.get("personal", {}) if isinstance(data.get("personal"), dict) else {}
+                    
+                    name_val = personal.get("full_name") or data.get("name")
+                    if name_val:
+                        self.profile.name = name_val
+
+                    email_val = personal.get("email") or data.get("email")
+                    if email_val:
+                        self.profile.email = email_val
+
+                    loc_val = personal.get("location") or data.get("location")
+                    if loc_val:
+                        self.profile.location = loc_val
+
+                    title_val = personal.get("primary_title") or data.get("title")
+                    if title_val:
+                        self.profile.title = title_val
+
+                    pf_val = personal.get("portfolio_url") or data.get("portfolio_url")
+                    if pf_val:
+                        self.profile.portfolio_url = pf_val
+
+                    gh_val = personal.get("github_url") or data.get("github_url")
+                    if gh_val:
+                        self.profile.github_url = gh_val
+
+                    li_val = personal.get("linkedin_url") or data.get("linkedin_url")
+                    if li_val:
+                        self.profile.linkedin_url = li_val
+
                     if "skills" in data and isinstance(data["skills"], list):
                         for s in data["skills"]:
                             if s not in self.profile.skills:
                                 self.profile.skills.append(s)
-                    if "portfolio_url" in data:
-                        self.profile.portfolio_url = data["portfolio_url"]
-                    if "github_url" in data:
-                        self.profile.github_url = data["github_url"]
-                    if "linkedin_url" in data:
-                        self.profile.linkedin_url = data["linkedin_url"]
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Error parsing JSON profile in %s: %s", fname, e)
 
         # Index into vector database if memory manager is attached
         if self.memory_manager and hasattr(self.memory_manager, "add_memory"):
