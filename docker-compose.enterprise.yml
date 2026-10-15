@@ -23,7 +23,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-thanatos_memory}
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
-      - "5432:5432"
+      - "5436:5432"
     volumes:
       - thanatos_postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -49,7 +49,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-thanatos_admin}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-thanatos_mongo_secret}
     ports:
-      - "27017:27017"
+      - "27018:27017"
     volumes:
       - thanatos_mongo_data:/data/db
     healthcheck:
