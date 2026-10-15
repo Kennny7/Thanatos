@@ -71,6 +71,24 @@ class UnifiedLLMProvider:
             {"name": "deepseek-chat", "details": {"provider": "cloud"}},
         ]
 
+    async def generate(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        stream: bool = False,
+        use_slm: bool = False,
+    ) -> LLMResponse:
+        """
+        Direct generation helper for lightweight sub-agents (Velma, Amelia, Alfred).
+        Supports routing to local SLM (e.g. Ollama 7B / 3.8B) for quick tasks to relieve
+        pressure on the main large LLM, reducing latency and avoiding keep-alive timeouts.
+        """
+        history = [{"role": "user", "content": prompt}]
+        return await self.generate_response(
+            history=history,
+            system_prompt=system_prompt,
+        )
+
     async def generate_response(
         self,
         history: List[Dict[str, Any]],
