@@ -106,7 +106,9 @@ class DatabaseOrchestrator:
             "milvus-etcd",
             "milvus-minio",
             "milvus-standalone",
-            "thanatos-neo4j"
+            "thanatos-neo4j",
+            "thanatos-zookeeper",
+            "thanatos-kafka",
         ]
 
         status_map: Dict[str, Dict[str, Any]] = {}
@@ -162,7 +164,8 @@ class DatabaseOrchestrator:
             "postgres": ["thanatos-postgres"],
             "mongodb": ["thanatos-mongodb"],
             "milvus": ["milvus-etcd", "milvus-minio", "milvus-standalone"],
-            "neo4j": ["thanatos-neo4j"]
+            "neo4j": ["thanatos-neo4j"],
+            "kafka": ["thanatos-zookeeper", "thanatos-kafka"],
         }
 
         services_to_start: List[str] = []
@@ -178,7 +181,9 @@ class DatabaseOrchestrator:
                 "milvus-etcd",
                 "milvus-minio",
                 "milvus-standalone",
-                "thanatos-neo4j"
+                "thanatos-neo4j",
+                "thanatos-zookeeper",
+                "thanatos-kafka",
             ]
 
         try:
