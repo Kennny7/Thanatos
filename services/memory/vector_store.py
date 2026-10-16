@@ -63,28 +63,38 @@ class VectorStore:
         """Autonomously initialize, verify, and report vector database health."""
         os.makedirs(self.persist_directory, exist_ok=True)
 
-        # 1. Try Milvus Lite / Standalone if preferred
+        # 1. Try Milvus Standalone (or local db fallback) if preferred
         if self.preferred_backend in ("milvus", "auto"):
             try:
                 from services.memory.milvus_store import MilvusVectorStore
+                milvus_server_uri = getattr(app_config, "milvus_uri", "http://localhost:19530")
                 milvus_db_path = os.path.join(self.persist_directory, "milvus_v2_store.db")
-                m_store = MilvusVectorStore(uri=milvus_db_path, collection_name=self.collection_name)
+                
+                # Check server uri first
+                m_store = MilvusVectorStore(uri=milvus_server_uri, collection_name=self.collection_name)
+                is_standalone = m_store.is_available()
+                
+                if not is_standalone:
+                    # Fallback to local DB if standalone container is not active yet
+                    m_store = MilvusVectorStore(uri=milvus_db_path, collection_name=self.collection_name)
+
                 if m_store.is_available():
                     self._milvus_store = m_store
                     self.active_backend = "milvus"
                     status = m_store.get_status()
+                    backend_label = "Milvus Standalone (Distributed Vector DB)" if is_standalone else "Milvus Vector Store"
                     self._status_summary = {
-                        "backend": "Milvus Lite (Scalable Vector DB)",
+                        "backend": backend_label,
                         "status": "ready",
                         "is_new": status.get("is_new", False),
-                        "persist_directory": os.path.abspath(milvus_db_path),
+                        "persist_directory": milvus_server_uri if is_standalone else os.path.abspath(milvus_db_path),
                         "collection": self.collection_name,
                         "doc_count": status.get("doc_count", 0),
                     }
-                    logger.info("Initialized Milvus Lite vector store at: %s", milvus_db_path)
+                    logger.info("Initialized %s at: %s", backend_label, milvus_server_uri if is_standalone else milvus_db_path)
                     return
             except Exception as e:
-                logger.warning("Milvus Lite initialization bypassed (%s), trying ChromaDB...", e)
+                logger.warning("Milvus initialization bypassed (%s), trying ChromaDB...", e)
 
         # 2. Try ChromaDB
         if self.preferred_backend in ("chroma", "auto", "milvus"):
