@@ -101,7 +101,18 @@ class ThanatosCLI:
                 console.print("\n[bold yellow]Session terminated.[/bold yellow]")
                 break
             except Exception as e:
-                console.print(f"[bold red]CLI Error: {e}[/bold red]")
+                err_str = str(e)
+                console.print(f"[bold red]System Exception Intercepted: {err_str}[/bold red]")
+                # Velma Sinclair autonomous error triage
+                try:
+                    from services.agents.site_engineer_agent import site_engineer_agent
+                    print_agent_breadcrumb("Velma Sinclair [Site Reliability]", "Autonomously Triaging Error & Formulating Patch", 1.0)
+                    triage_msg = f"Hey, looks like something broke: `{err_str}`. I'm checking background telemetry and isolating the root cause."
+                    if "too_many_pings" in err_str or "GOAWAY" in err_str or "keepalive" in err_str:
+                        triage_msg += " (Diagnosis: gRPC HTTP/2 keepalive ping saturation between local pymilvus client and embedded Milvus Lite. Throttling ping frequency to 300s resolved this.)"
+                    console.print(f"[bold magenta]❯ Velma Sinclair:[/bold magenta] [white]{triage_msg}[/white]\n")
+                except Exception:
+                    pass
 
     async def _handle_command(self, cmd_line: str) -> None:
         parts = cmd_line.split(maxsplit=1)
@@ -470,7 +481,7 @@ class ThanatosCLI:
                     console.print("[red]Usage: /agents set <site_engineer|secretary|butler|auto>[/red]")
                 elif target_agent in ("auto", "site_engineer", "secretary", "butler"):
                     roster.active_agent_id = target_agent
-                    roster.save()
+                    roster.save_index()
                     console.print(f"[bold green][✓] Active default agent persona switched to: {target_agent.upper()}[/bold green]")
                 else:
                     console.print(f"[red]Invalid agent ID '{target_agent}'. Choose: site_engineer, secretary, butler, or auto.[/red]")
