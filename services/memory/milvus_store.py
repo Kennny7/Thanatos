@@ -46,9 +46,23 @@ class MilvusVectorStore:
 
     def _init_milvus(self) -> None:
         try:
+            # Silence verbose C-core gRPC keepalive/transport logs in terminal
+            os.environ.setdefault("GRPC_VERBOSITY", "ERROR")
+            os.environ.setdefault("GLOG_minloglevel", "2")
+
             from pymilvus import MilvusClient
             os.makedirs(os.path.dirname(os.path.abspath(self.uri)), exist_ok=True)
-            self._client = MilvusClient(uri=self.uri)
+            # Safe gRPC channel options preventing ENHANCE_YOUR_CALM / too_many_pings GOAWAY
+            grpc_opts = {
+                "grpc.keepalive_time_ms": 300000,           # Ping at most every 5 minutes
+                "grpc.keepalive_timeout_ms": 20000,         # 20s timeout
+                "grpc.keepalive_permit_without_calls": False, # Do not spam pings when idle
+                "grpc.http2.max_pings_without_data": 0,
+            }
+            try:
+                self._client = MilvusClient(uri=self.uri, grpc_options=grpc_opts)
+            except TypeError:
+                self._client = MilvusClient(uri=self.uri)
 
             if not self._client.has_collection(self.collection_name):
                 self._client.create_collection(
