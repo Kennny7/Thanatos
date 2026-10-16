@@ -1,9 +1,13 @@
-# Thanatos Enterprise Scalable Multi-Engine Database Stack
+# Thanatos Enterprise Scalable Multi-Engine Stack & Real-Time Stream Ingestion
 # Engines:
-# 1. PostgreSQL 16 (Scalable Relational Database - schema, logs, jobs, contacts, profiles)
+# 1. PostgreSQL 16 (Relational Database - schema, logs, jobs, contacts, profiles)
 # 2. MongoDB 7.0 (Document Database - unstructured memories, agent transcripts, dossiers)
 # 3. Milvus 2.4.13 Standalone + etcd + MinIO (Distributed Vector Search - high-dimensional embeddings)
 # 4. Neo4j 5.20 Community (Knowledge Graph - entity links, social relations, character arcs)
+# 5. Apache Kafka + Zookeeper (Distributed Event Streaming - multi-camera telemetry, audio frames, IoT streams)
+#
+# Storage:
+#   Direct host-mounted volumes inside ./data/docker_storage/<service> for 100% transparent migration and backups.
 #
 # Usage:
 #   docker compose -f docker-compose.enterprise.yml up -d
@@ -25,7 +29,7 @@ services:
     ports:
       - "5436:5432"
     volumes:
-      - thanatos_postgres_data:/var/lib/postgresql/data
+      - ./data/docker_storage/postgres:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-thanatos}"]
       interval: 10s
@@ -51,7 +55,7 @@ services:
     ports:
       - "27018:27017"
     volumes:
-      - thanatos_mongo_data:/data/db
+      - ./data/docker_storage/mongo:/data/db
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
@@ -77,7 +81,7 @@ services:
       - ETCD_QUOTA_BACKEND_BYTES=4294967296
       - ETCD_SNAPSHOT_COUNT=50000
     volumes:
-      - thanatos_etcd_data:/etcd
+      - ./data/docker_storage/etcd:/etcd
     command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls=http://0.0.0.0:2379 --data-dir=/etcd
     healthcheck:
       test: ["CMD", "etcdctl", "endpoint", "health"]
@@ -102,7 +106,7 @@ services:
       - "9001:9001"
       - "9000:9000"
     volumes:
-      - thanatos_minio_data:/minio_data
+      - ./data/docker_storage/minio:/minio_data
     command: minio server /minio_data --console-address ":9001"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
@@ -127,7 +131,7 @@ services:
       ETCD_ENDPOINTS: milvus-etcd:2379
       MINIO_ADDRESS: milvus-minio:9000
     volumes:
-      - thanatos_milvus_data:/var/lib/milvus
+      - ./data/docker_storage/milvus:/var/lib/milvus
     ports:
       - "19530:19530"
       - "9091:9091"
@@ -163,8 +167,7 @@ services:
       - "7474:7474" # HTTP Browser
       - "7687:7687" # Bolt Protocol
     volumes:
-      - thanatos_neo4j_data:/data
-      - thanatos_neo4j_logs:/logs
+      - ./data/docker_storage/neo4j:/data
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1"]
       interval: 10s
@@ -177,23 +180,55 @@ services:
     networks:
       - thanatos_enterprise_net
 
+  # ---------------------------------------------------------------------------
+  # 5. Distributed Event Streaming & Camera/Sensory Feeds: Kafka + Zookeeper
+  # ---------------------------------------------------------------------------
+  thanatos-zookeeper:
+    container_name: thanatos-zookeeper
+    image: confluentinc/cp-zookeeper:7.5.0
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    volumes:
+      - ./data/docker_storage/zookeeper:/var/lib/zookeeper/data
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - thanatos_enterprise_net
+
+  thanatos-kafka:
+    container_name: thanatos-kafka
+    image: confluentinc/cp-kafka:7.5.0
+    restart: unless-stopped
+    depends_on:
+      - thanatos-zookeeper
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: thanatos-zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://127.0.0.1:9092,PLAINTEXT_INTERNAL://thanatos-kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    volumes:
+      - ./data/docker_storage/kafka:/var/lib/kafka/data
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+    networks:
+      - thanatos_enterprise_net
+
 networks:
   thanatos_enterprise_net:
     name: thanatos_enterprise_net
     driver: bridge
-
-volumes:
-  thanatos_postgres_data:
-    name: thanatos_postgres_data
-  thanatos_mongo_data:
-    name: thanatos_mongo_data
-  thanatos_etcd_data:
-    name: thanatos_etcd_data
-  thanatos_minio_data:
-    name: thanatos_minio_data
-  thanatos_milvus_data:
-    name: thanatos_milvus_data
-  thanatos_neo4j_data:
-    name: thanatos_neo4j_data
-  thanatos_neo4j_logs:
-    name: thanatos_neo4j_logs
