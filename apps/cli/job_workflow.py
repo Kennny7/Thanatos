@@ -144,7 +144,7 @@ class JobWorkflowRunner:
 
             # Compile PDFs
             pdf_generator.generate_resume_pdf(
-                source_tex_or_md=resume_tex or resume_md,
+                source_tex_or_md=resume_md or resume_tex,
                 output_pdf_path=resume_pdf_path,
                 candidate_name=prof.name or "Khushal Pareta",
                 candidate_title=prof.title or "AI Developer | Machine Learning Engineer",
