@@ -51,7 +51,8 @@ class MilvusVectorStore:
             os.environ.setdefault("GLOG_minloglevel", "2")
 
             from pymilvus import MilvusClient
-            os.makedirs(os.path.dirname(os.path.abspath(self.uri)), exist_ok=True)
+            if not self.uri.startswith("http://") and not self.uri.startswith("https://"):
+                os.makedirs(os.path.dirname(os.path.abspath(self.uri)), exist_ok=True)
             # Safe gRPC channel options preventing ENHANCE_YOUR_CALM / too_many_pings GOAWAY
             grpc_opts = {
                 "grpc.keepalive_time_ms": 300000,           # Ping at most every 5 minutes
