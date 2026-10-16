@@ -90,7 +90,9 @@ class VectorStore:
         if self.preferred_backend in ("chroma", "auto", "milvus"):
             try:
                 import chromadb
-                self._chroma_client = chromadb.PersistentClient(path=self.persist_directory)
+                from chromadb.config import Settings as ChromaSettings
+                chroma_settings = ChromaSettings(anonymized_telemetry=False)
+                self._chroma_client = chromadb.PersistentClient(path=self.persist_directory, settings=chroma_settings)
                 existing_cols = [c.name for c in self._chroma_client.list_collections()]
                 is_new = self.collection_name not in existing_cols
 
