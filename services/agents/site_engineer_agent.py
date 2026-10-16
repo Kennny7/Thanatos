@@ -125,6 +125,64 @@ class SiteEngineerAgent:
     def get_engineer_notes(self, limit: int = 10) -> List[Dict[str, Any]]:
         return self.notes[-limit:]
 
+    def check_port_conflicts(self, target_ports: Optional[List[int]] = None) -> List[Dict[str, Any]]:
+        """Scans system to check if database or gateway ports are blocked by host processes."""
+        ports = target_ports or [5432, 5436, 8000, 7474, 7687, 9092, 11434, 19530, 27017, 27018]
+        conflicts = []
+        try:
+            for conn in psutil.net_connections(kind="inet"):
+                if conn.status == "LISTEN" and conn.laddr and conn.laddr.port in ports:
+                    pname = "unknown"
+                    try:
+                        p = psutil.Process(conn.pid)
+                        pname = p.name()
+                    except Exception:
+                        pass
+                    conflicts.append({
+                        "port": conn.laddr.port,
+                        "pid": conn.pid,
+                        "process": pname,
+                    })
+        except Exception as e:
+            logger.debug("Port scan check note: %s", e)
+        return conflicts
+
+    def auto_manage_docker(self, action: str = "ensure") -> Dict[str, Any]:
+        """
+        Velma's automated Docker supervisor:
+        Checks if Docker daemon is running, identifies port conflicts,
+        and starts or verifies the enterprise database containers.
+        """
+        from services.database.db_orchestrator import db_orchestrator
+        is_avail = db_orchestrator.is_docker_available()
+        if not is_avail:
+            return {
+                "running": False,
+                "message": "Docker Desktop is not currently started. Please launch Docker Desktop so I can spin up your persistent database containers (Postgres, Mongo, Milvus, Neo4j, Kafka). Embedded local storage is standing by safely in the meantime."
+            }
+
+        conflicts = self.check_port_conflicts([5436, 27018, 19530, 7474, 9092])
+        if action == "ensure":
+            res = db_orchestrator.ensure_containers_running()
+            statuses = db_orchestrator.get_container_status()
+            return {
+                "running": True,
+                "orchestrator_result": res,
+                "containers": statuses,
+                "port_conflicts": conflicts,
+                "message": "All enterprise database & streaming containers (Postgres, Mongo, Milvus, Neo4j, Kafka) are operational with storage mounted in data/docker_storage/."
+            }
+        elif action == "status":
+            return {
+                "running": True,
+                "containers": db_orchestrator.get_container_status(),
+                "port_conflicts": conflicts,
+            }
+        elif action == "stop":
+            return db_orchestrator.stop_containers()
+
+        return {"running": is_avail}
+
     def build_system_prompt(self) -> str:
         prof = self.get_profile()
         name = prof.name if prof else "Velma Sinclair"
