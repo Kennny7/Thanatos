@@ -152,14 +152,61 @@ July 2022 – August 2024
 \usepackage[a4paper,left=1.8cm,right=1.8cm,top=1.6cm,bottom=1.6cm]{{geometry}}
 \usepackage{{enumitem}}
 \usepackage[hidelinks]{{hyperref}}
+\usepackage{{titlesec}}
+\setlist[itemize]{{noitemsep, topsep=2pt, leftmargin=*, parsep=0pt, partopsep=0pt}}
+\setlength{{\parskip}}{{3pt}}
+\setlength{{\parindent}}{{0pt}}
+\titleformat{{\section}}{{\large\bfseries}}{{}}{{0em}}{{}}
+\titlespacing*{{\section}}{{0pt}}{{1em}}{{0.3em}}
+\newcommand{{\sectionline}}{{\vspace{{2pt}}\noindent\rule{{\textwidth}}{{0.5pt}}\vspace{{4pt}}}}
+
 \begin{{document}}
 \begin{{center}}
   {{\LARGE\textbf{{{profile.name or 'Khushal Pareta'}}}}}\\[4pt]
-  {{\normalsize\textbf{{{job_title}}}}}\\[4pt]
-  \href{{mailto:{profile.email}}}{{{profile.email}}} $\cdot$ {profile.location} $\cdot$ \href{{{profile.portfolio_url}}}{{Portfolio}}
+  {{\normalsize\textbf{{{job_title} | Generative AI, LLM & RAG Systems}}}}\\[4pt]
+  \href{{mailto:{profile.email}}}{{{profile.email}}} $\cdot$ {profile.location} $\cdot$ \href{{{profile.portfolio_url}}}{{Portfolio}} $\cdot$ \href{{{profile.linkedin_url}}}{{LinkedIn}} $\cdot$ \href{{{profile.github_url}}}{{GitHub}}
 \end{{center}}
+
 \section*{{Profile}}
-AI/ML Engineer with \textbf{{{exp_duration} of experience}} developing Generative AI, RAG architectures, and agentic systems tailored for \textbf{{{company}}}.
+\vspace{{-0.4em}}
+\sectionline
+AI/ML Engineer with \textbf{{{exp_duration} of experience}} developing Generative AI, RAG architectures, and agentic systems tailored for \textbf{{{company}}}. Proven track record designing enterprise AI assistants and microservices using LangChain, Hugging Face, PyTorch, and FastAPI.
+
+\section*{{Core Competencies}}
+\vspace{{-0.4em}}
+\sectionline
+\begin{{itemize}}
+  \item \textbf{{Generative AI \& LLMs:}} OpenAI, Claude, Gemini, LangChain, Hugging Face, RAG, Prompt Engineering, Vector DBs (Chroma/FAISS)
+  \item \textbf{{Engineering \& Backend:}} Python, FastAPI, PySpark, PostgreSQL, Docker, Microservices, CI/CD, Git, Linux
+  \item \textbf{{Data \& MLOps:}} MLflow, Airflow, ELK Stack, Data Validation, Automated Ingestion Pipelines
+\end{{itemize}}
+
+\section*{{Professional Experience}}
+\vspace{{-0.4em}}
+\sectionline
+\textbf{{Project Engineer (AI/ML \& Data Pipelines)}} \hfill C-DAC, Mumbai \\
+\textit{{March 2025 -- Present}}
+\begin{{itemize}}
+  \item Architected and deployed an LLM-powered conversational assistant for the Maritime Knowledge Cluster using LangChain and RAG over regulatory circulars.
+  \item Engineered PySpark ETL pipelines for the National Family Health Survey (NFHS), optimizing query latency by 40\% with PostgreSQL connection pooling.
+  \item Developed real-time error classification microservices and deployed ELK Stack for centralized telemetry and monitoring.
+\end{{itemize}}
+
+\vspace{{4pt}}
+\textbf{{Data Operations Engineer}} \hfill Laxmi Traders, Rajasthan \\
+\textit{{July 2022 -- August 2024}}
+\begin{{itemize}}
+  \item Engineered real-time data synchronization layers with Python and PostgreSQL, unifying procurement across multiple commodity hubs.
+  \item Built automated commodity forecasting microservices using XGBoost, Scikit-learn, and FastAPI.
+  \item Orchestrated end-to-end Airflow ETL pipelines and MLflow experiment tracking.
+\end{{itemize}}
+
+\section*{{Education}}
+\vspace{{-0.4em}}
+\sectionline
+\textbf{{Post Graduate Diploma in Big Data Analytics}} \hfill C-DAC, Mumbai (Rank 1 for Academic Excellence) \\
+\textbf{{Bachelor of Technology in Computer Science}} \hfill Poornima College of Engineering, Jaipur
+
 \end{{document}}
 """
 
