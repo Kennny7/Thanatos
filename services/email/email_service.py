@@ -75,6 +75,7 @@ class EmailService:
         user: Optional[str] = None,
         password: Optional[str] = None,
         from_email: Optional[str] = None,
+        persist: bool = True,
     ) -> None:
         if host:
             self.host = host
@@ -88,6 +89,51 @@ class EmailService:
             self.from_email = from_email
         elif user and not self.from_email:
             self.from_email = user
+
+        if persist:
+            self._save_to_env()
+
+    def _save_to_env(self) -> None:
+        """Persist current SMTP settings into root .env file so they survive restarts."""
+        env_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
+        try:
+            lines = []
+            if os.path.exists(env_path):
+                with open(env_path, "r", encoding="utf-8") as f:
+                    lines = f.readlines()
+
+            keys_to_set = {
+                "SMTP_HOST": self.host or "",
+                "SMTP_PORT": str(self.port or 587),
+                "SMTP_USER": self.user or "",
+                "SMTP_PASSWORD": self.password or "",
+                "SMTP_FROM_EMAIL": self.from_email or self.user or "",
+                "SMTP_USE_TLS": "true" if self.use_tls else "false",
+            }
+
+            updated_keys = set()
+            new_lines = []
+            for line in lines:
+                matched = False
+                for k, v in keys_to_set.items():
+                    if line.strip().startswith(f"{k}=") or line.strip().startswith(f"# {k}=") or line.strip().startswith(f"#{k}="):
+                        new_lines.append(f"{k}={v}\n")
+                        updated_keys.add(k)
+                        matched = True
+                        break
+                if not matched:
+                    new_lines.append(line)
+
+            # Append any keys that weren't present
+            for k, v in keys_to_set.items():
+                if k not in updated_keys and v:
+                    new_lines.append(f"{k}={v}\n")
+
+            with open(env_path, "w", encoding="utf-8") as f:
+                f.writelines(new_lines)
+            logger.info("Successfully persisted SMTP credentials into .env at %s", env_path)
+        except Exception as e:
+            logger.warning("Could not persist SMTP credentials to .env: %s", e)
 
     def verify_connection(self) -> EmailTransmissionResult:
         """Tests SMTP handshake and authentication without sending an email."""
