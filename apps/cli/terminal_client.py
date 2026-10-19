@@ -81,10 +81,10 @@ class ThanatosCLI:
             if not db_orchestrator.is_docker_available():
                 print_agent_breadcrumb("Velma Sinclair [Site Reliability]", "Host Infrastructure & Database Diagnostic", 1.0)
                 console.print(
-                    "[bold magenta]❯ Velma Sinclair:[/bold magenta] [white]Hey! I ran a pre-flight system check and Docker Desktop isn't running yet. "
-                    "Your enterprise database cluster (PostgreSQL, MongoDB, Milvus, Neo4j, Kafka) is offline. "
-                    "I can launch Docker Desktop and spin up the containers automatically, or we can keep rolling with local embedded storage. "
-                    "Run [bold yellow]/docker start[/bold yellow] to have me launch it, or [bold yellow]/docker status[/bold yellow] to check containers.[/white]\n"
+                    "[bold magenta]❯ Velma Sinclair:[/bold magenta] [white]Hey! I ran a pre-flight system check and Docker Desktop isn't running yet, "
+                    "so your enterprise database cluster (PostgreSQL, MongoDB, Milvus, Neo4j, Kafka) is offline. "
+                    "Should I launch Docker Desktop and deploy your containers, or keep rolling with local embedded storage? "
+                    "Just tell me [bold yellow]\"yes, start docker\"[/bold yellow] or [bold yellow]\"keep local\"[/bold yellow].[/white]\n"
                 )
         except Exception:
             pass
@@ -614,12 +614,23 @@ class ThanatosCLI:
             await self._handle_command("/thinking off")
             return
 
-        if any(phrase in lower for phrase in ["start docker", "launch docker", "spin up docker", "start containers", "up docker", "bring up database"]):
+        if any(phrase in lower for phrase in [
+            "start docker", "launch docker", "spin up docker", "start containers", "up docker", 
+            "bring up database", "containerized service", "containerised service", "run containers",
+            "prefer running the container", "prefer docker", "boot docker", "start database"
+        ]) and not any(neg in lower for neg in ["dont", "don't", "no", "stop", "never"]):
             console.print("[dim cyan]❯ [Autonomous Action Gate][/dim cyan] [yellow]Triggering autonomous Docker boot & container deployment...[/yellow]")
             await self._handle_command("/docker start")
             return
 
-        if any(phrase in lower for phrase in ["check docker", "docker status", "database status", "containers status"]):
+        if any(phrase in lower for phrase in [
+            "dont want docker", "don't want docker", "no docker", "keep local", "stay local", 
+            "prefer lite", "use lite", "without docker", "local lite"
+        ]):
+            console.print("[dim cyan]❯ [Velma Sinclair][/dim cyan] [white]Got it! Keeping local embedded storage active. Docker remains off.[/white]\n")
+            return
+
+        if any(phrase in lower for phrase in ["check docker", "docker status", "database status", "containers status", "is docker running"]):
             await self._handle_command("/docker status")
             return
 
