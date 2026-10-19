@@ -161,38 +161,102 @@ class ResumeTailorSkill(BaseSkill):
                             tailored_resume_latex[comp_match.end():]
                         )
 
-                # E. Dynamically Select and Reorder Key Projects
-                # The master resume contains 7 key projects. Select the top 3-4 most relevant to this opening
+                # E. Dynamically Adapt Key Projects (Preserve ALL 7 Projects, subtly tailoring tech & usecase phrasing)
+                # First, remove the Personal Projects section containing Thanatos if present
+                tailored_resume_latex = re.sub(
+                    r"\\section\*\{Personal Projects\}[\s\S]*?(?=\\section\*\{Education\}|\\end\{document\})",
+                    "",
+                    tailored_resume_latex
+                )
+                # Also remove Thanatos bullet from Achievements if present
+                tailored_resume_latex = re.sub(
+                    r"\\item\s+Built and open-sourced \\textbf\{Thanatos\}[^\n]*\n?",
+                    "",
+                    tailored_resume_latex
+                )
+
+                # Parse the Key Projects section
                 proj_match = re.search(r"(\\section\*\{Key Projects\}\s*\\vspace\{[^}]+\}\s*\\sectionline\s*\\begin\{description\}[^\n]*\n)(.*?)(\\end\{description\})", tailored_resume_latex, flags=re.DOTALL)
                 if proj_match:
                     proj_header = proj_match.group(1)
                     proj_body = proj_match.group(2)
                     proj_footer = proj_match.group(3)
 
-                    # Extract each project item block
+                    # Extract all 7 project items
                     proj_items = re.findall(r"(\\item\[\\textbf\{[^\]]+\}\][\s\S]*?)(?=(?:\\item\[\\textbf\{|\\end\{description\}))", proj_body + "\\end{description}")
                     if proj_items:
+                        def adapt_project_phrasing(proj_text: str) -> str:
+                            adapted = proj_text
+                            # 1. MKC: Heavily AI/RAG focused
+                            if "Maritime Knowledge Cluster" in adapted:
+                                if any(s.lower() in ["ollama", "vllm", "local llm", "deepseek", "qwen"] for s in skills_required):
+                                    adapted = re.sub(r"Integrated \\textbf\{OpenAI/Azure OpenAI/Gemini/Claude/Llama\} APIs",
+                                                     r"Integrated \\textbf{OpenAI/Azure OpenAI, Local LLMs (Ollama/vLLM), and Claude} APIs", adapted)
+                                if any(s.lower() in ["pgvector", "milvus", "qdrant"] for s in skills_required):
+                                    adapted = re.sub(r"vector store to ground", r"vector store (Chroma/Milvus/pgvector) to ground", adapted)
+
+                            # 2. LRIT: Vessel Tracking, PyTorch sequence networks & FastAPI microservices
+                            elif "Long Range Identification" in adapted:
+                                if any(s.lower() in ["fastapi", "docker", "microservice"] for s in skills_required):
+                                    adapted = re.sub(r"FastAPI\\textbf\{\s*microservices behind \\textbf\{Docker\}",
+                                                     r"\\textbf{FastAPI} microservices containerized with \\textbf{Docker} and async event handling", adapted)
+
+                            # 3. Bharat Trace: Supply Chain Traceability
+                            elif "Bharat Trace" in adapted:
+                                if any(s.lower() in ["kafka", "streaming", "event"] for s in skills_required):
+                                    adapted = re.sub(r"automated ETL pipelines for end-to-end",
+                                                     r"automated ETL & event-driven ingestion pipelines for end-to-end", adapted)
+
+                            # 4. NFHS: National Family Health Survey (PySpark, Analytics, PostgreSQL)
+                            elif "National Family Health Survey" in adapted:
+                                if any(s.lower() in ["pyspark", "big data", "hadoop", "sql"] for s in skills_required):
+                                    adapted = re.sub(r"PySpark-based ETL pipelines",
+                                                     r"\\textbf{PySpark} distributed ETL pipelines and optimized SQL queries", adapted)
+
+                            # 5. CotBoz: Procurement platform backend (subtle backend enhancement)
+                            elif "CotBoz" in adapted:
+                                if any(s.lower() in ["fastapi", "rest api", "python", "backend"] for s in skills_required):
+                                    adapted = re.sub(r"backend in \\textbf\{Python\} and \\textbf\{PostgreSQL\}",
+                                                     r"modular backend in \\textbf{Python (FastAPI)} and \\textbf{PostgreSQL}", adapted)
+                                elif any(s.lower() in ["machine learning", "automation", "nlp"] for s in skills_required):
+                                    adapted = re.sub(r"automated data validation",
+                                                     r"automated backend validation algorithms and automated report parsing", adapted)
+
+                            # 6. Centralized Resource Board: Real-Time Data Synchronization
+                            elif "Centralized Resource Board" in adapted:
+                                if any(s.lower() in ["redis", "caching", "websocket", "sync"] for s in skills_required):
+                                    adapted = re.sub(r"centralized synchronization layer",
+                                                     r"centralized synchronization & caching layer", adapted)
+
+                            # 7. Inventory Requirements Prediction: ML Forecasting & Regression
+                            elif "Inventory Requirements Prediction" in adapted:
+                                if any(s.lower() in ["scikit-learn", "xgboost", "mlflow", "fastapi"] for s in skills_required):
+                                    adapted = re.sub(r"Served predictions via FastAPI",
+                                                     r"Served low-latency predictions via \\textbf{FastAPI} and tracked metrics in \\textbf{MLflow}", adapted)
+
+                            return adapted
+
+                        # Adapt all 7 projects with subtle technology alignment while retaining full credibility
+                        adapted_projs = [adapt_project_phrasing(p.strip()) for p in proj_items]
+
+                        # Order them so the most relevant to the JD appear first, but KEEP ALL 7
                         def score_project(proj_text: str) -> int:
                             score = 0
                             for sk in skills_required:
                                 if re.search(r"\b" + re.escape(sk) + r"\b", proj_text, re.IGNORECASE):
-                                    score += 3
+                                    score += 2
                             if jd:
                                 words = [w for w in re.split(r"\W+", jd.lower()) if len(w) > 3]
-                                for w in set(words[:30]):
+                                for w in set(words[:25]):
                                     if w in proj_text.lower():
                                         score += 1
-                            # Always ensure MKC and LRIT have high baseline relevance for AI/ML roles
-                            if "Maritime Knowledge Cluster" in proj_text:
-                                score += 2
                             return score
 
-                        sorted_projs = sorted(proj_items, key=score_project, reverse=True)
-                        # Keep top 3 most relevant projects to avoid clutter and ensure tight fit
-                        selected_projs = sorted_projs[:3]
+                        sorted_all_7 = sorted(adapted_projs, key=score_project, reverse=True)
+
                         tailored_resume_latex = (
                             tailored_resume_latex[:proj_match.start()] +
-                            f"{proj_header}\n" + "\n\n".join(p.strip() for p in selected_projs) + f"\n\n{proj_footer}" +
+                            f"{proj_header}\n" + "\n\n".join(sorted_all_7) + f"\n\n{proj_footer}" +
                             tailored_resume_latex[proj_match.end():]
                         )
 
