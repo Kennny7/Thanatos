@@ -48,6 +48,7 @@ class AgentCoordinator:
         # 2. Fetch Hybrid RAG & Knowledge Context
         rag_context = hybrid_memory.get_context(user_prompt)
         asst_name = hybrid_memory.profile.assistant_name or "Thanatos Assistant"
+        lower_prompt = user_prompt.lower()
 
         # 3. Check persona delegation from AgentRoster
         from services.agents.agent_roster import roster
