@@ -112,31 +112,102 @@ class UserProfileManager:
         return stats
 
     def _seed_default_files_if_empty(self) -> None:
-        """Seed baseline profile.json and resume.tex if directory is empty."""
+        """Seed baseline profile.json, online_profiles.md, and resume_template.tex if directory is empty on fresh clones."""
         files = os.listdir(self.profile_dir)
         if files:
             return
 
-        # Seed profile.json
+        # 1. Seed clean starter profile.json
         profile_json_path = os.path.join(self.profile_dir, "profile.json")
         try:
             with open(profile_json_path, "w", encoding="utf-8") as f:
-                json.dump(self.profile.model_dump(), f, indent=2)
-        except Exception:
-            pass
+                starter_profile = {
+                    "schema_version": "2.0",
+                    "personal": {
+                        "full_name": self.profile.name or "Your Name",
+                        "email": self.profile.email or "your.email@example.com",
+                        "phone": "+91 00000 00000",
+                        "location": self.profile.location or "City, Country",
+                        "primary_title": self.profile.title or "Software Engineer",
+                        "github_url": self.profile.github_url or "https://github.com/your-username",
+                        "linkedin_url": self.profile.linkedin_url or "https://www.linkedin.com/in/your-profile",
+                        "portfolio_url": self.profile.portfolio_url or "https://your-portfolio.dev",
+                    },
+                    "skills": self.profile.skills or ["Python", "Docker", "REST APIs", "SQL", "Git"],
+                    "experience": [],
+                    "education": [],
+                    "projects": []
+                }
+                json.dump(starter_profile, f, indent=2)
+        except Exception as e:
+            logger.warning("Could not auto-seed profile.json: %s", e)
 
-        # Seed portfolio_links.md
+        # 2. Seed online_profiles.md
         links_md_path = os.path.join(self.profile_dir, "online_profiles.md")
         try:
             with open(links_md_path, "w", encoding="utf-8") as f:
                 f.write(
                     f"# Online Profiles & Portfolio\n\n"
-                    f"- **GitHub**: {self.profile.github_url}\n"
-                    f"- **LinkedIn**: {self.profile.linkedin_url}\n"
-                    f"- **Portfolio**: {self.profile.portfolio_url}\n"
+                    f"- **GitHub**: {self.profile.github_url or 'https://github.com/your-username'}\n"
+                    f"- **LinkedIn**: {self.profile.linkedin_url or 'https://www.linkedin.com/in/your-profile'}\n"
+                    f"- **Portfolio**: {self.profile.portfolio_url or 'https://your-portfolio.dev'}\n"
                 )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Could not auto-seed online_profiles.md: %s", e)
+
+        # 3. Seed universal starter resume_template.tex
+        tex_path = os.path.join(self.profile_dir, "resume_template.tex")
+        try:
+            with open(tex_path, "w", encoding="utf-8") as f:
+                f.write(r"""\documentclass[10pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[a4paper,left=1.8cm,right=1.8cm,top=1.6cm,bottom=1.6cm]{geometry}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{titlesec}
+
+\titleformat{\section}{\large\bfseries}{}{0em}{}
+\titlespacing*{\section}{0pt}{1em}{0.3em}
+\newcommand{\sectionline}{\vspace{2pt}\noindent\rule{\textwidth}{0.5pt}\vspace{4pt}}
+
+\begin{document}
+
+\begin{center}
+  {\LARGE\textbf{Your Name}}\\[4pt]
+  {\normalsize\textbf{Software Engineer | Systems & AI}}\\[4pt]
+  your.email@example.com $\bullet$ +91 00000 00000 $\bullet$ City, Country\\
+  \href{https://linkedin.com}{LinkedIn} $\bullet$ \href{https://github.com}{GitHub} $\bullet$ \href{https://portfolio.dev}{Portfolio}
+\end{center}
+
+\section*{Profile}
+\sectionline
+Experienced engineer skilled in architecting scalable applications, high-performance backends, and cloud microservices.
+
+\section*{Technical Skills}
+\sectionline
+\begin{itemize}[leftmargin=*, label=--]
+  \item \textbf{Languages \& Frameworks:} Python, SQL, REST APIs, FastAPI, Docker
+  \item \textbf{Systems \& Cloud:} Linux, Git, CI/CD, Containerization, Distributed Storage
+\end{itemize}
+
+\section*{Professional Experience}
+\sectionline
+\textbf{Software Engineer} \hfill Company Name \\
+\textit{2023 -- Present}
+\begin{itemize}[leftmargin=*, label=--]
+  \item Designed and deployed resilient microservices, improving throughput and reliability.
+\end{itemize}
+
+\section*{Education}
+\sectionline
+\textbf{Bachelor of Technology / Science} \hfill 2019--2023\\
+University / Institute Name
+
+\end{document}
+""")
+        except Exception as e:
+            logger.warning("Could not auto-seed resume_template.tex: %s", e)
 
     def _parse_and_ingest_file(self, filepath: str, ext: str) -> None:
         """Parse contents of individual file and merge into profile & vector memory."""
