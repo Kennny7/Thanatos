@@ -30,8 +30,9 @@ class JobWorkflowRunner:
         location: str = "Pune (Hybrid/Office) & Remote",
         experience: str = "3 years and 8 months",
         source_resume_path: Optional[str] = None,
+        continuous_loop: bool = False,
     ) -> None:
-        """Runs end-to-end autonomous job workflow with live terminal feedback."""
+        """Runs end-to-end autonomous job workflow with live terminal feedback and optional continuous loop."""
         console.print(f"\n[bold green]• Initiating Autonomous Job Hunt & Application Dispatch[/bold green]")
         console.print(f"[dim]Role:[/dim] [cyan]{query}[/cyan] │ [dim]Location:[/dim] [cyan]{location}[/cyan] │ [dim]Experience Target:[/dim] [yellow]{experience}[/yellow]\n")
 
@@ -49,171 +50,206 @@ class JobWorkflowRunner:
                 f"- Deduplication status: {sync_stats.get('added', 0)} added, {sync_stats.get('updated', 0)} updated, {sync_stats.get('skipped', 0)} skipped."
             )
 
-        # 2. Search Jobs accepting email
-        print_agent_breadcrumb("Web Crawler & Job Hunter", f"Scanning listings for {query} ({location}) with email application channel...", 0.25)
-        search_res = await registry.dispatch("search_jobs", {
-            "location": location,
-            "keywords": query,
-            "experience": experience,
-            "require_email_apply": True,
-            "limit": 4,
-        })
-
-        if not search_res.success or not search_res.content.get("jobs"):
-            console.print(f"[bold red][!] No vacancies found matching '{query}' with email application channel.[/bold red]")
-            return
-
-        jobs = search_res.content["jobs"]
-        skipped_dup = search_res.content.get("skipped_already_applied", 0)
-        dup_msg = f" ([dim]{skipped_dup} previously applied openings excluded to avoid spamming[/dim])" if skipped_dup else ""
-        console.print(f"[bold green][+] Located {len(jobs)} fresh openings with direct email routes.{dup_msg}[/bold green]\n")
-
-        # Print quick summary of jobs found
-        for idx, j in enumerate(jobs, 1):
-            console.print(f"  [bold cyan]{idx}. {j['title']}[/bold cyan] at [bold white]{j['company']}[/bold white]")
-            console.print(f"     [dim]Mode:[/dim] {j.get('work_mode')} │ [dim]Exp:[/dim] {j.get('experience_required')} │ [dim]Email:[/dim] [yellow]{j.get('apply_email')}[/yellow]")
-
-        # 3. Process all high-match job applications with interactive review/preview
-        console.print(f"[bold cyan]• Processing {len(jobs)} Verified Opportunities...[/bold cyan]\n")
-
         from services.document.pdf_generator import pdf_generator
         from services.email.email_service import email_service
-        import subprocess
         is_configured = email_service.is_configured()
 
         if not is_configured:
             console.print(f"[dim red]Notice: SMTP credentials are not configured. Emails will be drafted and staged locally.[/dim red]")
             console.print(f"[dim]Tip: Configure SMTP anytime using [bold white]/smtp[/bold white] to enable verified live sending.[/dim]\n")
 
+        cycle_count = 0
+        total_applied = 0
         auto_approve_all = False
+        loop_active = continuous_loop
 
-        for idx, target_job in enumerate(jobs, 1):
-            console.print(f"\n[bold cyan]━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[/bold cyan]")
-            console.print(f"[bold cyan]• [{idx}/{len(jobs)}] Target Opportunity: {target_job['title']} at {target_job['company']}[/bold cyan]")
-            console.print(f"  [dim]Contact:[/dim] {target_job.get('hiring_manager')} │ [dim]Email:[/dim] [yellow]{target_job.get('apply_email')}[/yellow]")
+        while True:
+            cycle_count += 1
+            if cycle_count > 1:
+                console.print(f"\n[bold magenta]━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[/bold magenta]")
+                console.print(f"[bold magenta]• Continuous Loop [Cycle {cycle_count}]: Scanning portals for fresh unapplied openings...[/bold magenta]")
 
-            # Resume Tailoring
-            print_agent_breadcrumb("Resume Tailor Agent", f"Calibrating qualifications to {experience} & formatting LaTeX/MD for {target_job['company']}...", 0.40)
-            tailor_res = await registry.dispatch("tailor_resume", {
-                "job_title": target_job["title"],
-                "company": target_job["company"],
-                "job_description": target_job.get("description", ""),
-                "experience_level": experience,
-                "source_file_path": source_resume_path if source_resume_path and os.path.exists(source_resume_path) else None,
+            # 2. Search Jobs accepting email
+            print_agent_breadcrumb("Web Crawler & Job Hunter", f"Scanning listings for {query} ({location}) with email application channel...", 0.25)
+            search_res = await registry.dispatch("search_jobs", {
+                "location": location,
+                "keywords": query,
+                "experience": experience,
+                "require_email_apply": True,
+                "limit": 4,
             })
 
-            tailor_data = tailor_res.content if tailor_res.success else {}
-            resume_md = tailor_data.get("resume_markdown", "")
-            resume_tex = tailor_data.get("resume_latex", "")
-            cover_letter = tailor_data.get("cover_letter", "")
-            tmpl_name = tailor_data.get("template_source", "default")
+            if not search_res.success or not search_res.content.get("jobs"):
+                if cycle_count == 1:
+                    console.print(f"[bold red][!] No vacancies found matching '{query}' with email application channel.[/bold red]")
+                else:
+                    console.print(f"\n[bold green][✓] Continuous loop completed: No further unapplied matching jobs found.[/bold green]")
+                    console.print(f"[dim]Total applications submitted across all cycles: [bold white]{total_applied}[/bold white][/dim]\n")
+                break
 
-            # 4. Multi-Agent ATS Validation & Quality Loop
-            from services.document.ats_auditor import ats_auditor
-            print_agent_breadcrumb("ATS Quality Auditor Agent", f"Analyzing resume keyword alignment & ATS compatibility against {target_job['company']} requirements...", 0.60)
-            ats_res = ats_auditor.audit_resume(
-                resume_text=resume_md or resume_tex,
-                job_description=target_job.get("description", ""),
-                required_skills=target_job.get("skills_required", []),
-                target_role=target_job["title"],
-            )
+            jobs = search_res.content["jobs"]
+            skipped_dup = search_res.content.get("skipped_already_applied", 0)
+            dup_msg = f" ([dim]{skipped_dup} previously applied openings excluded to avoid spamming[/dim])" if skipped_dup else ""
+            console.print(f"[bold green][+] Located {len(jobs)} fresh openings with direct email routes.{dup_msg}[/bold green]\n")
 
-            ats_color = "green" if ats_res.passed else ("yellow" if ats_res.score >= 60 else "red")
-            console.print(f"  [bold {ats_color}]• ATS Match Score: {ats_res.score}%[/bold {ats_color}] [dim]({ats_res.feedback})[/dim]")
-            if ats_res.matched_keywords:
-                console.print(f"    [dim]Verified Skills ({len(ats_res.matched_keywords)}):[/dim] [green]{', '.join(ats_res.matched_keywords[:6])}[/green]")
+            # Print quick summary of jobs found
+            for idx, j in enumerate(jobs, 1):
+                console.print(f"  [bold cyan]{idx}. {j['title']}[/bold cyan] at [bold white]{j['company']}[/bold white]")
+                console.print(f"     [dim]Mode:[/dim] {j.get('work_mode')} │ [dim]Exp:[/dim] {j.get('experience_required')} │ [dim]Email:[/dim] [yellow]{j.get('apply_email')}[/yellow]")
 
-            # Self-Correction Check: If ATS score is too low and missing critical qualifications, flag or skip
-            if not ats_res.passed and ats_res.score < 50:
-                console.print(f"[bold yellow][!] ATS score ({ats_res.score}%) below threshold and significant skill gap detected. Skipping to maintain application quality.[/bold yellow]")
-                continue
+            # 3. Process all high-match job applications with interactive review/preview
+            console.print(f"[bold cyan]• Processing {len(jobs)} Verified Opportunities...[/bold cyan]\n")
 
-            # Save generated files to disk
-            out_dir = os.path.join("logs", "generated_resumes")
-            os.makedirs(out_dir, exist_ok=True)
-            slug = target_job['company'].lower().replace(' ', '_').replace('.', '_')
-            tex_path = os.path.join(out_dir, f"{slug}_resume.tex")
-            md_path = os.path.join(out_dir, f"{slug}_resume.md")
-            resume_pdf_path = os.path.join(out_dir, f"{slug}_resume.pdf")
-            cover_letter_pdf_path = os.path.join(out_dir, f"{slug}_cover_letter.pdf")
+            cycle_applied = 0
+            cancelled_entirely = False
 
-            with open(tex_path, "w", encoding="utf-8") as f:
-                f.write(resume_tex)
-            with open(md_path, "w", encoding="utf-8") as f:
-                f.write(resume_md)
+            for idx, target_job in enumerate(jobs, 1):
+                console.print(f"\n[bold cyan]━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[/bold cyan]")
+                console.print(f"[bold cyan]• [{idx}/{len(jobs)}] Target Opportunity: {target_job['title']} at {target_job['company']}[/bold cyan]")
+                console.print(f"  [dim]Contact:[/dim] {target_job.get('hiring_manager')} │ [dim]Email:[/dim] [yellow]{target_job.get('apply_email')}[/yellow]")
 
-            prof = memory_service.user_profile.get_profile()
+                # Resume Tailoring
+                print_agent_breadcrumb("Resume Tailor Agent", f"Calibrating qualifications to {experience} & formatting LaTeX/MD for {target_job['company']}...", 0.40)
+                tailor_res = await registry.dispatch("tailor_resume", {
+                    "job_title": target_job["title"],
+                    "company": target_job["company"],
+                    "job_description": target_job.get("description", ""),
+                    "experience_level": experience,
+                    "source_file_path": source_resume_path if source_resume_path and os.path.exists(source_resume_path) else None,
+                })
 
-            # Compile PDFs
-            pdf_generator.generate_resume_pdf(
-                source_tex_or_md=resume_md or resume_tex,
-                output_pdf_path=resume_pdf_path,
-                candidate_name=prof.name or "Khushal Pareta",
-                candidate_title=prof.title or "AI Developer | Machine Learning Engineer",
-                candidate_contacts={"email": prof.email, "phone": "+91 96604 64021", "location": prof.location},
-            )
+                tailor_data = tailor_res.content if tailor_res.success else {}
+                resume_md = tailor_data.get("resume_markdown", "")
+                resume_tex = tailor_data.get("resume_latex", "")
+                cover_letter = tailor_data.get("cover_letter", "")
+                tmpl_name = tailor_data.get("template_source", "default")
 
-            pdf_generator.generate_cover_letter_pdf(
-                cover_letter_text=cover_letter,
-                applicant_name=prof.name or "Khushal Pareta",
-                job_title=target_job["title"],
-                company=target_job["company"],
-                output_pdf_path=cover_letter_pdf_path,
-                contact_info={"email": prof.email, "phone": "+91 96604 64021", "location": prof.location},
-            )
+                # Multi-Agent ATS Validation & Quality Loop
+                from services.document.ats_auditor import ats_auditor
+                print_agent_breadcrumb("ATS Quality Auditor Agent", f"Analyzing resume keyword alignment & ATS compatibility against {target_job['company']} requirements...", 0.60)
+                ats_res = ats_auditor.audit_resume(
+                    resume_text=resume_md or resume_tex,
+                    job_description=target_job.get("description", ""),
+                    required_skills=target_job.get("skills_required", []),
+                    target_role=target_job["title"],
+                )
 
-            # Interactive Draft Review / Preview Stage
-            preview_enabled = os.getenv("THANATOS_DRAFT_PREVIEW", "true").lower() in ("true", "1", "yes", "on")
-            if preview_enabled and not auto_approve_all:
-                console.print(f"\n[bold yellow]• Interactive Draft & Permission Gate[/bold yellow]")
-                console.print(f"  [dim]Template Used:[/dim] [cyan]{tmpl_name}[/cyan]")
-                console.print(f"  [dim]Draft Resume PDF:[/dim]  [underline white]{os.path.abspath(resume_pdf_path)}[/underline white]")
-                console.print(f"  [dim]Draft Cover PDF:[/dim]   [underline white]{os.path.abspath(cover_letter_pdf_path)}[/underline white]")
-                console.print(f"  [dim]Draft LaTeX Code:[/dim]  [underline white]{os.path.abspath(tex_path)}[/underline white]")
-                
-                # Show quick terminal cover letter preview
-                console.print(Panel(cover_letter, title="[cyan]Cover Letter Preview[/cyan]", box=ROUNDED, border_style="dim cyan"))
-                console.print("[dim]Options: [bold white]Enter / Y[/bold white] = Approve  │  [bold white]a / A[/bold white] = Yes to All  │  [bold white]e / o[/bold white] = Edit  │  [bold white]s[/bold white] = Skip  │  [bold white]c[/bold white] = Cancel[/dim]")
+                ats_color = "green" if ats_res.passed else ("yellow" if ats_res.score >= 60 else "red")
+                console.print(f"  [bold {ats_color}]• ATS Match Score: {ats_res.score}%[/bold {ats_color}] [dim]({ats_res.feedback})[/dim]")
+                if ats_res.matched_keywords:
+                    console.print(f"    [dim]Verified Skills ({len(ats_res.matched_keywords)}):[/dim] [green]{', '.join(ats_res.matched_keywords[:6])}[/green]")
 
-                try:
-                    user_action = input("  Proceed with dispatch? [Y/a/e/s/c]: ").strip().lower()
-                    if user_action == "a":
-                        auto_approve_all = True
-                        console.print(f"[bold green]✔ Yes to All selected. Auto-approving all remaining applications in this batch.[/bold green]")
-                    elif user_action in ("e", "o"):
-                        # Open resume in default system viewer (Word, WPS, or PDF viewer)
-                        if os.name == "nt":
-                            os.startfile(os.path.abspath(resume_pdf_path))
-                            os.startfile(os.path.abspath(cover_letter_pdf_path))
-                        input("  Files opened in system editor. Press Enter after reviewing or saving your edits...")
-                    elif user_action == "s":
-                        console.print(f"[yellow]Skipped dispatch for {target_job['company']}. Moving to next opening...[/yellow]")
-                        continue
-                    elif user_action == "c":
-                        console.print(f"[yellow]Job application workflow cancelled by user.[/yellow]")
-                        return
-                except (EOFError, KeyboardInterrupt):
-                    console.print(f"\n[yellow]Draft review interrupted. Cancelling dispatch.[/yellow]")
-                    return
+                # Self-Correction Check: If ATS score is too low and missing critical qualifications, flag or skip
+                if not ats_res.passed and ats_res.score < 50:
+                    console.print(f"[bold yellow][!] ATS score ({ats_res.score}%) below threshold and significant skill gap detected. Skipping to maintain application quality.[/bold yellow]")
+                    continue
 
-            # Application Packaging & Dispatch
-            pdf_attachments = [resume_pdf_path, cover_letter_pdf_path]
-            print_agent_breadcrumb("Job Applicator Agent", f"Packaging attachments and recording outreach log...", 0.85)
-            apply_res = await registry.dispatch("prepare_job_application", {
-                "job_id": target_job.get("id"),
-                "job_title": target_job["title"],
-                "company": target_job["company"],
-                "recipient_email": target_job.get("apply_email"),
-                "hiring_manager": target_job.get("hiring_manager"),
-                "tailored_resume": resume_md,
-                "cover_letter": cover_letter,
-                "resume_attachments": pdf_attachments,
-                "send_email_now": is_configured,
-            })
+                # Save generated files to disk
+                out_dir = os.path.join("logs", "generated_resumes")
+                os.makedirs(out_dir, exist_ok=True)
+                slug = target_job['company'].lower().replace(' ', '_').replace('.', '_')
+                tex_path = os.path.join(out_dir, f"{slug}_resume.tex")
+                md_path = os.path.join(out_dir, f"{slug}_resume.md")
+                resume_pdf_path = os.path.join(out_dir, f"{slug}_resume.pdf")
+                cover_letter_pdf_path = os.path.join(out_dir, f"{slug}_cover_letter.pdf")
 
-            status_text = apply_res.content.get("status", "Staged")
-            status_color = "green" if apply_res.content.get("verified_delivery") else ("yellow" if "Staged" in status_text else "red")
-            console.print(f"  [bold {status_color}][✓] Application {status_text} for {target_job['company']} -> {target_job.get('apply_email')}[/bold {status_color}]")
+                with open(tex_path, "w", encoding="utf-8") as f:
+                    f.write(resume_tex)
+                with open(md_path, "w", encoding="utf-8") as f:
+                    f.write(resume_md)
 
-        print_agent_breadcrumb("Coordinator", "All qualified job applications processed successfully!", 1.0)
+                prof = memory_service.user_profile.get_profile()
+
+                # Compile PDFs
+                pdf_generator.generate_resume_pdf(
+                    source_tex_or_md=resume_md or resume_tex,
+                    output_pdf_path=resume_pdf_path,
+                    candidate_name=prof.name or "Khushal Pareta",
+                    candidate_title=prof.title or "AI Developer | Machine Learning Engineer",
+                    candidate_contacts={"email": prof.email, "phone": "+91 96604 64021", "location": prof.location},
+                )
+
+                pdf_generator.generate_cover_letter_pdf(
+                    cover_letter_text=cover_letter,
+                    applicant_name=prof.name or "Khushal Pareta",
+                    job_title=target_job["title"],
+                    company=target_job["company"],
+                    output_pdf_path=cover_letter_pdf_path,
+                    contact_info={"email": prof.email, "phone": "+91 96604 64021", "location": prof.location},
+                )
+
+                # Interactive Draft Review / Preview Stage
+                preview_enabled = os.getenv("THANATOS_DRAFT_PREVIEW", "true").lower() in ("true", "1", "yes", "on")
+                if preview_enabled and not auto_approve_all:
+                    console.print(f"\n[bold yellow]• Interactive Draft & Permission Gate[/bold yellow]")
+                    console.print(f"  [dim]Template Used:[/dim] [cyan]{tmpl_name}[/cyan]")
+                    console.print(f"  [dim]Draft Resume PDF:[/dim]  [underline white]{os.path.abspath(resume_pdf_path)}[/underline white]")
+                    console.print(f"  [dim]Draft Cover PDF:[/dim]   [underline white]{os.path.abspath(cover_letter_pdf_path)}[/underline white]")
+                    console.print(f"  [dim]Draft LaTeX Code:[/dim]  [underline white]{os.path.abspath(tex_path)}[/underline white]")
+                    
+                    # Show quick terminal cover letter preview
+                    console.print(Panel(cover_letter, title="[cyan]Cover Letter Preview[/cyan]", box=ROUNDED, border_style="dim cyan"))
+                    console.print("[dim]Options: [bold white]Enter / Y[/bold white] = Approve  │  [bold white]a / A[/bold white] = Yes to All  │  [bold white]l / L[/bold white] = Continuous Loop  │  [bold white]e / o[/bold white] = Edit  │  [bold white]s[/bold white] = Skip  │  [bold white]c[/bold white] = Cancel[/dim]")
+
+                    try:
+                        user_action = input("  Proceed with dispatch? [Y/a/l/e/s/c]: ").strip().lower()
+                        if user_action == "l":
+                            loop_active = True
+                            auto_approve_all = True
+                            console.print(f"[bold magenta]⚡ Continuous Loop Activated: Auto-approving all applications and continuously hunting until no fresh openings remain.[/bold magenta]")
+                        elif user_action == "a":
+                            auto_approve_all = True
+                            console.print(f"[bold green]✔ Yes to All selected. Auto-approving all remaining applications in this batch.[/bold green]")
+                        elif user_action in ("e", "o"):
+                            # Open resume in default system viewer (Word, WPS, or PDF viewer)
+                            if os.name == "nt":
+                                os.startfile(os.path.abspath(resume_pdf_path))
+                                os.startfile(os.path.abspath(cover_letter_pdf_path))
+                            input("  Files opened in system editor. Press Enter after reviewing or saving your edits...")
+                        elif user_action == "s":
+                            console.print(f"[yellow]Skipped dispatch for {target_job['company']}. Moving to next opening...[/yellow]")
+                            continue
+                        elif user_action == "c":
+                            console.print(f"[yellow]Job application workflow cancelled by user.[/yellow]")
+                            cancelled_entirely = True
+                            break
+                    except (EOFError, KeyboardInterrupt):
+                        console.print(f"\n[yellow]Draft review interrupted. Cancelling dispatch.[/yellow]")
+                        cancelled_entirely = True
+                        break
+
+                # Application Packaging & Dispatch
+                pdf_attachments = [resume_pdf_path, cover_letter_pdf_path]
+                print_agent_breadcrumb("Job Applicator Agent", f"Packaging attachments and recording outreach log...", 0.85)
+                apply_res = await registry.dispatch("prepare_job_application", {
+                    "job_id": target_job.get("id"),
+                    "job_title": target_job["title"],
+                    "company": target_job["company"],
+                    "recipient_email": target_job.get("apply_email"),
+                    "hiring_manager": target_job.get("hiring_manager"),
+                    "tailored_resume": resume_md,
+                    "cover_letter": cover_letter,
+                    "resume_attachments": pdf_attachments,
+                    "send_email_now": is_configured,
+                })
+
+                status_text = apply_res.content.get("status", "Staged")
+                status_color = "green" if apply_res.content.get("verified_delivery") else ("yellow" if "Staged" in status_text else "red")
+                console.print(f"  [bold {status_color}][✓] Application {status_text} for {target_job['company']} -> {target_job.get('apply_email')}[/bold {status_color}]")
+                cycle_applied += 1
+                total_applied += 1
+
+            if cancelled_entirely:
+                break
+
+            # If continuous loop is not enabled, end after first cycle
+            if not loop_active:
+                break
+
+            # If in loop mode but no applications were made in this cycle, avoid infinite busy-wait
+            if cycle_applied == 0:
+                console.print(f"[dim]No openings processed in this cycle. Concluding loop.[/dim]")
+                break
+
+        print_agent_breadcrumb("Coordinator", f"All qualified job applications processed ({total_applied} total dispatched/staged)!", 1.0)
         console.print(f"\n[bold green][✓] Audit ledger updated in: [white]logs/job_applications.jsonl[/white][/bold green]\n")
