@@ -95,6 +95,55 @@ class DatabaseOrchestrator:
         except Exception:
             return False
 
+    def get_docker_desktop_executable(self) -> Optional[str]:
+        """Locate Docker Desktop executable on the host system."""
+        candidates = [
+            r"C:\Program Files\Docker\Docker\Docker Desktop.exe",
+            r"C:\Program Files (x86)\Docker\Docker\Docker Desktop.exe",
+            os.path.expandvars(r"%LOCALAPPDATA%\Docker\Docker Desktop.exe"),
+            os.path.expandvars(r"%PROGRAMFILES%\Docker\Docker\Docker Desktop.exe"),
+        ]
+        for path in candidates:
+            if os.path.isfile(path):
+                return path
+        # Try finding in PATH
+        which_desktop = shutil.which("Docker Desktop.exe") or shutil.which("docker-desktop")
+        return which_desktop
+
+    def start_docker_desktop(self) -> Dict[str, Any]:
+        """Launch the Docker Desktop GUI/daemon process in the background."""
+        if self.is_docker_available():
+            return {"success": True, "already_running": True, "message": "Docker daemon is already online and operational."}
+
+        exe_path = self.get_docker_desktop_executable()
+        if not exe_path:
+            return {"success": False, "message": "Docker Desktop executable could not be found in standard installation directories."}
+
+        try:
+            subprocess.Popen([exe_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            logger.info("Launched Docker Desktop process from: %s", exe_path)
+            return {
+                "success": True,
+                "already_running": False,
+                "executable": exe_path,
+                "message": f"Successfully launched Docker Desktop ({os.path.basename(exe_path)}). Initializing daemon..."
+            }
+        except Exception as e:
+            logger.error("Failed to launch Docker Desktop: %s", e)
+            return {"success": False, "error": str(e)}
+
+    def wait_for_docker(self, timeout_sec: int = 90, poll_interval_sec: float = 3.0, status_callback=None) -> bool:
+        """Poll until Docker daemon reports healthy or timeout is reached."""
+        start_time = time.time()
+        while time.time() - start_time < timeout_sec:
+            if self.is_docker_available():
+                return True
+            elapsed = int(time.time() - start_time)
+            if status_callback:
+                status_callback(elapsed, timeout_sec)
+            time.sleep(poll_interval_sec)
+        return self.is_docker_available()
+
     def get_container_status(self) -> Dict[str, Dict[str, Any]]:
         """Inspect current running state and resource usage for all database containers."""
         if not self.is_docker_available():
