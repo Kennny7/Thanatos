@@ -65,19 +65,11 @@ class ResumeTailorSkill(BaseSkill):
 
             # If no explicit template, check loaded custom documents in profile
             if not template_content and profile.custom_documents:
-                # Prefer matching role keywords (Engineer vs Developer)
-                lower_title = job_title.lower()
-                if "develop" in lower_title and "AI_Developer.tex" in profile.custom_documents:
-                    template_content = profile.custom_documents["AI_Developer.tex"]
-                    selected_template_name = "AI_Developer.tex"
-                elif "AI_Engineer.tex" in profile.custom_documents:
-                    template_content = profile.custom_documents["AI_Engineer.tex"]
-                    selected_template_name = "AI_Engineer.tex"
-                elif "AI_Developer.tex" in profile.custom_documents:
-                    template_content = profile.custom_documents["AI_Developer.tex"]
-                    selected_template_name = "AI_Developer.tex"
+                # Prefer standard resume_template.tex, or any available single document
+                if "resume_template.tex" in profile.custom_documents:
+                    template_content = profile.custom_documents["resume_template.tex"]
+                    selected_template_name = "resume_template.tex"
                 else:
-                    # Pick first available .tex or .md document
                     for doc_name, content in profile.custom_documents.items():
                         if doc_name.endswith(".tex") or doc_name.endswith(".md"):
                             template_content = content
