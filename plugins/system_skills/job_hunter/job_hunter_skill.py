@@ -35,6 +35,7 @@ class JobHunterSkill(BaseSkill):
                         "experience": {"type": "string", "description": "Desired experience (e.g., '3 years and 8 months', '3-4 years')"},
                         "portals": {"type": "array", "items": {"type": "string"}, "description": "Specific job portals e.g. ['linkedin', 'naukri']"},
                         "require_email_apply": {"type": "boolean", "description": "Only return jobs accepting resume/profile by email"},
+                        "cycle": {"type": "integer", "description": "Current loop hunt cycle (1-indexed) for progressive portal pagination"},
                         "limit": {"type": "integer", "description": "Max number of jobs to return"},
                     },
                     "required": ["keywords"],
@@ -44,11 +45,12 @@ class JobHunterSkill(BaseSkill):
 
     async def execute(self, tool_name: str, params: Dict[str, Any]) -> ToolResult:
         if tool_name == "search_jobs":
-            location = params.get("location", "Remote / Pune")
+            location = params.get("location", "Remote")
             keywords = params.get("keywords", "AI/ML Engineer")
             experience = params.get("experience", "3 years 8 months")
             portals = params.get("portals", ["linkedin", "naukri"])
             require_email_apply = params.get("require_email_apply", True)
+            cycle = params.get("cycle", 1)
             limit = params.get("limit", 5)
 
             # 1. Fetch portal listings from LinkedIn and Naukri search service
@@ -58,7 +60,8 @@ class JobHunterSkill(BaseSkill):
                 location=location,
                 experience=experience,
                 portals=portals,
-                limit=limit + 3,
+                cycle=cycle,
+                limit=limit + 5,
             )
 
             # Load previously applied jobs to avoid duplicate applications / spam
