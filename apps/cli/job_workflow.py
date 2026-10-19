@@ -109,12 +109,13 @@ class JobWorkflowRunner:
                 console.print(f"  [dim]Contact:[/dim] {target_job.get('hiring_manager')} │ [dim]Email:[/dim] [yellow]{target_job.get('apply_email')}[/yellow]")
 
                 # Resume Tailoring
-                print_agent_breadcrumb("Resume Tailor Agent", f"Calibrating qualifications to {experience} & formatting LaTeX/MD for {target_job['company']}...", 0.40)
+                print_agent_breadcrumb("Resume Tailor Agent", f"Calibrating qualifications to {experience} & tailoring LaTeX/MD for {target_job['company']}...", 0.40)
                 tailor_res = await registry.dispatch("tailor_resume", {
                     "job_title": target_job["title"],
                     "company": target_job["company"],
                     "job_description": target_job.get("description", ""),
                     "experience_level": experience,
+                    "skills_required": target_job.get("skills_required", []),
                     "source_file_path": source_resume_path if source_resume_path and os.path.exists(source_resume_path) else None,
                 })
 
