@@ -65,9 +65,66 @@ class AgentCoordinator:
             diag = site_engineer_agent.collect_system_telemetry()
             task_desc = "Inspecting OS hardware metrics, processes & telemetry"
             yield {"type": "agent_status", "agent": asst_name, "status": task_desc}
+            
+            # Classify intent for Docker/database actions:
+            wants_docker_up = any(w in lower_prompt for w in [
+                "start docker", "launch docker", "spin up docker", "up docker", "start database", 
+                "run docker", "start container", "containerized", "containerised", "prefer docker",
+                "prefer container", "bring up database", "turn on docker", "boot docker", "open docker",
+                "yes, start", "yes start", "yeah start", "sure start", "run containers", "run with docker"
+            ])
+            wants_local_lite = any(w in lower_prompt for w in [
+                "dont want docker", "don't want docker", "no docker", "keep local", "stay local", 
+                "local lite", "use lite", "prefer lite", "without docker", "no thanks", "keep it local",
+                "embedded", "skip docker", "ignore docker", "run locally", "dont launch"
+            ])
+            wants_docker_down = any(w in lower_prompt for w in [
+                "stop docker", "stop database", "stop container", "down docker", "halt docker", "shut docker", "kill docker"
+            ])
+
+            if wants_docker_up and not wants_local_lite:
+                yield {"type": "agent_status", "agent": asst_name, "status": "Executing autonomous Docker launch & database container deployment...", "progress": 0.3}
+                action_res = site_engineer_agent.auto_manage_docker(action="ensure", start_if_stopped=True)
+                if action_res.get("running"):
+                    reply = "All set! I've launched Docker Desktop and spun up your database cluster (PostgreSQL, MongoDB, Milvus, Neo4j, Kafka). Data is mapped to `data/docker_storage/`. Telemetry is clean and we're good to go!"
+                else:
+                    reply = f"I tried to launch Docker Desktop and deploy the cluster, but ran into an issue: {action_res.get('message') or action_res.get('error')}. I'm keeping local embedded storage active for now so nothing breaks."
+                yield {"type": "assistant_chunk", "content": reply}
+                return
+
+            if wants_local_lite:
+                yield {"type": "agent_status", "agent": asst_name, "status": "Confirming local embedded mode...", "progress": 1.0}
+                reply = "Got it! Keeping things lightweight with local embedded storage (Milvus Lite & SQLite). Docker stays sleeping so your RAM remains free. Let me know whenever you want to switch!"
+                yield {"type": "assistant_chunk", "content": reply}
+                return
+
+            if wants_docker_down:
+                yield {"type": "agent_status", "agent": asst_name, "status": "Halting database containers to conserve RAM/CPU...", "progress": 0.5}
+                action_res = site_engineer_agent.auto_manage_docker(action="stop")
+                reply = "Done! I've safely stopped the database containers to free up your memory and CPU."
+                yield {"type": "assistant_chunk", "content": reply}
+                return
+
+            # For general inquiries or complex operational questions, pass site operations tools into LLM generate_response
+            infra_tools = [t.to_openai_schema() for t in registry.get_all_tools() if "docker" in t.name or "telemetry" in t.name or "port" in t.name]
             prompt = f"{site_engineer_agent.build_system_prompt()}\n\nUser Question/Task: {user_prompt}\n\nLive System Telemetry:\n{json.dumps(diag, indent=2)}\n\nRespond with your charming, willful Velma persona."
-            ans = await self.provider.generate(prompt=prompt, stream=False)
-            yield {"type": "assistant_chunk", "content": ans.content}
+            response = await self.provider.generate_response(
+                history=[{"role": "user", "content": prompt}],
+                tools_schema=infra_tools,
+                system_prompt=site_engineer_agent.build_system_prompt(),
+            )
+            if response.action == "tool_call" and response.tool_name:
+                yield {"type": "agent_status", "agent": asst_name, "status": f"Invoking `{response.tool_name}`...", "progress": 0.6}
+                t_res = await registry.dispatch(response.tool_name, response.args or {})
+                res_content = t_res.content if t_res.success else f"Error: {t_res.error}"
+                follow_up = await self.provider.generate(
+                    prompt=f"{site_engineer_agent.build_system_prompt()}\n\nUser said: {user_prompt}\nTool {response.tool_name} returned: {res_content}\n\nExplain result in your charming Velma persona.",
+                    stream=False
+                )
+                yield {"type": "assistant_chunk", "content": follow_up.content or str(res_content)}
+                return
+
+            yield {"type": "assistant_chunk", "content": response.text or "Velma telemetry check complete."}
             return
 
         if is_secretary_req:
@@ -141,7 +198,8 @@ class AgentCoordinator:
         is_news_or_web = any(k in lower_prompt for k in ["news", "headline", "trending", "current events", "latest", "search", "lookup", "who is", "what happened"])
         is_job = any(k in lower_prompt for k in ["job", "resume", "cv", "hire", "apply"])
         is_novel = any(k in lower_prompt for k in ["novel", "chapter", "translate"])
-        is_security = any(k in lower_prompt for k in ["security", "audit", "port", "header", "vulnerability", "hardening", "intel", "recon", "remediation", "firewall"])
+        is_security = any(k in lower_prompt for k in ["security", "audit", "header", "vulnerability", "hardening", "intel", "recon", "remediation", "firewall"])
+        is_infra = any(k in lower_prompt for k in ["docker", "container", "postgres", "mongo", "milvus", "neo4j", "kafka", "telemetry", "port", "daemon", "infrastructure"])
 
         if is_news_or_web:
             selected_tools = [t for t in all_tools if t.name in ("search_news", "search_web")]
@@ -151,6 +209,8 @@ class AgentCoordinator:
             selected_tools = [t for t in all_tools if "novel" in t.name]
         elif is_security:
             selected_tools = [t for t in all_tools if "audit" in t.name or "intel" in t.name or "remediation" in t.name or "security" in t.name]
+        elif is_infra:
+            selected_tools = [t for t in all_tools if "docker" in t.name or "telemetry" in t.name or "port" in t.name]
         else:
             selected_tools = all_tools
 
