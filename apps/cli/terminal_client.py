@@ -81,10 +81,10 @@ class ThanatosCLI:
             if not db_orchestrator.is_docker_available():
                 print_agent_breadcrumb("Velma Sinclair [Site Reliability]", "Host Infrastructure & Database Diagnostic", 1.0)
                 console.print(
-                    "[bold magenta]❯ Velma Sinclair:[/bold magenta] [white]Hey! I ran a pre-flight system check and Docker Desktop isn't running yet, "
-                    "so your enterprise database cluster (PostgreSQL, MongoDB, Milvus, Neo4j, Kafka) is offline. "
+                    "[bold magenta]❯ Velma Sinclair:[/bold magenta] [white]Hey! I ran a pre-flight system check and Docker Desktop isn't running yet; "
+                    "therefore, your enterprise database cluster (PostgreSQL, MongoDB, Milvus, Neo4j, Kafka) is offline. "
                     "Should I launch Docker Desktop and deploy your containers, or keep rolling with local embedded storage? "
-                    "Just tell me [bold yellow]\"yes, start docker\"[/bold yellow] or [bold yellow]\"keep local\"[/bold yellow].[/white]\n"
+                    "Just tell me whether you want to [bold yellow]start Docker[/bold yellow] or [bold yellow]keep it local[/bold yellow].[/white]\n"
                 )
         except Exception:
             pass
