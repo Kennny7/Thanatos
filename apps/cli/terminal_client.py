@@ -202,11 +202,23 @@ class ThanatosCLI:
                     console.print(f"  [dim]• {status_text}[/dim]")
 
                 res = site_engineer_agent.auto_manage_docker(action="ensure", start_if_stopped=True, status_callback=live_progress)
-                if res.get("running"):
+                orch_res = res.get("orchestrator_result", {})
+                statuses = res.get("containers", {})
+                running_any = any(c.get("running") for c in statuses.values() if isinstance(c, dict))
+                
+                if res.get("running") and (orch_res.get("success") or running_any):
                     print_agent_breadcrumb("Velma Sinclair [Site Reliability]", "Database Containers Online & Verified", 1.0)
-                    console.print("[bold green][✓] Docker Desktop and enterprise database containers (Postgres, Mongo, Milvus, Neo4j, Kafka) are up and running![/bold green]\n")
+                    up_list = [name for name, c in statuses.items() if isinstance(c, dict) and c.get("running")]
+                    if up_list:
+                        console.print(f"[bold green][✓] Docker is online. Active containers: {', '.join(up_list)}[/bold green]")
+                    else:
+                        console.print(f"[bold green][✓] Docker Desktop is online. Container deployment initiated.[/bold green]")
+                    if not orch_res.get("success") and orch_res.get("output"):
+                        console.print(f"[dim yellow]Notice from Docker compose: {orch_res.get('output')[:180]}...[/dim yellow]")
+                    console.print()
                 else:
-                    console.print(f"[bold red][!] Could not start Docker: {res.get('message') or res.get('error')}[/bold red]\n")
+                    err_msg = orch_res.get("output") or res.get("message") or res.get("error") or "Unknown error deploying containers."
+                    console.print(f"[bold red][!] Docker Desktop is online, but some or all containers could not be created yet: {err_msg}[/bold red]\n")
 
             elif sub in ("stop", "down"):
                 print_agent_breadcrumb("Velma Sinclair [Site Reliability]", "Safely Stopping Database Containers", 0.8)
