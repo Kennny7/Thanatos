@@ -303,9 +303,21 @@ class ThanatosCLI:
                 # User ran /jobs run, /jobs loop, or provided a query
                 is_loop = sub_cmd == "loop"
                 query = sub_query if sub_cmd in ("run", "loop") else arg
+                q_lower = (query or "").lower()
+                if "pune" in q_lower and "remote" in q_lower:
+                    cmd_loc = "Pune & Remote"
+                elif "pune" in q_lower:
+                    cmd_loc = "Pune (Hybrid/Office)"
+                elif "remote" in q_lower and "india" in q_lower:
+                    cmd_loc = "Remote (India)"
+                elif "remote" in q_lower:
+                    cmd_loc = "Remote"
+                else:
+                    cmd_loc = "Remote / Pune"
+
                 await self.job_runner.execute_job_workflow(
-                    query=query if query else "AI / ML Engineer remote or Pune",
-                    location="Pune (Hybrid/Office) & Remote",
+                    query=query if query else "AI / ML Engineer",
+                    location=cmd_loc,
                     experience="3 years and 8 months",
                     source_resume_path=self.user_resume_path,
                     continuous_loop=is_loop,
@@ -650,14 +662,56 @@ class ThanatosCLI:
             return
 
         # Check if the user is naturally instructing a job workflow
-        is_job_request = any(k in lower for k in ["job", "apply", "resume"]) and any(k in lower for k in ["search", "find", "hunt", "mail", "email", "pune", "remote"])
+        is_job_request = any(k in lower for k in ["job", "apply", "resume", "opening", "vacanc"]) and any(k in lower for k in ["search", "find", "hunt", "mail", "email", "pune", "remote", "loop", "apply"])
 
         if is_job_request:
-            exp = "3 years and 8 months" if "3" in lower else "3+ years"
-            loc = "Pune (Hybrid/Office) & Remote" if "pune" in lower or "remote" in lower else "Remote"
+            exp = "3 years and 8 months" if ("3" in lower or "3+" in lower or "experience" in lower) else "3+ years"
+            
+            # Precise location extraction without false Pune bundling
+            has_pune = "pune" in lower
+            has_remote = "remote" in lower
+            has_india = "india" in lower
+            has_mumbai = "mumbai" in lower
+            has_bangalore = "bangalore" in lower or "bengaluru" in lower
+            has_hyderabad = "hyderabad" in lower
+
+            if has_remote and has_pune:
+                loc = "Pune & Remote"
+            elif has_pune:
+                loc = "Pune (Hybrid/Office)"
+            elif has_remote and has_india:
+                loc = "Remote (India)"
+            elif has_remote:
+                loc = "Remote"
+            elif has_mumbai:
+                loc = "Mumbai"
+            elif has_bangalore:
+                loc = "Bengaluru"
+            elif has_hyderabad:
+                loc = "Hyderabad"
+            else:
+                loc = "Remote"
+
+            # Clean role extraction for targeted portal queries
+            clean_role = "AI / ML Engineer"
+            if any(k in lower for k in ["generative ai", "genai", "gen ai", "llm"]):
+                clean_role = "Generative AI / LLM Engineer"
+            elif any(k in lower for k in ["mlops", "ml ops"]):
+                clean_role = "MLOps Engineer"
+            elif any(k in lower for k in ["machine learning", "ml engineer"]):
+                clean_role = "Machine Learning Engineer"
+            elif any(k in lower for k in ["data engineer", "etl", "pipeline"]):
+                clean_role = "Data Engineer"
+            elif any(k in lower for k in ["data scientist", "data science"]):
+                clean_role = "Data Scientist"
+            elif any(k in lower for k in ["full stack ai", "fullstack ai"]):
+                clean_role = "Full Stack AI Developer"
+            elif any(k in lower for k in ["python developer", "python engineer"]):
+                clean_role = "Python AI Engineer"
+
             is_loop_request = any(k in lower for k in ["loop", "continuously", "continuous", "keep applying", "infinite", "all openings", "until done"])
             await self.job_runner.execute_job_workflow(
-                query=user_text,
+                query=clean_role,
                 location=loc,
                 experience=exp,
                 source_resume_path=self.user_resume_path,
