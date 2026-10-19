@@ -20,11 +20,24 @@ logger = logging.getLogger(__name__)
 
 
 def clean_latex_to_text(tex_content: str) -> str:
-    """Strip LaTeX commands and syntax into clean plain text for conversion."""
+    """Strip LaTeX commands, preamble, macro parameters, and escape sequences into clean text for ReportLab conversion."""
     text = tex_content
+    # 1. Protect escaped percent signs before stripping LaTeX comments
+    text = re.sub(r"\\%", "__PERCENT__", text)
     # Remove comments
     text = re.sub(r"%.*$", "", text, flags=re.MULTILINE)
-    # Remove documentclass, usepackage, etc.
+    text = text.replace("__PERCENT__", "%")
+
+    # 2. Remove document preamble completely if present
+    if r"\begin{document}" in text:
+        text = text.split(r"\begin{document}", 1)[1]
+    if r"\end{document}" in text:
+        text = text.split(r"\end{document}", 1)[0]
+
+    # 3. Remove LaTeX header center block so it doesn't duplicate top ReportLab header
+    text = re.sub(r"\\begin\{center\}.*?\\end\{center\}", "", text, flags=re.DOTALL)
+
+    # 4. Remove document setup macros, lengths, spacing and packages
     text = re.sub(r"\\documentclass\[.*?\]\{.*?\}", "", text)
     text = re.sub(r"\\usepackage\[.*?\]\{.*?\}", "", text)
     text = re.sub(r"\\usepackage\{.*?\}", "", text)
@@ -34,34 +47,46 @@ def clean_latex_to_text(tex_content: str) -> str:
     text = re.sub(r"\\titleformat.*", "", text)
     text = re.sub(r"\\titlespacing.*", "", text)
     text = re.sub(r"\\newcommand.*", "", text)
-    text = re.sub(r"\\begin\{document\}", "", text)
-    text = re.sub(r"\\end\{document\}", "", text)
-    text = re.sub(r"\\begin\{itemize\}", "", text)
-    text = re.sub(r"\\end\{itemize\}", "", text)
-    text = re.sub(r"\\begin\{description\}", "", text)
-    text = re.sub(r"\\end\{description\}", "", text)
-    text = re.sub(r"\\begin\{center\}", "", text)
-    text = re.sub(r"\\end\{center\}", "", text)
-    # Replace \item[Heading:] with Heading:
-    text = re.sub(r"\\item\[(.*?)\]", r"\1 ", text)
-    text = re.sub(r"\\item", "•", text)
-    # Replace \section*{Name} with Section: Name
-    text = re.sub(r"\\section\*?\{([^}]+)\}", r"### \1", text)
-    # Replace \textbf{text} with <b>text</b>
-    text = re.sub(r"\\textbf\{([^}]+)\}", r"<b>\1</b>", text)
-    # Replace \textit{text} with <i>text</i>
-    text = re.sub(r"\\textit\{([^}]+)\}", r"<i>\1</i>", text)
-    # Replace \href{url}{label} with label (url)
-    text = re.sub(r"\\href\{([^}]+)\}\{([^}]+)\}", r"<font color='#0066cc'><u>\2</u></font>", text)
-    # Replace rules and spaces
-    text = re.sub(r"\\sectionline", "", text)
+    text = re.sub(r"\\sectionline.*", "", text)
     text = re.sub(r"\\hr", "", text)
     text = re.sub(r"\\vspace\{.*?\}", "", text)
+    text = re.sub(r"\\vfill", "", text)
+
+    # 5. Environments with optional arguments e.g. \begin{itemize}[nosep, leftmargin=*, label=--]
+    text = re.sub(r"\\begin\{(itemize|enumerate|description)\}(\[.*?\])?", "", text)
+    text = re.sub(r"\\end\{(itemize|enumerate|description)\}", "", text)
+
+    # Clean leftover list options or macro parameters
+    text = re.sub(r"\[[a-zA-Z0-9_*, =+-]+\]", "", text)
+
+    # 6. Item markers and descriptions
+    text = re.sub(r"\\item\[(.*?)\]", r"\1: ", text)
+    text = re.sub(r"\\item", "• ", text)
+
+    # 7. Section headings
+    text = re.sub(r"\\section\*?\{([^}]+)\}", r"### \1", text)
+
+    # 8. Font styling tags
+    text = re.sub(r"\\textbf\{([^}]+)\}", r"<b>\1</b>", text)
+    text = re.sub(r"\\textit\{([^}]+)\}", r"<i>\1</i>", text)
+    text = re.sub(r"\\href\{([^}]+)\}\{([^}]+)\}", r"<font color='#0284c7'><u>\2</u></font>", text)
+
+    # 9. Special symbols, rules, and alignment
+    text = re.sub(r"\\&", "&", text)
+    text = re.sub(r"\\_", "_", text)
     text = re.sub(r"\\textbullet", "•", text)
     text = re.sub(r"\\,", " ", text)
-    text = re.sub(r"\\\[.*?\]", "", text)
+    text = re.sub(r"\\hfill", "  —  ", text)
+    text = re.sub(r"\\\\\[.*?\]", "\n", text)
     text = re.sub(r"\\\\", "\n", text)
-    return text.strip()
+
+    # 10. Stray LaTeX macros and brackets
+    text = re.sub(r"\\\[.*?\]", "", text)
+    text = re.sub(r"\\(?![a-zA-Z0-9])", "", text)
+
+    # Clean whitespace and empty lines
+    lines = [l.strip() for l in text.split("\n")]
+    return "\n".join([l for l in lines if l]).strip()
 
 
 class PDFGenerator:
