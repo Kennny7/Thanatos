@@ -76,6 +76,7 @@ class JobWorkflowRunner:
                 "keywords": query,
                 "experience": experience,
                 "require_email_apply": True,
+                "cycle": cycle_count,
                 "limit": 4,
             })
 
