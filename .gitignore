@@ -205,3 +205,15 @@ utils.h
 utils.cpp
 win32*
 *.bin
+
+# =========================
+# Docker database storage & runtime volumes
+# =========================
+data/docker_storage/
+docker_storage/
+pgdata/
+mongo_data/
+milvus_data/
+neo4j_data/
+zookeeper_data/
+kafka_data/
