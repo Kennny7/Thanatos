@@ -19,12 +19,36 @@ from reportlab.lib.units import inch
 logger = logging.getLogger(__name__)
 
 
+def sanitize_html_tags(text: str) -> str:
+    """Ensure all open HTML styling tags (<b>, <i>, <u>, <font>) are properly balanced before ReportLab builds."""
+    for tag in ("b", "i", "u"):
+        open_tag = f"<{tag}>"
+        close_tag = f"</{tag}>"
+        opens = text.count(open_tag)
+        closes = text.count(close_tag)
+        if opens > closes:
+            text += close_tag * (opens - closes)
+        elif closes > opens:
+            text = (open_tag * (closes - opens)) + text
+    
+    # Balance font tags
+    font_opens = text.count("<font")
+    font_closes = text.count("</font>")
+    if font_opens > font_closes:
+        text += "</font>" * (font_opens - font_closes)
+
+    return text
+
+
 def clean_latex_to_text(tex_content: str) -> str:
     """Strip LaTeX commands, preamble, macro parameters, and escape sequences into clean text for ReportLab conversion."""
     text = tex_content
-    # 1. Protect escaped percent signs before stripping LaTeX comments
+    # 1. Protect both escaped (\%) and unescaped percentage metrics (e.g. 25%, 40%) before stripping LaTeX comments
     text = re.sub(r"\\%", "__PERCENT__", text)
-    # Remove comments
+    text = re.sub(r"(\d+)%", r"\1__PERCENT__", text)
+    text = re.sub(r"%\}", "__PERCENT__}", text)
+    
+    # Remove genuine LaTeX comments
     text = re.sub(r"%.*$", "", text, flags=re.MULTILINE)
     text = text.replace("__PERCENT__", "%")
 
@@ -267,10 +291,12 @@ class PDFGenerator:
             elif line.startswith("•") or line.startswith("-") or line.startswith("*"):
                 bullet_content = line.lstrip("•-* ").strip()
                 bullet_content = re.sub(r"\*\*(.*?)\*\*", r"<b>\1</b>", bullet_content)
-                elements.append(Paragraph(f"• {bullet_content}", self.bullet_style))
+                sanitized_bullet = sanitize_html_tags(f"• {bullet_content}")
+                elements.append(Paragraph(sanitized_bullet, self.bullet_style))
             else:
                 line_content = re.sub(r"\*\*(.*?)\*\*", r"<b>\1</b>", line)
-                elements.append(Paragraph(line_content, self.body_style))
+                sanitized_line = sanitize_html_tags(line_content)
+                elements.append(Paragraph(sanitized_line, self.body_style))
 
         doc.build(elements)
         logger.info("Generated Resume PDF at: %s", output_pdf_path)
