@@ -120,20 +120,13 @@ class SkillRegistry:
         if task_description.startswith(("/", "\\")):
             return None
 
-        # Only suggest missing capability if the user is explicitly requesting system/infra actions
+        # Only suggest missing capability if the user is explicitly requesting system/infra actions not yet built
         if any(w in lower_task for w in ["database backup", "export database", "dump db"]):
             return {
                 "capability": "Database Export & Backup Skill",
                 "suggested_skill_name": "db_backup_manager",
                 "tool_name": "backup_vector_and_sqlite_stores",
                 "reason": "Thanatos currently has memory search and profiling tools, but lacks automated database export/snapshot capabilities.",
-            }
-        elif any(w in lower_task for w in ["docker", "container", "containerize", "kubernetes", "k8s"]):
-            return {
-                "capability": "Docker Container Management Skill",
-                "suggested_skill_name": "docker_manager",
-                "tool_name": "manage_docker_containers",
-                "reason": "Direct container lifecycle management requires a specialized Docker daemon skill.",
             }
 
         # For all other general queries, let the LLM brain answer directly with its vast intrinsic knowledge!
@@ -153,6 +146,7 @@ def init_default_skills() -> None:
     registry.register_lazy("novel_agent", lambda: __import__("plugins.system_skills.novel_agent.novel_skill", fromlist=["NovelAgentSkill"]).NovelAgentSkill())
     registry.register_lazy("self_improvement", lambda: __import__("plugins.system_skills.self_improvement.self_improvement_skill", fromlist=["SelfImprovementSkill"]).SelfImprovementSkill())
     registry.register_lazy("web_search", lambda: __import__("plugins.system_skills.web_search.web_search_skill", fromlist=["WebSearchSkill"]).WebSearchSkill())
+    registry.register_lazy("site_operations", lambda: __import__("plugins.system_skills.site_operations.site_operations_skill", fromlist=["SiteOperationsSkill"]).SiteOperationsSkill())
 
 
 init_default_skills()
