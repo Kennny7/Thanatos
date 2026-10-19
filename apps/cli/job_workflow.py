@@ -85,6 +85,8 @@ class JobWorkflowRunner:
             console.print(f"[dim red]Notice: SMTP credentials are not configured. Emails will be drafted and staged locally.[/dim red]")
             console.print(f"[dim]Tip: Configure SMTP anytime using [bold white]/smtp[/bold white] to enable verified live sending.[/dim]\n")
 
+        auto_approve_all = False
+
         for idx, target_job in enumerate(jobs, 1):
             console.print(f"\n[bold cyan]━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[/bold cyan]")
             console.print(f"[bold cyan]• [{idx}/{len(jobs)}] Target Opportunity: {target_job['title']} at {target_job['company']}[/bold cyan]")
@@ -162,7 +164,7 @@ class JobWorkflowRunner:
 
             # Interactive Draft Review / Preview Stage
             preview_enabled = os.getenv("THANATOS_DRAFT_PREVIEW", "true").lower() in ("true", "1", "yes", "on")
-            if preview_enabled:
+            if preview_enabled and not auto_approve_all:
                 console.print(f"\n[bold yellow]• Interactive Draft & Permission Gate[/bold yellow]")
                 console.print(f"  [dim]Template Used:[/dim] [cyan]{tmpl_name}[/cyan]")
                 console.print(f"  [dim]Draft Resume PDF:[/dim]  [underline white]{os.path.abspath(resume_pdf_path)}[/underline white]")
@@ -171,11 +173,14 @@ class JobWorkflowRunner:
                 
                 # Show quick terminal cover letter preview
                 console.print(Panel(cover_letter, title="[cyan]Cover Letter Preview[/cyan]", box=ROUNDED, border_style="dim cyan"))
-                console.print("[dim]Options: [bold white]Enter / Y[/bold white] = Approve & Dispatch  │  [bold white]e / o[/bold white] = Edit in WPS/Word  │  [bold white]s[/bold white] = Skip job  │  [bold white]c[/bold white] = Cancel hunt[/dim]")
+                console.print("[dim]Options: [bold white]Enter / Y[/bold white] = Approve  │  [bold white]a / A[/bold white] = Yes to All  │  [bold white]e / o[/bold white] = Edit  │  [bold white]s[/bold white] = Skip  │  [bold white]c[/bold white] = Cancel[/dim]")
 
                 try:
-                    user_action = input("  Proceed with dispatch? [Y/e/s/c]: ").strip().lower()
-                    if user_action in ("e", "o"):
+                    user_action = input("  Proceed with dispatch? [Y/a/e/s/c]: ").strip().lower()
+                    if user_action == "a":
+                        auto_approve_all = True
+                        console.print(f"[bold green]✔ Yes to All selected. Auto-approving all remaining applications in this batch.[/bold green]")
+                    elif user_action in ("e", "o"):
                         # Open resume in default system viewer (Word, WPS, or PDF viewer)
                         if os.name == "nt":
                             os.startfile(os.path.abspath(resume_pdf_path))
