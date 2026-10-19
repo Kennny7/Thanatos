@@ -274,6 +274,7 @@ class ThanatosCLI:
                 console.print(f"  [dim]ATS Quality Gating:[/dim] [green]Active (Auditing & Auto-Calibrating)[/green]\n")
                 console.print("[dim]Commands:[/dim]")
                 console.print("  • [bold yellow]/jobs run [query][/bold yellow]    - Scan LinkedIn & Naukri, tailor ATS resumes, and stage applications")
+                console.print("  • [bold yellow]/jobs loop [query][/bold yellow]   - Continuous autonomous hunt & apply loop until no fresh openings remain")
                 console.print("  • [bold yellow]/jobs search [query][/bold yellow] - Search openings without dispatching applications")
                 console.print("  • [bold yellow]/jobs history[/bold yellow]        - View logged application audit ledger\n")
             elif sub_cmd == "history":
@@ -299,13 +300,15 @@ class ThanatosCLI:
                 else:
                     console.print("[yellow]No direct recruiter email openings located for this search query.[/yellow]")
             else:
-                # User ran /jobs run or provided a query
-                query = sub_query if sub_cmd == "run" else arg
+                # User ran /jobs run, /jobs loop, or provided a query
+                is_loop = sub_cmd == "loop"
+                query = sub_query if sub_cmd in ("run", "loop") else arg
                 await self.job_runner.execute_job_workflow(
                     query=query if query else "AI / ML Engineer remote or Pune",
                     location="Pune (Hybrid/Office) & Remote",
                     experience="3 years and 8 months",
                     source_resume_path=self.user_resume_path,
+                    continuous_loop=is_loop,
                 )
 
         elif cmd == "/profile":
@@ -652,11 +655,13 @@ class ThanatosCLI:
         if is_job_request:
             exp = "3 years and 8 months" if "3" in lower else "3+ years"
             loc = "Pune (Hybrid/Office) & Remote" if "pune" in lower or "remote" in lower else "Remote"
+            is_loop_request = any(k in lower for k in ["loop", "continuously", "continuous", "keep applying", "infinite", "all openings", "until done"])
             await self.job_runner.execute_job_workflow(
                 query=user_text,
                 location=loc,
                 experience=exp,
                 source_resume_path=self.user_resume_path,
+                continuous_loop=is_loop_request,
             )
             return
 
