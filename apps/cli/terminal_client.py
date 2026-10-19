@@ -73,6 +73,22 @@ class ThanatosCLI:
         # Autonomously self-verify vector database on client boot
         diag = memory_service.vector_store.verify_and_diagnose()
         console.print(f"[dim blue]• Vector DB Auto-Verified: {diag.get('backend')} ({diag.get('doc_count')} indexed memories)[/dim blue]")
+
+        # Site Engineer Velma Sinclair startup telemetry & database check
+        try:
+            from services.database.db_orchestrator import db_orchestrator
+            from services.agents.site_engineer_agent import site_engineer_agent
+            if not db_orchestrator.is_docker_available():
+                print_agent_breadcrumb("Velma Sinclair [Site Reliability]", "Host Infrastructure & Database Diagnostic", 1.0)
+                console.print(
+                    "[bold magenta]❯ Velma Sinclair:[/bold magenta] [white]Hey! I ran a pre-flight system check and Docker Desktop isn't running yet. "
+                    "Your enterprise database cluster (PostgreSQL, MongoDB, Milvus, Neo4j, Kafka) is offline. "
+                    "I can launch Docker Desktop and spin up the containers automatically, or we can keep rolling with local embedded storage. "
+                    "Run [bold yellow]/docker start[/bold yellow] to have me launch it, or [bold yellow]/docker status[/bold yellow] to check containers.[/white]\n"
+                )
+        except Exception:
+            pass
+
         console.print("[dim]Type [bold white]/help[/bold white] for command list or start typing instructions/queries.[/dim]\n")
 
         session: PromptSession = PromptSession()
@@ -149,6 +165,55 @@ class ThanatosCLI:
         elif cmd == "/vector-db":
             diag = memory_service.vector_store.verify_and_diagnose()
             print_vector_status(diag)
+
+        elif cmd == "/docker":
+            from services.agents.site_engineer_agent import site_engineer_agent
+            from services.database.db_orchestrator import db_orchestrator
+            sub = arg.lower().strip() if arg else "status"
+
+            if sub in ("status", ""):
+                print_agent_breadcrumb("Velma Sinclair [Site Reliability]", "Inspecting Docker Daemon & Container Topology", 0.5)
+                statuses = site_engineer_agent.auto_manage_docker(action="status")
+                if not statuses.get("running"):
+                    console.print(f"[bold yellow]• Docker Engine Status:[/bold yellow] [red]OFFLINE[/red]")
+                    console.print(f"[dim]Message:[/dim] {statuses.get('message')}")
+                    console.print("[dim]Tip: Run [bold white]/docker start[/bold white] to have Velma launch Docker Desktop and spin up the database cluster automatically.[/dim]\n")
+                else:
+                    console.print(f"[bold green]• Docker Engine Status:[/bold green] [green]ONLINE[/green]")
+                    containers = statuses.get("containers", {})
+                    table = Table(title="• Enterprise Database Containers", box=ROUNDED, border_style="cyan")
+                    table.add_column("Container", style="bold white")
+                    table.add_column("Status", style="bold")
+                    table.add_column("Details", style="dim")
+                    for cname, cinfo in containers.items():
+                        if cname == "error":
+                            continue
+                        is_up = cinfo.get("running", False)
+                        col = "green" if is_up else "yellow"
+                        table.add_row(cname, f"[{col}]{cinfo.get('status', 'unknown')}[/{col}]", cinfo.get("status_line", ""))
+                    console.print(table)
+                    console.print()
+
+            elif sub in ("start", "up", "launch"):
+                print_agent_breadcrumb("Velma Sinclair [Site Reliability]", "Autonomous Docker Desktop Boot & Container Deployment", 0.2)
+                console.print("[dim cyan]❯ Velma Sinclair:[/dim cyan] [white]On it! Checking if Docker Desktop needs to be launched...[/white]")
+                
+                def live_progress(status_text: str):
+                    console.print(f"  [dim]• {status_text}[/dim]")
+
+                res = site_engineer_agent.auto_manage_docker(action="ensure", start_if_stopped=True, status_callback=live_progress)
+                if res.get("running"):
+                    print_agent_breadcrumb("Velma Sinclair [Site Reliability]", "Database Containers Online & Verified", 1.0)
+                    console.print("[bold green][✓] Docker Desktop and enterprise database containers (Postgres, Mongo, Milvus, Neo4j, Kafka) are up and running![/bold green]\n")
+                else:
+                    console.print(f"[bold red][!] Could not start Docker: {res.get('message') or res.get('error')}[/bold red]\n")
+
+            elif sub in ("stop", "down"):
+                print_agent_breadcrumb("Velma Sinclair [Site Reliability]", "Safely Stopping Database Containers", 0.8)
+                res = site_engineer_agent.auto_manage_docker(action="stop")
+                console.print(f"[bold yellow][✓] Database containers stopped to conserve RAM/CPU.[/bold yellow]\n")
+            else:
+                console.print("[dim]Usage: /docker status │ /docker start │ /docker stop[/dim]")
 
         elif cmd == "/thinking":
             if arg.lower() in ("on", "true", "1"):
@@ -505,7 +570,7 @@ class ThanatosCLI:
         else:
             import difflib
             known_cmds = [
-                "/help", "/clear", "/status", "/vector-db", "/thinking",
+                "/help", "/clear", "/status", "/vector-db", "/docker", "/thinking",
                 "/preview", "/history", "/jobs", "/profile", "/smtp",
                 "/audit", "/audit-web", "/nodes", "/agents", "/exit", "/quit"
             ]
@@ -547,6 +612,15 @@ class ThanatosCLI:
         if any(phrase in lower for phrase in ["turn off thinking", "hide thinking", "disable thinking", "hide reasoning"]):
             console.print("[dim cyan]❯ [Autonomous Action Gate][/dim cyan] [yellow]Hiding model reasoning blocks...[/yellow]")
             await self._handle_command("/thinking off")
+            return
+
+        if any(phrase in lower for phrase in ["start docker", "launch docker", "spin up docker", "start containers", "up docker", "bring up database"]):
+            console.print("[dim cyan]❯ [Autonomous Action Gate][/dim cyan] [yellow]Triggering autonomous Docker boot & container deployment...[/yellow]")
+            await self._handle_command("/docker start")
+            return
+
+        if any(phrase in lower for phrase in ["check docker", "docker status", "database status", "containers status"]):
+            await self._handle_command("/docker status")
             return
 
         # Check if the user is naturally instructing a job workflow
