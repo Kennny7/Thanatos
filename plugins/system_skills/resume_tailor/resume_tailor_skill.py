@@ -77,10 +77,20 @@ class ResumeTailorSkill(BaseSkill):
                             break
 
             # 2. Calibrate LaTeX Resume based on template
+            skills_required = params.get("skills_required", [])
+            if not skills_required and jd:
+                common_tech = ["Python", "FastAPI", "Docker", "PyTorch", "TensorFlow", "LangChain", "LlamaIndex", 
+                               "ChromaDB", "Milvus", "RAG", "PostgreSQL", "Kafka", "Airflow", "PySpark", 
+                               "Kubernetes", "AWS", "Azure", "GCP", "MLflow", "Ollama", "vLLM", "NLP", "LLM"]
+                for tech in common_tech:
+                    if re.search(r"\b" + re.escape(tech) + r"\b", jd, re.IGNORECASE):
+                        skills_required.append(tech)
+
             if template_content and ("\\documentclass" in template_content or "\\begin{document}" in template_content):
                 # We have an authentic LaTeX resume! Calibrate it for the company & role
                 tailored_resume_latex = template_content
-                # Update title line in header if present
+
+                # A. Calibrate Candidate Title Header
                 safe_title_header = f"{{\\normalsize\\textbf{{{job_title} | Generative AI, LLM & RAG Systems}}}}"
                 tailored_resume_latex = re.sub(
                     r"\{\\normalsize\\textbf\{[^}]+\}\}",
@@ -88,14 +98,8 @@ class ResumeTailorSkill(BaseSkill):
                     tailored_resume_latex,
                     count=1
                 )
-                # Calibrate experience in profile section
-                safe_exp_text = f"\\textbf{{{exp_duration} of experience}}"
-                tailored_resume_latex = re.sub(
-                    r"\\textbf\{3\+? years of experience\}",
-                    lambda m: safe_exp_text,
-                    tailored_resume_latex
-                )
-                # Ensure candidate name and contact align
+
+                # B. Calibrate Candidate Name
                 if profile.name:
                     safe_name_header = f"{{\\LARGE\\textbf{{{profile.name}}}}}"
                     tailored_resume_latex = re.sub(
@@ -104,7 +108,94 @@ class ResumeTailorSkill(BaseSkill):
                         tailored_resume_latex,
                         count=1
                     )
-                
+
+                # C. Dynamically Tailor the Profile / Summary Paragraph
+                # Craft a focused executive summary specifically targeted at this job & company
+                target_focus = ", ".join(skills_required[:4]) if skills_required else "Generative AI, RAG architectures, and scalable microservices"
+                tailored_profile_paragraph = (
+                    f"AI/ML Engineer with \\textbf{{{exp_duration} of experience}} designing, deploying, and optimizing production "
+                    f"\\textbf{{Generative AI systems, RAG pipelines, and high-performance ML architectures}} targeted for \\textbf{{{company}}}. "
+                    f"Demonstrated track record engineering scalable backend services and automated workflows with \\textbf{{{target_focus}}}, "
+                    f"PostgreSQL, and Docker. Proven capability in owning ML systems from data ingestion and model evaluation to production deployment, "
+                    f"delivering measurable improvements in latency, accuracy, and operational efficiency."
+                )
+
+                # Replace the template's profile paragraph
+                profile_match = re.search(r"(\\section\*\{Profile\}\s*\\vspace\{[^}]+\}\s*\\sectionline\s*(?:\\\\)?\s*)(.*?)(?=\s*\\section\*\{)", tailored_resume_latex, flags=re.DOTALL)
+                if profile_match:
+                    prefix = profile_match.group(1)
+                    tailored_resume_latex = (
+                        tailored_resume_latex[:profile_match.start()] +
+                        f"{prefix}\n{tailored_profile_paragraph}\n\n" +
+                        tailored_resume_latex[profile_match.end():]
+                    )
+
+                # D. Dynamically Prioritize Core Competencies
+                # Parse existing competencies and re-order / highlight categories relevant to this job
+                comp_match = re.search(r"(\\section\*\{Core Competencies\}\s*\\vspace\{[^}]+\}\s*\\sectionline\s*\\begin\{description\})(.*?)(\\end\{description\})", tailored_resume_latex, flags=re.DOTALL)
+                if comp_match:
+                    comp_header = comp_match.group(1)
+                    comp_body = comp_match.group(2)
+                    comp_footer = comp_match.group(3)
+
+                    # Split into individual \item[Category:] blocks
+                    items = re.findall(r"(\\item\[[^\]]+\]\s*[\s\S]*?)(?=(?:\\item\[|\\end\{description\}))", comp_body + "\\end{description}")
+                    if items:
+                        def score_item(item_text: str) -> int:
+                            score = 0
+                            for sk in skills_required:
+                                if re.search(r"\b" + re.escape(sk) + r"\b", item_text, re.IGNORECASE):
+                                    score += 2
+                            if jd:
+                                words = [w for w in re.split(r"\W+", jd.lower()) if len(w) > 3]
+                                for w in set(words[:25]):
+                                    if w in item_text.lower():
+                                        score += 1
+                            return score
+
+                        # Sort items by relevance to the target job
+                        sorted_items = sorted(items, key=score_item, reverse=True)
+                        tailored_resume_latex = (
+                            tailored_resume_latex[:comp_match.start()] +
+                            f"{comp_header}\n" + "\n\n".join(it.strip() for it in sorted_items) + f"\n{comp_footer}" +
+                            tailored_resume_latex[comp_match.end():]
+                        )
+
+                # E. Dynamically Select and Reorder Key Projects
+                # The master resume contains 7 key projects. Select the top 3-4 most relevant to this opening
+                proj_match = re.search(r"(\\section\*\{Key Projects\}\s*\\vspace\{[^}]+\}\s*\\sectionline\s*\\begin\{description\}[^\n]*\n)(.*?)(\\end\{description\})", tailored_resume_latex, flags=re.DOTALL)
+                if proj_match:
+                    proj_header = proj_match.group(1)
+                    proj_body = proj_match.group(2)
+                    proj_footer = proj_match.group(3)
+
+                    # Extract each project item block
+                    proj_items = re.findall(r"(\\item\[\\textbf\{[^\]]+\}\][\s\S]*?)(?=(?:\\item\[\\textbf\{|\\end\{description\}))", proj_body + "\\end{description}")
+                    if proj_items:
+                        def score_project(proj_text: str) -> int:
+                            score = 0
+                            for sk in skills_required:
+                                if re.search(r"\b" + re.escape(sk) + r"\b", proj_text, re.IGNORECASE):
+                                    score += 3
+                            if jd:
+                                words = [w for w in re.split(r"\W+", jd.lower()) if len(w) > 3]
+                                for w in set(words[:30]):
+                                    if w in proj_text.lower():
+                                        score += 1
+                            # Always ensure MKC and LRIT have high baseline relevance for AI/ML roles
+                            if "Maritime Knowledge Cluster" in proj_text:
+                                score += 2
+                            return score
+
+                        sorted_projs = sorted(proj_items, key=score_project, reverse=True)
+                        # Keep top 3 most relevant projects to avoid clutter and ensure tight fit
+                        selected_projs = sorted_projs[:3]
+                        tailored_resume_latex = (
+                            tailored_resume_latex[:proj_match.start()] +
+                            f"{proj_header}\n" + "\n\n".join(p.strip() for p in selected_projs) + f"\n\n{proj_footer}" +
+                            tailored_resume_latex[proj_match.end():]
+                        )
+
                 # Derive comprehensive markdown version from authentic LaTeX
                 from services.document.pdf_generator import clean_latex_to_text
                 tailored_resume_md = clean_latex_to_text(tailored_resume_latex)
@@ -207,6 +298,34 @@ AI/ML Engineer with \textbf{{{exp_duration} of experience}} developing Generativ
             github_ref = profile.github_url or "https://github.com/Kennny7"
             linkedin_ref = profile.linkedin_url or "https://www.linkedin.com/in/khushal-pareta-704355338"
 
+            # Align cover letter core strengths to target job requirements
+            primary_strengths = []
+            if any(s.lower() in ["rag", "langchain", "llamaindex", "vector databases", "embeddings"] for s in skills_required):
+                primary_strengths.append("Large Language Models & RAG: LangChain, LlamaIndex, Vector Databases, Semantic Search, and Prompt Optimization.")
+            if any(s.lower() in ["fastapi", "python", "docker", "microservices", "postgresql", "rest apis"] for s in skills_required):
+                primary_strengths.append("Backend & Microservices: Python, FastAPI, Docker, PostgreSQL, REST APIs, and Async Architecture.")
+            if any(s.lower() in ["pyspark", "airflow", "kafka", "etl", "data pipeline"] for s in skills_required):
+                primary_strengths.append("Robust Data & Streaming: PySpark, Apache Airflow, Kafka, and Data Validation Pipelines.")
+            if any(s.lower() in ["pytorch", "tensorflow", "xgboost", "scikit-learn", "deep learning"] for s in skills_required):
+                primary_strengths.append("Machine Learning & Deep Learning: PyTorch, Sequence Models, XGBoost, and Model Optimization.")
+            if any(s.lower() in ["ollama", "vllm", "gguf", "local llm", "qwen", "deepseek"] for s in skills_required):
+                primary_strengths.append("Local LLMs & Inference: Ollama, vLLM, GGUF Quantization, and High-Throughput Serving.")
+
+            # Default to top 3 if fewer matches
+            if len(primary_strengths) < 3:
+                defaults = [
+                    "Large Language Models & RAG: LangChain, LlamaIndex, Vector Databases, Semantic Search, and Prompt Optimization.",
+                    "Backend & Microservices: Python, FastAPI, Docker, PostgreSQL, REST APIs, and Async Architecture.",
+                    "Robust Data Pipelines: PySpark, Apache Airflow, MLflow tracking, and ELK Stack observability.",
+                ]
+                for d in defaults:
+                    if d not in primary_strengths:
+                        primary_strengths.append(d)
+                    if len(primary_strengths) >= 3:
+                        break
+
+            bullet_alignment = "\n".join(f"- {b}" for b in primary_strengths[:3])
+
             cover_letter = f"""Subject: Application for {job_title} - {profile.name}
 
 Dear Hiring Team at {company},
@@ -216,9 +335,7 @@ I am writing to express my strong interest in the {job_title} role at {company}.
 At C-DAC Mumbai, I architected and deployed an enterprise LLM conversational assistant for the Maritime Knowledge Cluster utilizing LangChain, Hugging Face, and state-of-the-art foundation models. Grounding responses in official regulatory documentation through vector search and structured prompt engineering delivered measurable accuracy gains for over 100 maritime stakeholders. Prior to this, I designed automated data synchronization pipelines and predictive machine learning microservices served via FastAPI and Docker, driving significant latency reductions and reporting accuracy.
 
 My technical background directly aligns with your requirements:
-- Large Language Models & RAG: LangChain, LlamaIndex, Vector Databases, Semantic Search, and Prompt Optimization.
-- Backend & Microservices: Python, FastAPI, Docker, PostgreSQL, REST APIs, and Async Architecture.
-- Robust Data Pipelines: PySpark, Apache Airflow, MLflow tracking, and ELK Stack observability.
+{bullet_alignment}
 
 You can inspect my technical portfolio and open-source contributions here:
 - Portfolio: {portfolio_ref}
