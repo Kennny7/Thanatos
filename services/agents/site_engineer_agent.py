@@ -147,22 +147,56 @@ class SiteEngineerAgent:
             logger.debug("Port scan check note: %s", e)
         return conflicts
 
-    def auto_manage_docker(self, action: str = "ensure") -> Dict[str, Any]:
+    def launch_docker_desktop(self) -> Dict[str, Any]:
+        """Launch the Docker Desktop application on the host machine."""
+        from services.database.db_orchestrator import db_orchestrator
+        return db_orchestrator.start_docker_desktop()
+
+    def wait_for_docker_ready(self, timeout_sec: int = 90, status_callback=None) -> bool:
+        """Poll until Docker Desktop engine finishes booting."""
+        from services.database.db_orchestrator import db_orchestrator
+        return db_orchestrator.wait_for_docker(timeout_sec=timeout_sec, status_callback=status_callback)
+
+    def auto_manage_docker(self, action: str = "ensure", start_if_stopped: bool = False, status_callback=None) -> Dict[str, Any]:
         """
         Velma's automated Docker supervisor:
         Checks if Docker daemon is running, identifies port conflicts,
-        and starts or verifies the enterprise database containers.
+        starts Docker Desktop if requested, and deploys enterprise database containers.
         """
         from services.database.db_orchestrator import db_orchestrator
         is_avail = db_orchestrator.is_docker_available()
+
+        if not is_avail and start_if_stopped:
+            if status_callback:
+                status_callback("Launching Docker Desktop engine in background...")
+            launch_res = db_orchestrator.start_docker_desktop()
+            if not launch_res.get("success"):
+                return {
+                    "running": False,
+                    "error": launch_res.get("message") or launch_res.get("error"),
+                    "message": "Couldn't locate or launch Docker Desktop automatically. Standing by on embedded local storage."
+                }
+            
+            # Wait for docker engine to come alive
+            ready = db_orchestrator.wait_for_docker(
+                timeout_sec=90,
+                poll_interval_sec=3.0,
+                status_callback=lambda elapsed, total: status_callback(f"Docker Desktop initializing... ({elapsed}s/{total}s)") if status_callback else None
+            )
+            is_avail = ready
+
         if not is_avail:
+            has_exe = bool(db_orchestrator.get_docker_desktop_executable())
             return {
                 "running": False,
-                "message": "Docker Desktop is not currently started. Please launch Docker Desktop so I can spin up your persistent database containers (Postgres, Mongo, Milvus, Neo4j, Kafka). Embedded local storage is standing by safely in the meantime."
+                "can_launch": has_exe,
+                "message": "Docker Desktop is currently stopped. I can launch Docker Desktop and bring up your database cluster automatically, or stand by on local embedded storage."
             }
 
         conflicts = self.check_port_conflicts([5436, 27018, 19530, 7474, 9092])
         if action == "ensure":
+            if status_callback:
+                status_callback("Starting database containers (Postgres, Mongo, Milvus, Neo4j, Kafka)...")
             res = db_orchestrator.ensure_containers_running()
             statuses = db_orchestrator.get_container_status()
             return {
