@@ -88,12 +88,18 @@ class ThanatosCLI:
                 if not user_input:
                     continue
 
-                if user_input.lower() in ("/exit", "/quit", "/bye", r"\exit", r"\quit", r"\bye", "exit", "quit", "bye"):
+                # Handle exit variants & typos (e.g. \exot, /exot, exot, eixt, exit, quit)
+                low_raw = user_input.lower().strip()
+                norm_raw = low_raw.lstrip("/\\")
+                if norm_raw in ("exit", "quit", "bye", "exot", "eixt", "q"):
                     console.print("[bold yellow]Exiting Thanatos CLI. Have a productive day![/bold yellow]")
                     break
 
-                if user_input.startswith("/"):
-                    await self._handle_command(user_input)
+                # Support both forward slash (/) and backslash (\) for commands
+                if user_input.startswith("/") or user_input.startswith("\\"):
+                    # Normalize backslash prefix to forward slash
+                    normalized_cmd = "/" + user_input[1:]
+                    await self._handle_command(normalized_cmd)
                 else:
                     await self._handle_chat(user_input)
 
@@ -497,7 +503,15 @@ class ThanatosCLI:
                         console.print(f"[red]Agent '{target_agent}' not found.[/red]")
 
         else:
-            console.print(f"[red]Unknown command '{cmd}'. Type [bold white]/help[/bold white] for assistance.[/red]")
+            import difflib
+            known_cmds = [
+                "/help", "/clear", "/status", "/vector-db", "/thinking",
+                "/preview", "/history", "/jobs", "/profile", "/smtp",
+                "/audit", "/audit-web", "/nodes", "/agents", "/exit", "/quit"
+            ]
+            matches = difflib.get_close_matches(cmd, known_cmds, n=1, cutoff=0.5)
+            suggestion = f" Maybe you meant [bold yellow]{matches[0]}[/bold yellow]?" if matches else ""
+            console.print(f"[red]Unknown command '{cmd}'.{suggestion} Type [bold white]/help[/bold white] for available commands.[/red]")
 
     async def _handle_chat(self, user_text: str) -> None:
         """Handle standard user conversational and natural language task prompts."""
