@@ -149,9 +149,9 @@ class AgentCoordinator:
             yield {"type": "assistant_chunk", "content": ans.content}
             return
 
-        # 4. Check if this is a composite multi-agent workflow
-        is_job_workflow = any(k in lower_prompt for k in ["job", "freshers", "apply for job", "tailor resume"])
-        is_novel_workflow = any(k in lower_prompt for k in ["novel", "translate novel", "raw chapter"])
+        # 4. Check if this is an explicit composite workflow
+        is_job_workflow = any(k in lower_prompt for k in ["find me a job", "apply for jobs", "hunt for jobs", "search for jobs", "job hunt"])
+        is_novel_workflow = any(k in lower_prompt for k in ["translate novel", "raw chapter"])
         is_code_workflow = any(k in lower_prompt for k in ["improve code", "fix bug in thanatos", "refactor thanatos", "self-improve"])
 
         # Determine meaningful real-time task status
@@ -167,6 +167,8 @@ class AgentCoordinator:
             task_desc = "Scanning subnet UDP ports & pinging mesh nodes"
         elif any(k in lower_prompt for k in ["database", "db", "memory", "vector", "postgres", "mongo"]):
             task_desc = "Querying hybrid vector & relational database stores"
+        elif any(k in lower_prompt for k in ["run", "command", "powershell", "cmd", "exec", "uninstall", "install", "sfc", "dism", "chkdsk"]):
+            task_desc = "Preparing system execution & shell environment"
         else:
             task_desc = f"Synthesizing knowledge context for '{user_prompt[:35]}...'"
 
@@ -176,7 +178,7 @@ class AgentCoordinator:
             "status": task_desc,
         }
 
-        if is_job_workflow and ("search" in lower_prompt or "apply" in lower_prompt or "resume" in lower_prompt):
+        if is_job_workflow:
             async for chunk in self._run_job_hunt_pipeline(user_prompt, rag_context):
                 yield chunk
             return
@@ -196,13 +198,16 @@ class AgentCoordinator:
         
         # Heuristic matching: if prompt clearly targets specific domains, only inject those tools
         is_news_or_web = any(k in lower_prompt for k in ["news", "headline", "trending", "current events", "latest", "search", "lookup", "who is", "what happened"])
-        is_job = any(k in lower_prompt for k in ["job", "resume", "cv", "hire", "apply"])
+        is_job = any(k in lower_prompt for k in ["job", "resume", "cv", "hire", "apply"]) and any(k in lower_prompt for k in ["hunt", "search", "find", "draft"])
         is_novel = any(k in lower_prompt for k in ["novel", "chapter", "translate"])
         is_security = any(k in lower_prompt for k in ["security", "audit", "header", "vulnerability", "hardening", "intel", "recon", "remediation", "firewall"])
+        is_system_exec = any(k in lower_prompt for k in ["command", "powershell", "cmd", "run", "uninstall", "install", "sfc", "dism", "chkdsk", "winget", "appx", "package", "service", "process"])
         is_infra = any(k in lower_prompt for k in ["docker", "container", "postgres", "mongo", "milvus", "neo4j", "kafka", "telemetry", "port", "daemon", "infrastructure"])
 
         if is_news_or_web:
             selected_tools = [t for t in all_tools if t.name in ("search_news", "search_web")]
+        elif is_system_exec:
+            selected_tools = [t for t in all_tools if t.name in ("run_system_command", "manage_system_package", "get_system_telemetry", "check_port_conflicts")]
         elif is_job:
             selected_tools = [t for t in all_tools if "job" in t.name or "resume" in t.name or "email" in t.name]
         elif is_novel:
@@ -210,7 +215,7 @@ class AgentCoordinator:
         elif is_security:
             selected_tools = [t for t in all_tools if "audit" in t.name or "intel" in t.name or "remediation" in t.name or "security" in t.name]
         elif is_infra:
-            selected_tools = [t for t in all_tools if "docker" in t.name or "telemetry" in t.name or "port" in t.name]
+            selected_tools = [t for t in all_tools if "docker" in t.name or "telemetry" in t.name or "port" in t.name or "command" in t.name]
         else:
             selected_tools = all_tools
 
@@ -238,10 +243,11 @@ USER BACKGROUND & MEMORY CONTEXT:
 {missing_cap_prompt}
 
 COLLABORATIVE OPERATING GUIDELINES:
-1. When you encounter ambiguity, missing critical parameters (like credentials, ambiguous paths, or unclear scope), or high-impact actions, pause and ASK A CLARIFYING QUESTION to the user instead of guessing or proceeding with incomplete assumptions.
-2. For job applications and outreach, prioritize transparency: inform the user whether an email was verified as sent via SMTP or merely staged as a draft.
-3. For defensive cybersecurity, only assist with authorized testing, exposed service inspection, security header auditing, and system hardening on authorized hosts/accounts.
-4. When a tool or integration is missing, explain what is needed and ask for approval to develop or add the tool.
+1. You are a complete, general-purpose autonomous AI operating system designed to manage, rebuild, optimize, and debug the user's projects, as well as assist with daily lifestyle, productivity, and work.
+2. ALWAYS execute tools when the user asks for system actions (diagnostics, package management, running commands, inspecting processes, web searches). Never hallucinate or pretend a heavy command completed in seconds; execute the real tool and report actual results.
+3. Job hunting/applications is only a minor sub-skill of this system. NEVER steer conversations toward jobs, resumes, or hiring portals unless the user explicitly asks for job search or application assistance.
+4. If a capability or tool does not yet exist to fulfill an instruction, explicitly identify what tool/plugin is missing, why it is needed, and offer to create and register that new skill plugin autonomously.
+5. When executing impactful actions or when critical parameters are missing, confirm with the user.
 """
 
         history_payload = list(conversation_history)
