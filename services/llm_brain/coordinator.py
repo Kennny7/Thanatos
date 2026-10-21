@@ -317,6 +317,82 @@ COLLABORATIVE OPERATING GUIDELINES:
             return
 
         if response.action == "tool_call" and response.tool_name:
+            from services.background.task_manager import task_manager
+
+            tool_args = response.args if isinstance(response.args, dict) else {}
+
+            # Check if this tool should run in the background
+            if task_manager.is_tool_long_running(response.tool_name, tool_args):
+                # Offload to background — don't block the terminal
+                yield {
+                    "type": "agent_status",
+                    "agent": "Tool Executor",
+                    "status": f"Offloading `{response.tool_name}` to background...",
+                    "progress": 0.3,
+                }
+
+                # Capture variables for the background closure
+                bg_tool_name = response.tool_name
+                bg_args = tool_args
+                bg_history = list(history_payload)
+                bg_system_prompt = system_prompt
+                provider = self.provider
+
+                async def _background_tool_pipeline():
+                    """Runs the full tool execution + LLM summarization in background."""
+                    import re as _re
+                    tool_res = await registry.dispatch(bg_tool_name, bg_args)
+                    res_content = tool_res.content if tool_res.success else f"Error: {tool_res.error}"
+
+                    # Feed result to LLM for summarization
+                    follow_history = list(bg_history)
+                    follow_history.append({
+                        "role": "assistant",
+                        "content": f"[Invoked tool {bg_tool_name} with arguments {json.dumps(bg_args)}]",
+                        "tool_calls": [{"id": "call_bg", "type": "function", "function": {"name": bg_tool_name, "arguments": bg_args}}],
+                    })
+                    follow_history.append({
+                        "role": "user",
+                        "content": f"[Tool Execution Result for `{bg_tool_name}`]:\n{json.dumps(res_content, indent=2) if isinstance(res_content, (dict, list)) else str(res_content)}\n\nPlease summarize the result clearly and explain what was performed or what actions are required.",
+                    })
+
+                    try:
+                        follow_up = await provider.generate_response(
+                            history=follow_history, system_prompt=bg_system_prompt,
+                        )
+                        summary = follow_up.text or ""
+                        if "<tool_call>" in summary and "</tool_call>" in summary:
+                            summary = _re.sub(r"<tool_call>.*?</tool_call>", "", summary, flags=_re.DOTALL).strip()
+                        if not summary:
+                            if isinstance(res_content, dict):
+                                stdout_val = res_content.get("stdout") or res_content.get("details") or str(res_content)
+                                summary = f"**Executed `{bg_tool_name}`:**\n```\n{stdout_val}\n```"
+                            else:
+                                summary = str(res_content)
+                    except Exception as e:
+                        logger.warning("Background LLM summarization failed: %s", e)
+                        if isinstance(res_content, dict):
+                            summary = f"**`{bg_tool_name}` completed:**\n```\n{res_content.get('stdout', str(res_content))}\n```"
+                        else:
+                            summary = str(res_content)
+
+                    return {"result_text": summary}
+
+                task = task_manager.submit(
+                    name=f"{bg_tool_name} ({', '.join(f'{k}={v}' for k, v in list(bg_args.items())[:2]) or 'default'})",
+                    tool_name=bg_tool_name,
+                    args=bg_args,
+                    coroutine=_background_tool_pipeline(),
+                )
+
+                yield {
+                    "type": "background_task_started",
+                    "task_id": task.id,
+                    "tool_name": bg_tool_name,
+                }
+                return
+
+            # Normal synchronous tool dispatch for fast tools
             yield {
                 "type": "agent_status",
                 "agent": "Tool Executor",
@@ -328,7 +404,6 @@ COLLABORATIVE OPERATING GUIDELINES:
                 res_content = tool_res.content if tool_res.success else f"Error: {tool_res.error}"
                 
                 # Feedback loop to LLM with structured dictionary arguments for local LLMs
-                tool_args = response.args if isinstance(response.args, dict) else {}
                 history_payload.append({
                     "role": "assistant",
                     "content": f"[Invoked tool {response.tool_name} with arguments {json.dumps(tool_args)}]",
