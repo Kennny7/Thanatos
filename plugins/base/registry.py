@@ -155,6 +155,7 @@ def init_default_skills() -> None:
     registry.register_lazy("job_hunter", lambda: __import__("plugins.system_skills.job_hunter.job_hunter_skill", fromlist=["JobHunterSkill"]).JobHunterSkill())
     registry.register_lazy("resume_tailor", lambda: __import__("plugins.system_skills.resume_tailor.resume_tailor_skill", fromlist=["ResumeTailorSkill"]).ResumeTailorSkill())
     registry.register_lazy("job_applicator", lambda: __import__("plugins.system_skills.job_applicator.job_applicator_skill", fromlist=["JobApplicatorSkill"]).JobApplicatorSkill())
+    registry.register_lazy("dynamic_skill_factory", lambda: __import__("plugins.system_skills.dynamic_skill_factory.dynamic_skill_factory", fromlist=["DynamicSkillFactorySkill"]).DynamicSkillFactorySkill())
 
 
 init_default_skills()
