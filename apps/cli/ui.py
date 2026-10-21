@@ -128,6 +128,7 @@ def print_help() -> None:
     table.add_row("/audit [target]", "Run defensive port and service audit on authorized target")
     table.add_row("/audit-web [url]", "Inspect defensive HTTP security headers and TLS status")
     table.add_row("/nodes", "View connected distributed mesh devices / worker nodes")
+    table.add_row("/tasks [list|view|cancel|clear]", "View and manage background tasks (long-running operations)")
     table.add_row("/exit, /quit", "Exit the Thanatos terminal client")
 
     console.print(table)
@@ -142,4 +143,131 @@ def print_clarification_box(question: str) -> None:
         box=ROUNDED,
         border_style="yellow",
         padding=(0, 1),
+    ))
+
+
+# ── Background Task Notification & Display ────────────────────────────────
+
+def print_task_notification(task, event_type: str) -> None:
+    """
+    Print a compact notification above the prompt when a background task changes state.
+    Called by the BackgroundTaskManager's notification callback.
+    """
+    task_id = task.id
+    name = task.name
+    elapsed = task.elapsed_display
+
+    if event_type == "started":
+        console.print(
+            f"\n[bold green]▶ Background Task Started[/bold green] "
+            f"[dim]({task_id})[/dim] [white]{name}[/white]"
+        )
+        console.print(
+            f"  [dim]You can keep using the terminal. "
+            f"Type [bold white]/tasks[/bold white] to check progress.[/dim]"
+        )
+
+    elif event_type == "completed":
+        console.print()
+        # Build a result panel
+        result_preview = task.result_text or "(No output)"
+        # Truncate very long output for the notification
+        if len(result_preview) > 600:
+            result_preview = result_preview[:600] + f"\n\n[dim]... truncated. Use /tasks view {task_id} for full output.[/dim]"
+
+        console.print(Panel(
+            Markdown(result_preview) if not result_preview.startswith("{") else Text(result_preview),
+            title=f"[bold green]✓ Task Complete: {name}[/bold green] [dim]({elapsed})[/dim]",
+            title_align="left",
+            border_style="green",
+            box=ROUNDED,
+            padding=(0, 1),
+        ))
+
+    elif event_type == "failed":
+        error_msg = task.error or "Unknown error"
+        console.print(
+            f"\n[bold red]✗ Background Task Failed[/bold red] "
+            f"[dim]({task_id}, {elapsed})[/dim] [white]{name}[/white]"
+        )
+        console.print(f"  [red]{error_msg}[/red]")
+
+
+def print_task_table(tasks) -> None:
+    """Render a table of background tasks for the /tasks command."""
+    if not tasks:
+        console.print("[dim yellow]No background tasks. Long-running operations will appear here automatically.[/dim yellow]")
+        return
+
+    table = Table(
+        title="• Background Tasks",
+        box=ROUNDED,
+        border_style="cyan",
+    )
+    table.add_column("ID", style="dim white", width=6)
+    table.add_column("Tool", style="bold yellow", width=22)
+    table.add_column("Status", width=12)
+    table.add_column("Elapsed", style="dim white", width=10)
+    table.add_column("Details", style="white", ratio=1)
+
+    for t in tasks:
+        if t.status.value == "running":
+            status_str = "[bold cyan]● RUNNING[/bold cyan]"
+            detail = t.progress_message or "Working..."
+        elif t.status.value == "completed":
+            status_str = "[bold green]✓ DONE[/bold green]"
+            detail = (t.result_text[:80] + "...") if len(t.result_text) > 80 else (t.result_text or "Completed")
+        elif t.status.value == "failed":
+            status_str = "[bold red]✗ FAILED[/bold red]"
+            detail = t.error[:80] if t.error else "Unknown error"
+        else:
+            status_str = "[dim]○ PENDING[/dim]"
+            detail = "Queued"
+
+        table.add_row(
+            t.id,
+            t.tool_name,
+            status_str,
+            t.elapsed_display,
+            detail,
+        )
+
+    console.print(table)
+
+
+def print_task_detail(task) -> None:
+    """Render full detail view of a single background task."""
+    status_colors = {
+        "running": "cyan",
+        "completed": "green",
+        "failed": "red",
+        "pending": "dim",
+    }
+    color = status_colors.get(task.status.value, "white")
+
+    info = (
+        f"**Task ID:** `{task.id}`\n"
+        f"**Tool:** `{task.tool_name}`\n"
+        f"**Status:** {task.status.value.upper()}\n"
+        f"**Elapsed:** {task.elapsed_display}\n"
+    )
+
+    if task.args:
+        import json
+        args_str = json.dumps(task.args, indent=2)
+        info += f"\n**Arguments:**\n```json\n{args_str}\n```\n"
+
+    if task.result_text:
+        info += f"\n**Output:**\n```\n{task.result_text}\n```\n"
+
+    if task.error:
+        info += f"\n**Error:**\n```\n{task.error}\n```\n"
+
+    console.print(Panel(
+        Markdown(info),
+        title=f"[bold {color}]• Task Detail: {task.name}[/bold {color}]",
+        title_align="left",
+        border_style=color,
+        box=ROUNDED,
+        padding=(1, 2),
     ))
