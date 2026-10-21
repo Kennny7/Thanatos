@@ -661,10 +661,13 @@ class ThanatosCLI:
             await self._handle_command("/docker status")
             return
 
-        # Check if the user is naturally instructing a job workflow
-        is_job_request = any(k in lower for k in ["job", "apply", "resume", "opening", "vacanc"]) and any(k in lower for k in ["search", "find", "hunt", "mail", "email", "pune", "remote", "loop", "apply"])
+        # Job hunt pipeline is an optional sub-skill: strictly trigger ONLY when the user explicitly asks to hunt/apply for jobs
+        is_explicit_job_intent = any(phrase in lower for phrase in [
+            "find me a job", "search for jobs", "apply for jobs", "apply to jobs", "hunt for jobs",
+            "job hunt", "search jobs", "apply for a job", "find jobs", "job search"
+        ])
 
-        if is_job_request:
+        if is_explicit_job_intent:
             exp = "3 years and 8 months" if ("3" in lower or "3+" in lower or "experience" in lower) else "3+ years"
             
             # Precise location extraction without false Pune bundling
