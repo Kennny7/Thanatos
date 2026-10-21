@@ -30,7 +30,7 @@ def print_banner(app_name: str = "Thanatos AI", model_name: str = "Unknown", pro
     banner_text.append("    ██║   ██╔══██║██╔══██║██║╚██╗██║██╔══██║   ██║   ██║   ██║╚════██║\n", style="bold blue")
     banner_text.append("    ██║   ██║  ██║██║  ██║██║ ╚████║██║  ██║   ██║   ╚██████╔╝███████║\n", style="bold magenta")
     banner_text.append("    ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝   ╚═╝    ╚═════╝ ╚══════╝\n", style="bold magenta")
-    banner_text.append("  [ Autonomous Multi-Agent Terminal Client & AI Job Orchestrator ]", style="italic white")
+    banner_text.append("  [ Autonomous Multi-Agent Terminal Client & AI Developer Operating System ]", style="italic white")
 
     meta_info = f"[dim]Provider:[/dim] [bold green]{provider}[/bold green]  │  [dim]Model:[/dim] [bold cyan]{model_name}[/bold cyan]  │  [dim]Terminal:[/dim] [bold yellow]Interactive Shell[/bold yellow]"
     console.print(banner_text)
@@ -118,11 +118,10 @@ def print_help() -> None:
     table.add_row("/help", "Show this command reference list")
     table.add_row("/clear", "Clear terminal screen")
     table.add_row("/status", "Display active LLM model, provider, and settings")
+    table.add_row("/docker [status|start|stop]", "Manage database containers and Docker Desktop")
     table.add_row("/vector-db", "Verify and inspect vector database health & collections")
     table.add_row("/thinking on|off", "Toggle visibility of model reasoning / thought blocks")
-    table.add_row("/preview on|off", "Toggle interactive draft review gate (WPS/Word/terminal editing)")
-    table.add_row("/history", "View recent autonomous job applications & email logs")
-    table.add_row("/jobs [run|search]", "Inspect job settings, search portals (Naukri/LinkedIn), or run workflow")
+    table.add_row("/preview on|off", "Toggle interactive draft review gate")
     table.add_row("/agents [dm|set|rename]", "List personas (Velma, Amelia, Alfred), send private DMs, or switch active agent")
     table.add_row("/profile [folder]", "Inspect or set path to profile directory & sync files")
     table.add_row("/smtp", "Test or configure SMTP email transmission credentials")
