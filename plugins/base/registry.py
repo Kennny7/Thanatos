@@ -96,16 +96,11 @@ class SkillRegistry:
     def identify_missing_capability(self, task_description: str) -> Optional[Dict[str, Any]]:
         """
         Inspects existing tool capabilities against a task.
-        If no existing tool matches the domain, formulates a proposed tool specification.
+        If the task asks for an action/tool that does not exist in any registered skill,
+        dynamically formulates a proposed capability and tool specification instead of hardcoding.
         """
         all_tools = self.get_all_tools()
-        tool_names = [t.name for t in all_tools]
-        lower_task = task_description.lower()
-
-        # Check existing tool coverage
-        for t in all_tools:
-            if any(word in lower_task for word in t.name.split("_")):
-                return None
+        lower_task = task_description.lower().strip()
 
         # Conversational, knowledge, philosophical, or greetings NEVER need tool creation
         conversational_markers = [
@@ -113,23 +108,35 @@ class SkillRegistry:
             "explain", "translate", "write a", "poem", "story", "joke", "hello", "hi",
             "hey", "bye", "goodbye", "help", "thanks", "thank you", "meaning of"
         ]
-        if any(marker in lower_task for marker in conversational_markers):
+        if any(lower_task.startswith(m) or f" {m} " in f" {lower_task} " for m in conversational_markers):
             return None
 
         # Slash commands or escape commands are shell actions, not missing plugin requests
         if task_description.startswith(("/", "\\")):
             return None
 
-        # Only suggest missing capability if the user is explicitly requesting system/infra actions not yet built
-        if any(w in lower_task for w in ["database backup", "export database", "dump db"]):
+        # Check existing tool coverage
+        for t in all_tools:
+            # Check if key tokens in the tool name appear in the task
+            tokens = [tok for tok in t.name.split("_") if len(tok) > 3]
+            if tokens and any(tok in lower_task for tok in tokens):
+                return None
+
+        # Check for action words indicating an intent to execute or integrate something new
+        action_triggers = ["create feature", "build tool", "add support for", "integrate", "automate", "missing feature", "new capability"]
+        if any(trig in lower_task for trig in action_triggers):
+            # Derive capability dynamically from the user's description
+            import re
+            clean_name = re.sub(r"[^a-zA-Z0-9\s]", "", lower_task)
+            words = [w for w in clean_name.split() if w not in ["can", "you", "please", "i", "want", "to", "a", "the", "create", "build", "tool", "feature", "for", "in", "my", "me"]]
+            suggested_tag = "_".join(words[:4]) if words else "custom_automation"
             return {
-                "capability": "Database Export & Backup Skill",
-                "suggested_skill_name": "db_backup_manager",
-                "tool_name": "backup_vector_and_sqlite_stores",
-                "reason": "Thanatos currently has memory search and profiling tools, but lacks automated database export/snapshot capabilities.",
+                "capability": f"Dynamic Capability ({' '.join(words[:4]).title() or 'Custom Action'})",
+                "suggested_skill_name": f"{suggested_tag}_skill",
+                "tool_name": f"execute_{suggested_tag}",
+                "reason": f"User requested '{task_description[:80]}' which is not covered by existing registered skills.",
             }
 
-        # For all other general queries, let the LLM brain answer directly with its vast intrinsic knowledge!
         return None
 
 
@@ -139,14 +146,16 @@ registry = SkillRegistry()
 
 def init_default_skills() -> None:
     """Auto-register default domain skills using lazy factories for zero startup delay."""
+    registry.register_lazy("system_execution", lambda: __import__("plugins.system_skills.system_execution.system_execution_skill", fromlist=["SystemExecutionSkill"]).SystemExecutionSkill())
+    registry.register_lazy("site_operations", lambda: __import__("plugins.system_skills.site_operations.site_operations_skill", fromlist=["SiteOperationsSkill"]).SiteOperationsSkill())
+    registry.register_lazy("web_search", lambda: __import__("plugins.system_skills.web_search.web_search_skill", fromlist=["WebSearchSkill"]).WebSearchSkill())
+    registry.register_lazy("security_auditor", lambda: __import__("plugins.system_skills.security_auditor.security_auditor_skill", fromlist=["SecurityAuditorSkill"]).SecurityAuditorSkill())
+    registry.register_lazy("self_improvement", lambda: __import__("plugins.system_skills.self_improvement.self_improvement_skill", fromlist=["SelfImprovementSkill"]).SelfImprovementSkill())
+    registry.register_lazy("novel_agent", lambda: __import__("plugins.system_skills.novel_agent.novel_skill", fromlist=["NovelAgentSkill"]).NovelAgentSkill())
     registry.register_lazy("job_hunter", lambda: __import__("plugins.system_skills.job_hunter.job_hunter_skill", fromlist=["JobHunterSkill"]).JobHunterSkill())
     registry.register_lazy("resume_tailor", lambda: __import__("plugins.system_skills.resume_tailor.resume_tailor_skill", fromlist=["ResumeTailorSkill"]).ResumeTailorSkill())
     registry.register_lazy("job_applicator", lambda: __import__("plugins.system_skills.job_applicator.job_applicator_skill", fromlist=["JobApplicatorSkill"]).JobApplicatorSkill())
-    registry.register_lazy("security_auditor", lambda: __import__("plugins.system_skills.security_auditor.security_auditor_skill", fromlist=["SecurityAuditorSkill"]).SecurityAuditorSkill())
-    registry.register_lazy("novel_agent", lambda: __import__("plugins.system_skills.novel_agent.novel_skill", fromlist=["NovelAgentSkill"]).NovelAgentSkill())
-    registry.register_lazy("self_improvement", lambda: __import__("plugins.system_skills.self_improvement.self_improvement_skill", fromlist=["SelfImprovementSkill"]).SelfImprovementSkill())
-    registry.register_lazy("web_search", lambda: __import__("plugins.system_skills.web_search.web_search_skill", fromlist=["WebSearchSkill"]).WebSearchSkill())
-    registry.register_lazy("site_operations", lambda: __import__("plugins.system_skills.site_operations.site_operations_skill", fromlist=["SiteOperationsSkill"]).SiteOperationsSkill())
 
 
 init_default_skills()
+
