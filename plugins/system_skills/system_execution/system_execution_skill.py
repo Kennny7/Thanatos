@@ -152,18 +152,28 @@ class SystemExecutionSkill(BaseSkill):
                     error=f"Command timed out after {timeout_seconds} seconds.",
                 )
 
-            # Windows console encodings (cp1252 / utf-8 fallback)
-            encodings = ["utf-8", "cp1252", "latin1"]
+            # Windows console encodings (utf-16le for utilities like sfc/dism, cp1252, utf-8 fallback)
+            encodings = ["utf-16le", "utf-16", "utf-8", "cp1252", "latin1"]
             def decode_bytes(b: bytes) -> str:
-                for enc in encodings:
+                if not b:
+                    return ""
+                # Check for UTF-16 null byte pattern (every second byte null)
+                if len(b) >= 2 and b[1] == 0:
                     try:
-                        return b.decode(enc)
+                        return b.decode("utf-16le").strip()
+                    except Exception:
+                        pass
+                for enc in ["utf-8", "cp1252", "latin1"]:
+                    try:
+                        s = b.decode(enc)
+                        # Clean any leftover embedded null bytes
+                        return s.replace("\x00", "").strip()
                     except UnicodeDecodeError:
                         continue
-                return b.decode("utf-8", errors="replace")
+                return b.decode("utf-8", errors="replace").replace("\x00", "").strip()
 
-            stdout_str = decode_bytes(stdout_bytes).strip()
-            stderr_str = decode_bytes(stderr_bytes).strip()
+            stdout_str = decode_bytes(stdout_bytes)
+            stderr_str = decode_bytes(stderr_bytes)
             exit_code = process.returncode
 
             return ToolResult.success_result(
