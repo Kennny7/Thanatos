@@ -19,9 +19,9 @@ class SelfImprovementSkill(BaseSkill):
     and validate patches using an isolated sandbox test runner.
     """
 
-    def __init__(self, workspace_dir: str = r"c:\Users\Kennny\Desktop\Self Projects\Thanatos") -> None:
-        self.workspace_dir = Path(workspace_dir)
-        self.runner = ResourceLimitedRunner(timeout_seconds=10)
+    def __init__(self, workspace_dir: Optional[str] = None) -> None:
+        self.workspace_dir = Path(workspace_dir) if workspace_dir else Path(__file__).resolve().parent.parent.parent.parent
+        self.runner = ResourceLimitedRunner(timeout_seconds=25)
 
     @property
     def skill_name(self) -> str:
