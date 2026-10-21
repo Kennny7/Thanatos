@@ -105,8 +105,11 @@ class AgentCoordinator:
                 yield {"type": "assistant_chunk", "content": reply}
                 return
 
-            # For general inquiries or complex operational questions, pass site operations tools into LLM generate_response
-            infra_tools = [t.to_openai_schema() for t in registry.get_all_tools() if "docker" in t.name or "telemetry" in t.name or "port" in t.name]
+            # For general inquiries or complex operational questions, pass site operations and system execution tools into LLM generate_response
+            infra_tools = [
+                t.to_openai_schema() for t in registry.get_all_tools()
+                if any(k in t.name for k in ("docker", "telemetry", "port", "command", "package", "improve"))
+            ]
             prompt = f"{site_engineer_agent.build_system_prompt()}\n\nUser Question/Task: {user_prompt}\n\nLive System Telemetry:\n{json.dumps(diag, indent=2)}\n\nRespond with your charming, willful Velma persona."
             response = await self.provider.generate_response(
                 history=[{"role": "user", "content": prompt}],
@@ -311,18 +314,30 @@ COLLABORATIVE OPERATING GUIDELINES:
                 tool_args = response.args if isinstance(response.args, dict) else {}
                 history_payload.append({
                     "role": "assistant",
-                    "content": None,
+                    "content": f"[Invoked tool {response.tool_name} with arguments {json.dumps(tool_args)}]",
                     "tool_calls": [{"id": "call_1", "type": "function", "function": {"name": response.tool_name, "arguments": tool_args}}],
                 })
                 history_payload.append({
-                    "role": "tool",
-                    "tool_call_id": "call_1",
-                    "name": response.tool_name,
-                    "content": str(res_content),
+                    "role": "user",
+                    "content": f"[Tool Execution Result for `{response.tool_name}`]:\n{json.dumps(res_content, indent=2) if isinstance(res_content, (dict, list)) else str(res_content)}\n\nPlease summarize the result clearly and explain what was performed or what actions are required.",
                 })
                 
                 follow_up = await self.provider.generate_response(history=history_payload, system_prompt=system_prompt)
-                yield {"type": "assistant_chunk", "content": follow_up.text or str(res_content)}
+                
+                # Clean any stray <tool_call> tags from final text if echoed
+                final_text = follow_up.text or ""
+                if "<tool_call>" in final_text and "</tool_call>" in final_text:
+                    import re
+                    final_text = re.sub(r"<tool_call>.*?</tool_call>", "", final_text, flags=re.DOTALL).strip()
+
+                if not final_text:
+                    if isinstance(res_content, dict):
+                        stdout_val = res_content.get("stdout") or res_content.get("details") or str(res_content)
+                        final_text = f"**Executed `{response.tool_name}`:**\n```\n{stdout_val}\n```"
+                    else:
+                        final_text = str(res_content)
+
+                yield {"type": "assistant_chunk", "content": final_text}
             except Exception as e:
                 logger.error("Tool execution failed: %s", e)
                 yield {"type": "assistant_chunk", "content": f"I attempted to execute `{response.tool_name}`, but encountered: {str(e)}"}
