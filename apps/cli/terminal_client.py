@@ -598,7 +598,7 @@ class ThanatosCLI:
             import difflib
             known_cmds = [
                 "/help", "/clear", "/status", "/vector-db", "/docker", "/thinking",
-                "/preview", "/history", "/jobs", "/profile", "/smtp",
+                "/preview", "/history", "/profile", "/smtp",
                 "/audit", "/audit-web", "/nodes", "/agents", "/exit", "/quit"
             ]
             matches = difflib.get_close_matches(cmd, known_cmds, n=1, cutoff=0.5)
