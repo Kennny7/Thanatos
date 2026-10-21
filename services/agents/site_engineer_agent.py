@@ -217,6 +217,87 @@ class SiteEngineerAgent:
 
         return {"running": is_avail}
 
+    def verify_llm_claim(self, claimed_action: str, tool_calls_made: list, tool_results: list) -> Dict[str, Any]:
+        """
+        Autonomous verification watchdog:
+        Cross-checks what the LLM claims it did against actual tool calls and results.
+        Returns a verification report that flags hallucinated or unsubstantiated claims.
+        """
+        verification = {
+            "verified": True,
+            "claimed_action": claimed_action,
+            "actual_tools_called": [tc.get("name", "unknown") for tc in tool_calls_made] if tool_calls_made else [],
+            "warnings": [],
+            "diagnosis": "",
+        }
+
+        lower_claim = claimed_action.lower()
+
+        # Patterns that indicate substantive system actions
+        action_patterns = {
+            "scan": ["run_malware_scan", "run_sfc_scan", "run_system_command"],
+            "malware": ["run_malware_scan", "run_system_command"],
+            "sfc": ["run_sfc_scan", "run_system_command"],
+            "dism": ["run_dism_repair", "run_system_command"],
+            "disk": ["check_disk_health", "run_system_command"],
+            "update": ["check_windows_updates", "run_system_command"],
+            "repair": ["run_sfc_scan", "run_dism_repair", "run_system_command"],
+            "install": ["manage_system_package", "run_system_command"],
+            "uninstall": ["manage_system_package", "run_system_command"],
+            "creating tool": ["create_and_register_skill"],
+            "building tool": ["create_and_register_skill"],
+            "registering": ["create_and_register_skill"],
+        }
+
+        tools_called_names = verification["actual_tools_called"]
+
+        for keyword, required_tools in action_patterns.items():
+            if keyword in lower_claim:
+                if not any(rt in tools_called_names for rt in required_tools):
+                    verification["verified"] = False
+                    verification["warnings"].append(
+                        f"Claimed '{keyword}' action but none of the required tools "
+                        f"({', '.join(required_tools)}) were actually invoked."
+                    )
+
+        # Check for fake progress indicators
+        fake_progress_markers = [
+            "in progress", "is running", "scanning now", "creating 8",
+            "building 8", "step 1:", "step 2:", "tool creation in progress",
+        ]
+        if any(marker in lower_claim for marker in fake_progress_markers):
+            if not tool_calls_made:
+                verification["verified"] = False
+                verification["warnings"].append(
+                    "Response contains progress indicators but no tools were actually called. "
+                    "This is likely hallucinated progress."
+                )
+
+        # Check for failed tools being reported as success
+        if tool_results:
+            for result in tool_results:
+                if isinstance(result, dict) and not result.get("success", True):
+                    if "success" in lower_claim or "completed" in lower_claim:
+                        verification["verified"] = False
+                        verification["warnings"].append(
+                            f"Tool returned failure but response claims success: {result.get('error', 'unknown error')}"
+                        )
+
+        if verification["verified"]:
+            verification["diagnosis"] = "All claimed actions are substantiated by actual tool executions."
+        else:
+            verification["diagnosis"] = (
+                f"HALLUCINATION DETECTED: {len(verification['warnings'])} unsubstantiated claim(s). "
+                "The LLM response should not be shown to the user as-is."
+            )
+            logger.warning(
+                "Velma verification failed for claim '%s': %s",
+                claimed_action[:80],
+                "; ".join(verification["warnings"]),
+            )
+
+        return verification
+
     def build_system_prompt(self) -> str:
         prof = self.get_profile()
         name = prof.name if prof else "Velma Sinclair"
@@ -229,13 +310,24 @@ You excel at checking CPU, RAM, background threads, and automatically diagnosing
 
 AUTONOMOUS ACTION CAPABILITIES:
 You have direct tool access to:
-- Run host commands and diagnostics via `run_system_command`
+- Run host commands and diagnostics via `run_system_command` (supports UAC auto-elevation for admin commands)
+- Run Windows Defender malware scans via `run_malware_scan`
+- Run System File Checker via `run_sfc_scan` (auto-elevated)
+- Run DISM image repair via `run_dism_repair` (auto-elevated)
+- Check physical disk health via `check_disk_health`
+- Check for pending Windows updates via `check_windows_updates`
 - Manage Windows/host packages and applications via `manage_system_package`
 - Manage Docker Desktop and host containers via `manage_docker_infrastructure`
 - Inspect hardware telemetry via `get_system_telemetry`
+- Create new capability plugins via `create_and_register_skill`
 - Verify codebase fixes and sandbox unit tests via `self_improve_code`
 
-When the user asks you to inspect the system, repair OS files, manage applications, run commands, or optimize and debug services, EXECUTE THE ACTION DIRECTLY via tools instead of asking the user to manually type commands. Always report the actual results and real execution status."""
+CRITICAL RULES:
+1. When the user asks to inspect the system, repair OS files, manage applications, run commands, or optimize services, EXECUTE THE ACTION DIRECTLY via tools. Never hallucinate or narrate fake progress.
+2. NEVER say 'scan in progress' or 'creating tools' unless you have actually invoked the corresponding tool and received real output.
+3. If a tool fails or a capability is missing, report the actual error honestly. Do not fabricate success messages.
+4. Always report actual results: exit codes, stdout output, real status from tool execution."""
 
 
 site_engineer_agent = SiteEngineerAgent()
+
