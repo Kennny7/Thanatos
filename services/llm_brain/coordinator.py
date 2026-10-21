@@ -108,7 +108,10 @@ class AgentCoordinator:
             # For general inquiries or complex operational questions, pass site operations and system execution tools into LLM generate_response
             infra_tools = [
                 t.to_openai_schema() for t in registry.get_all_tools()
-                if any(k in t.name for k in ("docker", "telemetry", "port", "command", "package", "improve"))
+                if any(k in t.name for k in (
+                    "docker", "telemetry", "port", "command", "package", "improve",
+                    "malware", "sfc", "dism", "disk", "update", "register",
+                ))
             ]
             prompt = f"{site_engineer_agent.build_system_prompt()}\n\nUser Question/Task: {user_prompt}\n\nLive System Telemetry:\n{json.dumps(diag, indent=2)}\n\nRespond with your charming, willful Velma persona."
             response = await self.provider.generate_response(
@@ -204,13 +207,23 @@ class AgentCoordinator:
         is_job = any(k in lower_prompt for k in ["job", "resume", "cv", "hire", "apply"]) and any(k in lower_prompt for k in ["hunt", "search", "find", "draft"])
         is_novel = any(k in lower_prompt for k in ["novel", "chapter", "translate"])
         is_security = any(k in lower_prompt for k in ["security", "audit", "header", "vulnerability", "hardening", "intel", "recon", "remediation", "firewall"])
-        is_system_exec = any(k in lower_prompt for k in ["command", "powershell", "cmd", "run", "uninstall", "install", "sfc", "dism", "chkdsk", "winget", "appx", "package", "service", "process"])
+        is_system_exec = any(k in lower_prompt for k in [
+            "command", "powershell", "cmd", "run", "uninstall", "install", "sfc", "dism",
+            "chkdsk", "winget", "appx", "package", "service", "process", "health", "repair",
+            "scan", "malware", "defender", "virus", "disk", "update", "system check",
+            "maintenance", "diagnostic",
+        ])
         is_infra = any(k in lower_prompt for k in ["docker", "container", "postgres", "mongo", "milvus", "neo4j", "kafka", "telemetry", "port", "daemon", "infrastructure"])
 
         if is_news_or_web:
             selected_tools = [t for t in all_tools if t.name in ("search_news", "search_web")]
         elif is_system_exec:
-            selected_tools = [t for t in all_tools if t.name in ("run_system_command", "manage_system_package", "get_system_telemetry", "check_port_conflicts")]
+            selected_tools = [t for t in all_tools if t.name in (
+                "run_system_command", "manage_system_package", "get_system_telemetry",
+                "check_port_conflicts", "run_malware_scan", "run_sfc_scan",
+                "run_dism_repair", "check_disk_health", "check_windows_updates",
+                "create_and_register_skill",
+            )]
         elif is_job:
             selected_tools = [t for t in all_tools if "job" in t.name or "resume" in t.name or "email" in t.name]
         elif is_novel:
@@ -222,17 +235,21 @@ class AgentCoordinator:
         else:
             selected_tools = all_tools
 
-        # Check for missing capability if prompt is task-oriented but no tools match
+        # Check for missing capability — if found, attempt real dynamic tool creation
+        # instead of prompting the LLM to hallucinate about creating tools
         missing_cap = registry.identify_missing_capability(user_prompt)
         missing_cap_prompt = ""
         if missing_cap:
+            # Inform the LLM about the gap, but instruct it to use the create_and_register_skill tool
             missing_cap_prompt = f"""
-NOTICE ON CAPABILITIES:
-The user is requesting an operation related to '{missing_cap.get('capability')}'.
-If your available tools cannot fulfill this directly, explain:
-1. What capability or tool is missing ({missing_cap.get('suggested_skill_name')}).
-2. Why it is needed: {missing_cap.get('reason')}.
-3. Ask the user for explicit approval: "Would you like me to create and register this new skill plugin?"
+MISSING CAPABILITY DETECTED:
+The user needs '{missing_cap.get('capability')}' which is not covered by existing tools.
+Suggested skill name: {missing_cap.get('suggested_skill_name')}
+Reason: {missing_cap.get('reason')}
+
+IMPORTANT: You MUST use the `create_and_register_skill` tool to build this capability.
+Do NOT pretend to create tools, do NOT narrate fake progress, do NOT say 'creating tool...' without actually calling the tool.
+If you cannot create the tool, honestly tell the user what is missing and what you can do instead.
 """
 
         tools_schema = [t.to_openai_schema() for t in selected_tools]
@@ -342,9 +359,37 @@ COLLABORATIVE OPERATING GUIDELINES:
                 logger.error("Tool execution failed: %s", e)
                 yield {"type": "assistant_chunk", "content": f"I attempted to execute `{response.tool_name}`, but encountered: {str(e)}"}
         else:
+            # Anti-hallucination guard: detect when LLM narrates fake tool execution
+            response_text = response.text or "How else can I assist you?"
+            hallucination_markers = [
+                "creating tool", "building tool", "creating 8", "creating new",
+                "scan in progress", "scanning now", "scan is running",
+                "tool creation in progress", "registering new skill",
+                "malware scan is in progress", "sfc scan is running",
+                "building 8 new", "step 1:", "step 2:", "step 3:",
+            ]
+            lower_response = response_text.lower()
+            is_hallucinating = any(marker in lower_response for marker in hallucination_markers)
+            
+            if is_hallucinating and response.action != "tool_call":
+                # The LLM is narrating fake progress without actually calling any tool
+                logger.warning("Anti-hallucination guard triggered: LLM narrated fake progress without tool call")
+                response_text = (
+                    "I identified actions that need to be performed, but I need to execute them through "
+                    "real system tools rather than just describing them. Let me try using the appropriate "
+                    "tools to actually carry out your request.\n\n"
+                    "**What I can do right now:**\n"
+                    "- Run system commands via `run_system_command`\n"
+                    "- Run malware scans via `run_malware_scan`\n"
+                    "- Run SFC/DISM repairs via `run_sfc_scan` / `run_dism_repair`\n"
+                    "- Check disk health via `check_disk_health`\n"
+                    "- Check for Windows updates via `check_windows_updates`\n\n"
+                    "Please tell me specifically which check you'd like me to run, and I'll execute it for real."
+                )
+            
             yield {
                 "type": "assistant_chunk",
-                "content": response.text or "How else can I assist you?",
+                "content": response_text,
             }
 
     async def _run_job_hunt_pipeline(self, user_prompt: str, rag_context: str) -> AsyncGenerator[Dict[str, Any], None]:
