@@ -330,15 +330,16 @@ class UnifiedLLMProvider:
             )
 
     def _extract_embedded_tool_call(self, text: str) -> Optional[LLMResponse]:
-        """Extract tool calls formatted inside <tool_call> tags or JSON code blocks."""
+        """Extract tool calls formatted inside <tool_call> tags (JSON or Gemma XML) or JSON code blocks."""
         if not text:
             return None
 
         tag_match = re.search(r"<tool_call>(.*?)</tool_call>", text, re.DOTALL)
         if tag_match:
+            raw_content = tag_match.group(1).strip()
+            # 1. Try standard JSON first
             try:
-                raw_json = tag_match.group(1).strip()
-                data = json.loads(raw_json)
+                data = json.loads(raw_content)
                 return LLMResponse(
                     action="tool_call",
                     tool_name=data.get("name", data.get("tool_name")),
@@ -347,6 +348,32 @@ class UnifiedLLMProvider:
                 )
             except Exception:
                 pass
+
+            # 2. Try Gemma / XML tool calling format:
+            # e.g.: <function=search_web> <parameter=query> Naukri job ... <parameter=limit> 10
+            fn_match = re.search(r"<function=([a-zA-Z0-9_\-\.]+)>", raw_content)
+            if fn_match:
+                tool_name = fn_match.group(1)
+                # Extract parameters
+                param_pattern = re.findall(r"<parameter=([a-zA-Z0-9_\-\.]+)>([^<]+)", raw_content)
+                args: Dict[str, Any] = {}
+                for p_name, p_val in param_pattern:
+                    val_str = p_val.strip()
+                    # Try parsing numbers/booleans
+                    if val_str.lower() == "true":
+                        args[p_name] = True
+                    elif val_str.lower() == "false":
+                        args[p_name] = False
+                    elif val_str.isdigit():
+                        args[p_name] = int(val_str)
+                    else:
+                        args[p_name] = val_str
+                return LLMResponse(
+                    action="tool_call",
+                    tool_name=tool_name,
+                    args=args,
+                    text=text,
+                )
 
         json_blocks = re.findall(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
         for block in json_blocks:
