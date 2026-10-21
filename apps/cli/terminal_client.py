@@ -26,6 +26,9 @@ from .ui import (
     print_vector_status,
     print_application_history_table,
     print_help,
+    print_task_notification,
+    print_task_table,
+    print_task_detail,
 )
 from .job_workflow import JobWorkflowRunner
 
@@ -50,6 +53,11 @@ class ThanatosCLI:
         self.show_thinking = True
         self.conversation_history: List[Dict[str, Any]] = []
         self.user_resume_path: Optional[str] = None
+
+        # Register background task notification callback
+        from services.background.task_manager import task_manager
+        self._task_manager = task_manager
+        task_manager.set_notification_callback(print_task_notification)
 
     async def execute_single_command(self, cmd_input: str) -> None:
         """Execute a single non-interactive command or query and exit cleanly."""
@@ -594,12 +602,42 @@ class ThanatosCLI:
                     else:
                         console.print(f"[red]Agent '{target_agent}' not found.[/red]")
 
+        elif cmd == "/tasks":
+            sub_parts = arg.split(maxsplit=1) if arg else []
+            sub_cmd = sub_parts[0].lower() if sub_parts else "list"
+
+            if sub_cmd == "list":
+                print_task_table(self._task_manager.list_tasks())
+            elif sub_cmd == "view":
+                tid = sub_parts[1].strip() if len(sub_parts) > 1 else ""
+                if not tid:
+                    console.print("[red]Usage: /tasks view <task-id>[/red]")
+                else:
+                    task = self._task_manager.get_task(tid)
+                    if task:
+                        print_task_detail(task)
+                    else:
+                        console.print(f"[red]No task found with ID '{tid}'.[/red]")
+            elif sub_cmd == "cancel":
+                tid = sub_parts[1].strip() if len(sub_parts) > 1 else ""
+                if not tid:
+                    console.print("[red]Usage: /tasks cancel <task-id>[/red]")
+                elif self._task_manager.cancel_task(tid):
+                    console.print(f"[bold yellow]⏹ Task '{tid}' cancellation requested.[/bold yellow]")
+                else:
+                    console.print(f"[red]Cannot cancel task '{tid}' (not found or already finished).[/red]")
+            elif sub_cmd == "clear":
+                removed = self._task_manager.clear_completed()
+                console.print(f"[bold green][✓] Cleared {removed} completed/failed task(s).[/bold green]")
+            else:
+                console.print("[red]Usage: /tasks [list|view <id>|cancel <id>|clear][/red]")
+
         else:
             import difflib
             known_cmds = [
                 "/help", "/clear", "/status", "/vector-db", "/docker", "/thinking",
                 "/preview", "/history", "/profile", "/smtp",
-                "/audit", "/audit-web", "/nodes", "/agents", "/exit", "/quit"
+                "/audit", "/audit-web", "/nodes", "/agents", "/tasks", "/exit", "/quit"
             ]
             matches = difflib.get_close_matches(cmd, known_cmds, n=1, cutoff=0.5)
             suggestion = f" Maybe you meant [bold yellow]{matches[0]}[/bold yellow]?" if matches else ""
@@ -741,6 +779,12 @@ class ThanatosCLI:
             elif chunk_type == "thought":
                 if self.show_thinking:
                     print_thought(chunk.get("thought", ""))
+            elif chunk_type == "background_task_started":
+                # Notification callback already fires from the task_manager, nothing extra needed
+                pass
+            elif chunk_type == "tool_result":
+                # Tool execution results are woven into the LLM context; no direct print needed
+                pass
             elif chunk_type == "assistant_chunk":
                 full_response += chunk.get("content", "")
 
