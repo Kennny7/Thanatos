@@ -34,22 +34,26 @@
    - **Zero-Config UDP Discovery**: Automatic subnet beacon scanning on UDP port 47470 with persistent node caching and dynamic Wi-Fi gateway auto-detection.
    - **Remote Node Control & Model Offloading**: Remotely dispatch shell commands, pull models on remote Ollama instances, and trigger manifest-based delta file sync across the LAN.
 2. **Enterprise Multi-Engine Database Architecture**:
-   - Production-grade hybrid persistence stack: **PostgreSQL 16** (relational & career deduplication), **MongoDB 7.0** (unstructured transcripts & dossiers), **Milvus 2.4.13 Standalone** (high-dimensional vector search), and **Neo4j 5.20** (knowledge graph & social relationships).
+   - Production-grade hybrid persistence stack: **PostgreSQL 16** (relational & transactional state), **MongoDB 7.0** (unstructured transcripts & dossiers), **Milvus 2.4.13 Standalone** (high-dimensional vector search), and **Neo4j 5.20** (knowledge graph & social relationships).
    - Automated Docker supervisor ([`services/database/db_orchestrator.py`](./services/database/db_orchestrator.py)) provides on-demand container startup, health checks, RAM guardrails, and backup recovery.
-3. **Specialized Multi-Agent Personas & Isolated Memory**:
+3. **Specialized Multi-Agent Personas & Growth Architecture**:
    - Distinct agent personas with segregated memory partitions and dedicated profiles in `config/agents/`:
-     - **Site Engineer Agent (Velma Sinclair)**: Real-time OS telemetry, hardware resource allocation, error triage, and automated self-repair.
-     - **Secretary & Wingman Agent (Amelia Sterling)**: Daily agenda management, active workout/jogging routines, and personalized taste preference tracking.
-     - **Butler Agent (Alfred Vance)**: Tracks character dossiers, evaluates interpersonal social dynamics, and evaluates long-term strategic alignment.
-4. **Hands-Free Call Mode & Cross-Platform Tactical UI**:
+     - **Site Engineer Agent**: Real-time OS telemetry, hardware resource allocation, error triage, and automated self-repair.
+     - **Secretary & Wingman Agent**: Daily agenda management, active workout/jogging routines, and personalized taste preference tracking.
+     - **Butler Agent**: Tracks character dossiers, evaluates interpersonal social dynamics, and evaluates long-term strategic alignment.
+   - **Growth & Inter-Agent Communication**: Direct communication bus (`services/agents/agent_bus.py`) enabling agents to converse, collaborate, and retain continuous behavioral learnings from user guidance without repetitive essay-style responses.
+4. **Specialized Subagents & Direct Project Workspace Access**:
+   - Dedicated growth subagents (`Developer`, `Crawler`, `Doc Writer`) for code synthesis, live web querying, and technical documentation.
+   - **Direct Workspace Management**: Provide any project directory path and agents access it directly with automatic rollback backups (`services/agents/project_manager.py`), undoable via `/undo` without requiring manual MCP configuration.
+5. **Hands-Free Call Mode & Cross-Platform Tactical UI**:
    - High-contrast minimal black terminal mode and hands-free **Call Mode** across Windows and Android.
    - Real-time acoustic frequency spectrum visualizer reacting directly to microphone input decibels rather than synthetic waveforms.
-5. **Targeted SLM & Model Selection Agent**:
+6. **Targeted SLM & Model Selection Agent**:
    - The **primary orchestrator** benefits from larger, more capable models (32B–70B+ or reasoning-class models like `deepseek-r1:32b`, `qwen2.5:72b`, or cloud APIs like GPT-4o / Claude).
    - Specialized sub-agents can be assigned lightweight Small Language Models (7B–14B) like `qwen2.5:7b/14b`, `deepseek-r1:7b/14b`, or `phi4:14b` to keep latency low on constrained hardware.
    - Automatically detects missing models and triggers automated Ollama pulls on local or secondary mesh nodes.
-6. **External Action Execution & Autonomous Tool Creation**:
-   - Real-time command-line dispatch, desktop automation, port/service auditing, and live web scraping with safety gates and SHA-256 Merkle audit logs.
+7. **External Action Execution & Autonomous Tool Creation**:
+   - Real-time command-line dispatch, desktop automation, and live web scraping with safety gates and SHA-256 Merkle audit logs.
    - Dynamic tool synthesis allowing agents to generate and execute custom tools on the fly.
 
 ---
@@ -70,11 +74,11 @@ Explore the comprehensive technical documentation suite in the [`docs/`](./docs)
 | **Database Infrastructure** | Enterprise 4-engine database stack (PostgreSQL, MongoDB, Milvus, Neo4j) with Docker supervisor & recovery. | [![Read DB Spec](https://img.shields.io/badge/Open-DB%20Spec-009688?style=flat-square)](./docs/database_infrastructure.md) |
 | **Speech Intelligence & AEC** | Voice pipeline, acoustic echo cancellation, and speaker diarization details. | [![Read Voice Spec](https://img.shields.io/badge/Open-Voice%20Spec-3776AB?style=flat-square)](./docs/speech_intelligence.md) |
 | **Voice Mode & Speaker Verification** | Separate Voice Mode, ECG frequency line, VAD, multi-speaker authorization, and optional camera lip-sync. | [![Read Voice Mode Guide](https://img.shields.io/badge/Open-Voice%20Mode-00E5FF?style=flat-square)](./docs/voice_mode_speaker_verification.md) |
-| **Memory & RAG Subsystem** | ChromaDB & Milvus vector store, semantic embeddings, and career profile matching. | [![Read RAG Guide](https://img.shields.io/badge/Open-RAG%20Guide-4B8BBE?style=flat-square)](./docs/memory_and_rag.md) |
+| **Memory & RAG Subsystem** | ChromaDB & Milvus vector store, semantic embeddings, and context matching. | [![Read RAG Guide](https://img.shields.io/badge/Open-RAG%20Guide-4B8BBE?style=flat-square)](./docs/memory_and_rag.md) |
 | **Vector Database Setup Guide** | Detailed setup for embedded ChromaDB, Docker ChromaDB, Qdrant, and Ollama embedding models. | [![Read Setup Guide](https://img.shields.io/badge/Open-Vector%20DB%20Guide-4B8BBE?style=flat-square)](./docs/vector_database_setup.md) |
-| **Multi-Agent Personas & Architecture** | Modular agent roster (`config/agents/`), lazy loading, isolated partitions, and Velma/Amelia/Alfred roles. | [![Read Guide](https://img.shields.io/badge/Open-Agent%20Guide-6F42C1?style=flat-square)](./docs/agents_architecture.md) |
+| **Multi-Agent Personas & Architecture** | Modular agent roster (`config/agents/`), lazy loading, isolated partitions, and growth coordination. | [![Read Guide](https://img.shields.io/badge/Open-Agent%20Guide-6F42C1?style=flat-square)](./docs/agents_architecture.md) |
 | **Security & Isolation Model** | Sandbox boundaries, OS safety confirmation gates, and Merkle audit logs. | [![Read Model](https://img.shields.io/badge/Open-Security%20Model-E74C3C?style=flat-square)](./docs/security_model.md) |
-| **Security & Network Intelligence** | Authentication gates, network scanning capabilities, OSINT pipelines, and defence mechanisms. | [![Read Security Guide](https://img.shields.io/badge/Open-Network%20Security-E74C3C?style=flat-square)](./docs/security_and_network.md) |
+| **Security & Network Intelligence** | Authentication gates, network scanning capabilities, and defense mechanisms. | [![Read Security Guide](https://img.shields.io/badge/Open-Network%20Security-E74C3C?style=flat-square)](./docs/security_and_network.md) |
 | **Model Context Protocol (MCP)** | Exposing Thanatos OS tools to Claude Desktop, Cursor IDE, and MCP hosts. | [![Read MCP Guide](https://img.shields.io/badge/Open-MCP%20Guide-555555?style=flat-square)](./docs/mcp_server.md) |
 | **Future Vision: CCTV & Biometrics** | Architectural blueprint for RTSP video stream ingest, YOLO object tracking, and InsightFace recognition. | [![Read Roadmap](https://img.shields.io/badge/Open-Future%20Roadmap-007ACC?style=flat-square)](./docs/future_vision_roadmap.md) |
 | **Contributor Guide** | Coding conventions, PR guidelines, and running the test suite. | [![Read Guide](https://img.shields.io/badge/Open-Contributing-24292E?style=flat-square)](./docs/contributing.md) |
@@ -113,6 +117,8 @@ flowchart TB
         UnifiedProvider["Unified LLM Brain Adapter<br/>Ollama & Cloud Models"]
         SelfDiagnosis["Proactive Self-Diagnosis<br/>Connectivity & Resource Monitoring"]
         SkillRegistry["Singleton Skill Registry"]
+        AgentBus["Inter-Agent Communication Bus & Shared Growth Memory"]
+        ProjectWorkspaceMgr["Project Workspace Manager (Direct Access & Rollback)"]
     end
 
     subgraph ModelEngine ["4. Dynamic Model & Hardware Intelligence"]
@@ -123,12 +129,11 @@ flowchart TB
         ModelRecommendation["Task-Aware Model Recommendation"]
     end
 
-    subgraph SubAgents ["5. Domain Agent Skills"]
-        JobHunter["Job Hunter Agent"]
-        ResumeTailor["Resume Tailor Agent (RAG)"]
-        JobApplicator["Job Applicator Agent"]
-        NovelAgent["Novel Translation Agent"]
-        SelfImprovement["Self-Improvement Agent"]
+    subgraph SubAgents ["5. Specialized Agent & Subagent Skills"]
+        DeveloperAgent["Developer Subagent (Code, Refactoring & Tests)"]
+        CrawlerAgent["Web Crawler Subagent (Live Browsing & Research)"]
+        DocWriterAgent["Doc Writer Subagent (Markdown & Docs)"]
+        SelfImprovement["Self-Improvement Skill"]
         SandboxVerifier["Sandbox & Execution Verifier"]
     end
 
@@ -173,6 +178,8 @@ flowchart TB
     Coordinator --> UnifiedProvider
     Coordinator --> SkillRegistry
     Coordinator --> SelfDiagnosis
+    Coordinator --> AgentBus
+    Coordinator --> ProjectWorkspaceMgr
 
     %% Model Intelligence
     ConfigRoute --> OllamaManager
@@ -185,10 +192,9 @@ flowchart TB
     ModelDetection --> UnifiedProvider
 
     %% Agent Skills
-    SkillRegistry --> JobHunter
-    SkillRegistry --> ResumeTailor
-    SkillRegistry --> JobApplicator
-    SkillRegistry --> NovelAgent
+    SkillRegistry --> DeveloperAgent
+    SkillRegistry --> CrawlerAgent
+    SkillRegistry --> DocWriterAgent
     SkillRegistry --> SelfImprovement
     SelfImprovement --> SandboxVerifier
 
@@ -199,7 +205,6 @@ flowchart TB
     UserProfile --> RAGMemory
     WorkflowMemory --> RAGMemory
     Coordinator <--> RAGMemory
-    ResumeTailor <--> RAGMemory
 
     %% Voice
     SpeechRoute --> SpeechService
@@ -263,15 +268,15 @@ State / Data Ingestion ──► DatabaseOrchestrator (checks container health, 
 
 ## Sub-Agent Skills & Plugin Ecosystem
 
-Thanatos features an extensible, modular architecture organized into clean categories (`system`, `memory`, `mesh`, `automation`, `creative`, `career`). Any agent tool or skill can be synthesized dynamically or plugged in by implementing `BaseSkill` and registering with `SkillRegistry`:
+Thanatos features an extensible, modular architecture organized into clean categories (`system`, `memory`, `mesh`, `automation`). Any agent tool or skill can be synthesized dynamically or plugged in by implementing `BaseSkill` and registering with `SkillRegistry`:
 
 | Category | Primary Skills | Capabilities & Functional Scope |
 | :--- | :--- | :--- |
-| **System & Security** | `security_auditor`, `self_improvement` | Port auditing, process sandboxing, code self-inspection, automated test runs. |
+| **System & Engineering** | `system_execution`, `site_operations`, `self_improvement` | OS metrics, process sandboxing, code self-inspection, automated test runs. |
 | **Network & Mesh** | `mesh_worker`, `network_discovery` | Subnet node broadcasting, remote command dispatch, distributed inference pooling. |
 | **Web & Intelligence**| `web_search`, `os_automation` | Live DuckDuckGo queries, Google News RSS, shell dispatch, desktop automation. |
 | **Specialized Personas**| `butler_persona`, `secretary_persona` | Contact dossiers, interpersonal social dynamics, daily agendas, taste preference learning. |
-| **Modular Domain Tasks**| `novel_agent`, `job_hunter`, `resume_tailor` | *Sample domain skills*: Chapter outline polishing, automated role discovery, and resume tailoring. Countless similar domain skills can be registered seamlessly. |
+| **Developer & Subagents**| `developer_subagent`, `crawler_subagent`, `doc_writer_subagent` | Direct codebase inspection, live web crawling, and automated markdown documentation generation. |
 
 *To build a custom skill or domain agent, refer to the [Plugin Development Guide](./docs/plugin_dev_guide.md).*
 
@@ -309,12 +314,12 @@ Thanatos features a dedicated **Voice Mode** alongside standard Text Mode, desig
 > [!IMPORTANT]
 > **Docker Daemon & Port Verification**:
 > Before starting services or database dependencies, launch Docker Desktop.
-> Velma (Site Reliability Agent) scans your system ports on launch to prevent port collisions:
+> The Site Reliability Agent scans your system ports on launch to prevent port collisions:
 > - **PostgreSQL**: `5436:5432` (avoids conflicts with host PostgreSQL on default port 5432)
 > - **MongoDB**: `27018:27017` (avoids conflicts with default port 27017)
 > - **Milvus Standalone**: `19530:19530`
 > - **Neo4j**: `7474:7474` (HTTP) / `7687:7687` (Bolt)
-> All database volumes (`thanatos_postgres_data`, `thanatos_mongo_data`, `thanatos_milvus_data`, `thanatos_neo4j_data`) are mounted to Docker volumes so your data, jobs, and vector embeddings are permanently preserved across restarts.
+> All database volumes (`thanatos_postgres_data`, `thanatos_mongo_data`, `thanatos_milvus_data`, `thanatos_neo4j_data`) are mounted to Docker volumes so your data, configurations, and vector embeddings are permanently preserved across restarts.
 
 ### 2. Backend & Enterprise Databases Setup
 ```bash
@@ -340,6 +345,7 @@ uv run uvicorn apps.api_server.main:app --host 0.0.0.0 --port 8000 --reload
 
 > **Why `uv sync` instead of `pip install`?**  
 > `uv.lock` is committed to the repo and pins **exact versions** for all 100+ packages including transitive deps, so every developer and CI run gets an identical environment. See [Dependency Management](./docs/dependency_management.md) for details.
+
 ### 3. Environment & Variable Configuration
 
 Copy `.env.example` to `.env` in the root directory to customize configuration settings:
@@ -452,7 +458,7 @@ Thanatos runs on Android devices both as a portable mobile UI and as a wireless 
      - Connect your Android phone to your PC via USB cable in **File Transfer (MTP)** mode.
      - Copy `app-release.apk` to your phone's `Download/` or internal storage folder.
      - Open the Files / File Manager app on your Android phone, tap `app-release.apk`, and tap **Install** (allow installation from unknown sources if prompted).
-     - Alternatively, send the `.apk` file to your phone via local Wi-Fi sharing (e.g. LocalSend, KDE Connect, or Python HTTP server: `python -m http.server 8080` in the APK directory).
+     - Alternatively, send the `.apk` file to your phone via local Wi-Fi sharing.
 
 4. **Connecting Android to Thanatos Backend**:
    - Ensure your phone is connected to the same Wi-Fi network as the Thanatos host machine.
@@ -460,7 +466,7 @@ Thanatos runs on Android devices both as a portable mobile UI and as a wireless 
 
 ### 6. Running the Test Suite
 ```bash
-# Run all 48 unit and integration tests
+# Run all unit and integration tests
 pytest tests -v
 ```
 
@@ -481,6 +487,7 @@ Thanatos
 |   |   `-- lib/ui/               # Chat screen, voice visualizer, settings & tracker
 |   `-- mcp_server/               # Model Context Protocol (MCP) server for Claude / Cursor
 |-- services/
+|   |-- agents/                   # Agent roster, inter-agent bus & project workspace manager
 |   |-- llm_brain/                # Unified LLM provider & multi-agent coordinator
 |   |-- local_llm/                # Ollama client with dynamic model discovery
 |   |-- memory/                   # VectorStore (ChromaDB), MemoryManager & UserProfile
@@ -488,11 +495,11 @@ Thanatos
 |   `-- os_automation/            # System control & OS interaction
 |-- plugins/
 |   |-- base/                     # BaseSkill interface & SkillRegistry
-|   `-- system_skills/            # Domain skills (Job hunter, resume tailor, applicator, novel, self-improvement)
+|   `-- system_skills/            # Domain skills (System execution, site operations, self-improvement, web search)
 |-- sandbox/                      # Subprocess limiter & Docker container isolation
 |-- audit/                        # Tamper-evident Merkle hash audit logger
 |-- docs/                         # Comprehensive technical documentation suite
-`-- tests/                        # Full test suite (48 tests passing)
+`-- tests/                        # Full test suite
 ```
 
 ---
