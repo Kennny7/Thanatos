@@ -1,5 +1,3 @@
-# Thanatos/plugins/base/registry.py
-
 """Singleton skill registry for Thanatos with lazy skill resolution."""
 
 import logging
@@ -67,7 +65,6 @@ class SkillRegistry:
 
     def get_all_tools(self) -> List[ToolDefinition]:
         """Aggregate tool definitions from every registered and lazy skill."""
-        # Ensure lazy skills are instantiated so their schemas are known
         for name in list(self._lazy_factories.keys()):
             self._ensure_skill(name)
 
@@ -78,7 +75,6 @@ class SkillRegistry:
 
     async def dispatch(self, tool_name: str, params: dict) -> ToolResult:
         """Find the skill that owns the given tool and invoke its execution."""
-        # Ensure lazy skills are instantiated so their tools can be dispatched
         for name in list(self._lazy_factories.keys()):
             self._ensure_skill(name)
 
@@ -97,12 +93,11 @@ class SkillRegistry:
         """
         Inspects existing tool capabilities against a task.
         If the task asks for an action/tool that does not exist in any registered skill,
-        dynamically formulates a proposed capability and tool specification instead of hardcoding.
+        dynamically formulates a proposed capability.
         """
         all_tools = self.get_all_tools()
         lower_task = task_description.lower().strip()
 
-        # Conversational, knowledge, philosophical, or greetings NEVER need tool creation
         conversational_markers = [
             "quote", "saying", "proverb", "who is", "what is", "why", "how", "tell me",
             "explain", "translate", "write a", "poem", "story", "joke", "hello", "hi",
@@ -111,21 +106,16 @@ class SkillRegistry:
         if any(lower_task.startswith(m) or f" {m} " in f" {lower_task} " for m in conversational_markers):
             return None
 
-        # Slash commands or escape commands are shell actions, not missing plugin requests
         if task_description.startswith(("/", "\\")):
             return None
 
-        # Check existing tool coverage
         for t in all_tools:
-            # Check if key tokens in the tool name appear in the task
             tokens = [tok for tok in t.name.split("_") if len(tok) > 3]
             if tokens and any(tok in lower_task for tok in tokens):
                 return None
 
-        # Check for action words indicating an intent to execute or integrate something new
         action_triggers = ["create feature", "build tool", "add support for", "integrate", "automate", "missing feature", "new capability"]
         if any(trig in lower_task for trig in action_triggers):
-            # Derive capability dynamically from the user's description
             import re
             clean_name = re.sub(r"[^a-zA-Z0-9\s]", "", lower_task)
             words = [w for w in clean_name.split() if w not in ["can", "you", "please", "i", "want", "to", "a", "the", "create", "build", "tool", "feature", "for", "in", "my", "me"]]
@@ -145,18 +135,13 @@ registry = SkillRegistry()
 
 
 def init_default_skills() -> None:
-    """Auto-register default domain skills using lazy factories for zero startup delay."""
+    """Auto-register core domain skills using lazy factories."""
     registry.register_lazy("system_execution", lambda: __import__("plugins.system_skills.system_execution.system_execution_skill", fromlist=["SystemExecutionSkill"]).SystemExecutionSkill())
     registry.register_lazy("site_operations", lambda: __import__("plugins.system_skills.site_operations.site_operations_skill", fromlist=["SiteOperationsSkill"]).SiteOperationsSkill())
     registry.register_lazy("web_search", lambda: __import__("plugins.system_skills.web_search.web_search_skill", fromlist=["WebSearchSkill"]).WebSearchSkill())
-    registry.register_lazy("security_auditor", lambda: __import__("plugins.system_skills.security_auditor.security_auditor_skill", fromlist=["SecurityAuditorSkill"]).SecurityAuditorSkill())
     registry.register_lazy("self_improvement", lambda: __import__("plugins.system_skills.self_improvement.self_improvement_skill", fromlist=["SelfImprovementSkill"]).SelfImprovementSkill())
     registry.register_lazy("novel_agent", lambda: __import__("plugins.system_skills.novel_agent.novel_skill", fromlist=["NovelAgentSkill"]).NovelAgentSkill())
-    registry.register_lazy("job_hunter", lambda: __import__("plugins.system_skills.job_hunter.job_hunter_skill", fromlist=["JobHunterSkill"]).JobHunterSkill())
-    registry.register_lazy("resume_tailor", lambda: __import__("plugins.system_skills.resume_tailor.resume_tailor_skill", fromlist=["ResumeTailorSkill"]).ResumeTailorSkill())
-    registry.register_lazy("job_applicator", lambda: __import__("plugins.system_skills.job_applicator.job_applicator_skill", fromlist=["JobApplicatorSkill"]).JobApplicatorSkill())
     registry.register_lazy("dynamic_skill_factory", lambda: __import__("plugins.system_skills.dynamic_skill_factory.dynamic_skill_factory", fromlist=["DynamicSkillFactorySkill"]).DynamicSkillFactorySkill())
 
 
 init_default_skills()
-
