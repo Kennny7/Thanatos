@@ -1,4 +1,8 @@
 # Thanatos/apps/cli/ui.py
+"""
+Rich Terminal Interface for Thanatos Personal Agent Manager.
+Clean formatting, natural chat feel, and no emojis.
+"""
 
 import os
 import sys
@@ -8,9 +12,8 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.markdown import Markdown
 from rich.text import Text
-from rich.box import ROUNDED, DOUBLE_EDGE
+from rich.box import ROUNDED
 
-# Ensure stdout/stderr use UTF-8 encoding across Windows/Linux terminals
 if sys.platform == "win32":
     try:
         sys.stdout.reconfigure(encoding="utf-8")
@@ -22,252 +25,93 @@ console = Console(force_terminal=True, highlight=False)
 
 
 def print_banner(app_name: str = "Thanatos AI", model_name: str = "Unknown", provider: str = "Unknown") -> None:
-    """Print Linux-style ASCII banner with active system specifications."""
-    banner_text = Text()
-    banner_text.append(" ████████╗██╗  ██╗ █████╗ ███╗   ██╗ █████╗ ████████╗ ██████╗ ███████╗\n", style="bold cyan")
-    banner_text.append(" ╚══██╔══╝██║  ██║██╔══██╗████╗  ██║██╔══██╗╚══██╔══╝██╔═══██╗██╔════╝\n", style="bold cyan")
-    banner_text.append("    ██║   ███████║███████║██╔██╗ ██║███████║   ██║   ██║   ██║███████╗\n", style="bold blue")
-    banner_text.append("    ██║   ██╔══██║██╔══██║██║╚██╗██║██╔══██║   ██║   ██║   ██║╚════██║\n", style="bold blue")
-    banner_text.append("    ██║   ██║  ██║██║  ██║██║ ╚████║██║  ██║   ██║   ╚██████╔╝███████║\n", style="bold magenta")
-    banner_text.append("    ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝   ╚═╝    ╚═════╝ ╚══════╝\n", style="bold magenta")
-    banner_text.append("  [ Autonomous Multi-Agent Terminal Client & AI Developer Operating System ]", style="italic white")
-
-    meta_info = f"[dim]Provider:[/dim] [bold green]{provider}[/bold green]  │  [dim]Model:[/dim] [bold cyan]{model_name}[/bold cyan]  │  [dim]Terminal:[/dim] [bold yellow]Interactive Shell[/bold yellow]"
-    console.print(banner_text)
+    """Print clean terminal banner without emojis."""
+    banner_text = (
+        "============================================================\n"
+        f"   {app_name.upper()} - AUTONOMOUS AGENT ENGINE\n"
+        "   Distributed LAN Mesh | Multi-Agent Growth | Docker Supervisor\n"
+        "============================================================"
+    )
+    meta_info = f"Provider: [bold green]{provider}[/bold green] | Model: [bold cyan]{model_name}[/bold cyan] | Mode: [bold yellow]Interactive Agent Terminal[/bold yellow]"
+    console.print(Panel(banner_text, box=ROUNDED, border_style="cyan"))
     console.print(Panel(meta_info, box=ROUNDED, border_style="dim blue", padding=(0, 1)))
 
 
 def print_thought(thought_text: str) -> None:
-    """Render LLM reasoning / thinking step in an isolated terminal panel."""
+    """Render LLM reasoning dynamically if non-empty."""
     if not thought_text or not thought_text.strip():
         return
-    console.print()
-    thought_panel = Panel(
-        Markdown(thought_text.strip()),
-        title="[bold magenta]• REASONING & PLANNING[/bold magenta]",
+    console.print(Panel(
+        thought_text.strip(),
+        title="[bold magenta]REASONING[/bold magenta]",
         title_align="left",
         border_style="dim magenta",
         box=ROUNDED,
         padding=(0, 1),
-    )
-    console.print(thought_panel)
+    ))
 
 
 def print_agent_breadcrumb(agent: str, status: str, progress: Optional[float] = None) -> None:
-    """Print live sub-agent status indicator."""
-    pct_text = f" [{int(progress * 100)}%]" if progress is not None else ""
-    console.print(f"[bold cyan]❯ [{agent}][/bold cyan] [dim]{status}[/dim]{pct_text}")
+    """Print clean agent status indicator without emojis."""
+    pct = f" [{int(progress * 100)}%]" if progress is not None else ""
+    console.print(f"[bold cyan][{agent}][/bold cyan] [dim]{status}[/dim]{pct}")
 
 
-def print_assistant_response(text: str) -> None:
-    """Render finalized assistant markdown response."""
+def print_assistant_response(text: str, agent_name: str = "Thanatos") -> None:
+    """Render concise chat-style response."""
     console.print()
-    console.print(Panel(Markdown(text.strip()), title="[bold cyan]• THANATOS[/bold cyan]", title_align="left", border_style="cyan", box=ROUNDED, padding=(1, 2)))
+    console.print(Panel(
+        text.strip(),
+        title=f"[bold cyan]{agent_name.upper()}[/bold cyan]",
+        title_align="left",
+        border_style="cyan",
+        box=ROUNDED,
+        padding=(0, 1),
+    ))
     console.print()
-
-
-def print_vector_status(diag: Dict[str, Any]) -> None:
-    """Render diagnostic table of vector store health."""
-    table = Table(title="• Vector Database Self-Diagnostics", box=ROUNDED, border_style="blue")
-    table.add_column("Property", style="bold white")
-    table.add_column("Value", style="green")
-
-    table.add_row("Backend", str(diag.get("backend", "Unknown")))
-    table.add_row("Status", str(diag.get("status", "Unknown")).upper())
-    table.add_row("Collection", str(diag.get("collection", "Unknown")))
-    table.add_row("Total Indexed Documents", str(diag.get("doc_count", 0)))
-    table.add_row("Storage Path", str(diag.get("persist_directory", "Unknown")))
-    table.add_row("Collection Created Fresh?", "Yes (Newly Initialized)" if diag.get("is_new") else "No (Pre-existing Indexed)")
-
-    console.print(table)
-
-
-def print_application_history_table(applications: List[Dict[str, Any]]) -> None:
-    """Render a table of past job applications."""
-    if not applications:
-        console.print("[dim yellow]No applications logged yet.[/dim yellow]")
-        return
-
-    table = Table(title="• Job Applications & Outreach Audit Ledger", box=ROUNDED, border_style="green")
-    table.add_column("App ID", style="dim white")
-    table.add_column("Company", style="bold white")
-    table.add_column("Role", style="cyan")
-    table.add_column("Recipient Email", style="yellow")
-    table.add_column("Status", style="green")
-    table.add_column("Date", style="dim white")
-
-    for app in applications:
-        table.add_row(
-            app.get("application_id", "N/A"),
-            app.get("company", "N/A"),
-            app.get("job_title", "N/A"),
-            app.get("recipient_email", "N/A"),
-            app.get("status", "Staged"),
-            app.get("timestamp", "N/A"),
-        )
-
-    console.print(table)
 
 
 def print_help() -> None:
-    """Display terminal CLI command help."""
-    table = Table(title="• Thanatos Terminal Commands", box=ROUNDED, border_style="cyan")
+    """Print available commands."""
+    table = Table(title="Thanatos Command Deck", box=ROUNDED, border_style="cyan")
     table.add_column("Command", style="bold yellow")
     table.add_column("Description", style="white")
 
-    table.add_row("/help", "Show this command reference list")
+    table.add_row("/status", "Display LLM provider, active model, and system status")
+    table.add_row("/agents", "List agent personas, private DMs (/agents dm), and switch persona")
+    table.add_row("/bus", "View inter-agent communication messages and growth logs")
+    table.add_row("/docker", "Manage enterprise database containers (/docker start|status|stop)")
+    table.add_row("/nodes", "Distributed LAN mesh networking (/nodes list|scan|ping|add|exec|pull|sync)")
+    table.add_row("/undo", "Revert last project file change made by Developer Subagent")
+    table.add_row("/tasks", "View background running tasks (/tasks list|view|cancel|clear)")
+    table.add_row("/thinking", "Toggle reasoning thinking output on/off (/thinking on|off)")
+    table.add_row("/preview", "Toggle interactive draft review gate on/off (/preview on|off)")
+    table.add_row("/vector-db", "Run vector database diagnostics")
     table.add_row("/clear", "Clear terminal screen")
-    table.add_row("/status", "Display active LLM model, provider, and settings")
-    table.add_row("/docker [status|start|stop]", "Manage database containers and Docker Desktop")
-    table.add_row("/vector-db", "Verify and inspect vector database health & collections")
-    table.add_row("/thinking on|off", "Toggle visibility of model reasoning / thought blocks")
-    table.add_row("/preview on|off", "Toggle interactive draft review gate")
-    table.add_row("/agents [dm|set|rename]", "List personas (Velma, Amelia, Alfred), send private DMs, or switch active agent")
-    table.add_row("/profile [folder]", "Inspect or set path to profile directory & sync files")
-    table.add_row("/smtp", "Test or configure SMTP email transmission credentials")
-    table.add_row("/audit [target]", "Run defensive port and service audit on authorized target")
-    table.add_row("/audit-web [url]", "Inspect defensive HTTP security headers and TLS status")
-    table.add_row("/nodes", "View connected distributed mesh devices / worker nodes")
-    table.add_row("/tasks [list|view|cancel|clear]", "View and manage background tasks (long-running operations)")
-    table.add_row("/exit, /quit", "Exit the Thanatos terminal client")
-
+    table.add_row("/exit", "Exit Thanatos CLI")
     console.print(table)
 
 
-def print_clarification_box(question: str) -> None:
-    """Print an interactive inquiry box asking the user for clarification."""
-    console.print()
-    console.print(Panel(
-        f"[bold yellow][?] {question}[/bold yellow]\n\n[dim]Action paused for accuracy. Please provide your answer or instruction below:[/dim]",
-        title="[bold yellow]• Clarification Required[/bold yellow]",
-        box=ROUNDED,
-        border_style="yellow",
-        padding=(0, 1),
-    ))
+def print_vector_status(diag: Dict[str, Any]) -> None:
+    """Render vector store status."""
+    backend = diag.get("backend", "Unknown")
+    docs = diag.get("doc_count", 0)
+    console.print(f"[dim blue]• Vector Store: {backend} ({docs} memories indexed)[/dim blue]")
 
 
-# ── Background Task Notification & Display ────────────────────────────────
-
-def print_task_notification(task, event_type: str) -> None:
-    """
-    Print a compact notification above the prompt when a background task changes state.
-    Called by the BackgroundTaskManager's notification callback.
-    """
-    task_id = task.id
-    name = task.name
-    elapsed = task.elapsed_display
-
-    if event_type == "started":
-        console.print(
-            f"\n[bold green]▶ Background Task Started[/bold green] "
-            f"[dim]({task_id})[/dim] [white]{name}[/white]"
-        )
-        console.print(
-            f"  [dim]You can keep using the terminal. "
-            f"Type [bold white]/tasks[/bold white] to check progress.[/dim]"
-        )
-
-    elif event_type == "completed":
-        console.print()
-        # Build a result panel
-        result_preview = task.result_text or "(No output)"
-        # Truncate very long output for the notification
-        if len(result_preview) > 600:
-            result_preview = result_preview[:600] + f"\n\n[dim]... truncated. Use /tasks view {task_id} for full output.[/dim]"
-
-        console.print(Panel(
-            Markdown(result_preview) if not result_preview.startswith("{") else Text(result_preview),
-            title=f"[bold green]✓ Task Complete: {name}[/bold green] [dim]({elapsed})[/dim]",
-            title_align="left",
-            border_style="green",
-            box=ROUNDED,
-            padding=(0, 1),
-        ))
-
-    elif event_type == "failed":
-        error_msg = task.error or "Unknown error"
-        console.print(
-            f"\n[bold red]✗ Background Task Failed[/bold red] "
-            f"[dim]({task_id}, {elapsed})[/dim] [white]{name}[/white]"
-        )
-        console.print(f"  [red]{error_msg}[/red]")
+def print_task_notification(title: str, message: str) -> None:
+    console.print(f"[dim yellow][Task Alert][/dim yellow] [bold white]{title}:[/bold white] [dim]{message}[/dim]")
 
 
-def print_task_table(tasks) -> None:
-    """Render a table of background tasks for the /tasks command."""
-    if not tasks:
-        console.print("[dim yellow]No background tasks. Long-running operations will appear here automatically.[/dim yellow]")
-        return
-
-    table = Table(
-        title="• Background Tasks",
-        box=ROUNDED,
-        border_style="cyan",
-    )
-    table.add_column("ID", style="dim white", width=6)
-    table.add_column("Tool", style="bold yellow", width=22)
-    table.add_column("Status", width=12)
-    table.add_column("Elapsed", style="dim white", width=10)
-    table.add_column("Details", style="white", ratio=1)
-
+def print_task_table(tasks: list) -> None:
+    table = Table(title="• Background Tasks", box=ROUNDED, border_style="blue")
+    table.add_column("ID", style="cyan")
+    table.add_column("Task", style="white")
+    table.add_column("Status", style="green")
     for t in tasks:
-        if t.status.value == "running":
-            status_str = "[bold cyan]● RUNNING[/bold cyan]"
-            detail = t.progress_message or "Working..."
-        elif t.status.value == "completed":
-            status_str = "[bold green]✓ DONE[/bold green]"
-            detail = (t.result_text[:80] + "...") if len(t.result_text) > 80 else (t.result_text or "Completed")
-        elif t.status.value == "failed":
-            status_str = "[bold red]✗ FAILED[/bold red]"
-            detail = t.error[:80] if t.error else "Unknown error"
-        else:
-            status_str = "[dim]○ PENDING[/dim]"
-            detail = "Queued"
-
-        table.add_row(
-            t.id,
-            t.tool_name,
-            status_str,
-            t.elapsed_display,
-            detail,
-        )
-
+        table.add_row(str(t.get("id")), str(t.get("description")), str(t.get("status")))
     console.print(table)
 
 
-def print_task_detail(task) -> None:
-    """Render full detail view of a single background task."""
-    status_colors = {
-        "running": "cyan",
-        "completed": "green",
-        "failed": "red",
-        "pending": "dim",
-    }
-    color = status_colors.get(task.status.value, "white")
-
-    info = (
-        f"**Task ID:** `{task.id}`\n"
-        f"**Tool:** `{task.tool_name}`\n"
-        f"**Status:** {task.status.value.upper()}\n"
-        f"**Elapsed:** {task.elapsed_display}\n"
-    )
-
-    if task.args:
-        import json
-        args_str = json.dumps(task.args, indent=2)
-        info += f"\n**Arguments:**\n```json\n{args_str}\n```\n"
-
-    if task.result_text:
-        info += f"\n**Output:**\n```\n{task.result_text}\n```\n"
-
-    if task.error:
-        info += f"\n**Error:**\n```\n{task.error}\n```\n"
-
-    console.print(Panel(
-        Markdown(info),
-        title=f"[bold {color}]• Task Detail: {task.name}[/bold {color}]",
-        title_align="left",
-        border_style=color,
-        box=ROUNDED,
-        padding=(1, 2),
-    ))
+def print_task_detail(task_data: dict) -> None:
+    console.print(Panel(str(task_data), title="Task Detail", box=ROUNDED, border_style="dim blue"))
