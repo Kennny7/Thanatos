@@ -91,7 +91,12 @@ async def run_agent_loop(websocket: WebSocket, session_manager: SessionManager) 
                 elif chunk_type == "thought":
                     await websocket.send_json(chunk)
                 else:
-                    await websocket.send_json(chunk)
+                    payload = dict(chunk)
+                    if "box" in payload:
+                        payload["box"] = str(payload["box"])
+                    if hasattr(payload.get("plan"), "model_dump"):
+                        payload["plan"] = payload["plan"].model_dump()
+                    await websocket.send_json(payload)
 
             if full_assistant_response:
                 session_manager.remember_assistant_output(full_assistant_response)
