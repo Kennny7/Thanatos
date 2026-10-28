@@ -89,6 +89,171 @@ class UnifiedLLMProvider:
             system_prompt=system_prompt,
         )
 
+    async def generate_stream(
+        self,
+        prompt: Optional[str] = None,
+        history: Optional[List[Dict[str, Any]]] = None,
+        system_prompt: Optional[str] = None,
+        tools_schema: Optional[List[Dict[str, Any]]] = None,
+    ):
+        """
+        Real-time token streaming generator for near-zero TTFT latency (<200ms).
+        Yields tokens and thoughts dynamically as generated.
+        """
+        messages: List[Dict[str, Any]] = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+
+        active_history = list(history or [])
+        if prompt and not any(m.get("content") == prompt for m in active_history):
+            active_history.append({"role": "user", "content": prompt})
+
+        for msg in active_history:
+            role = msg.get("role", "user")
+            content = msg.get("content")
+            if role == "assistant" and "tool_calls" in msg:
+                messages.append(msg)
+            elif role == "tool":
+                messages.append(msg)
+            elif content is not None:
+                messages.append({"role": role, "content": str(content)})
+
+        if self.settings.provider in ("openai", "deepseek"):
+            async for chunk in self._stream_openai_compatible(
+                messages, tools_schema, self.settings.base_url, self.settings.api_key or "default-key"
+            ):
+                yield chunk
+        else:
+            async for chunk in self._stream_ollama(messages, tools_schema):
+                yield chunk
+
+    async def _stream_openai_compatible(
+        self,
+        messages: List[Dict[str, Any]],
+        tools_schema: Optional[List[Dict[str, Any]]],
+        base_url: str,
+        api_key: str,
+    ):
+        payload: Dict[str, Any] = {
+            "model": self.settings.model,
+            "messages": messages,
+            "temperature": 0.2,
+            "stream": True,
+        }
+        if tools_schema:
+            tools = []
+            for t in tools_schema:
+                if "function" in t:
+                    tools.append(t)
+                else:
+                    tools.append({"type": "function", "function": t})
+            payload["tools"] = tools
+
+        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+        clean_base = base_url.rstrip("/")
+        url = clean_base if clean_base.endswith("/chat/completions") else f"{clean_base.rstrip('/v1')}/v1/chat/completions"
+
+        in_think_block = False
+        saw_token = False
+
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                async with client.stream("POST", url, json=payload, headers=headers) as resp:
+                    resp.raise_for_status()
+                    async for line in resp.aiter_lines():
+                        line = line.strip()
+                        if not line or not line.startswith("data:"):
+                            continue
+                        data_str = line[5:].strip()
+                        if data_str == "[DONE]":
+                            break
+                        try:
+                            chunk_data = json.loads(data_str)
+                            choice = chunk_data.get("choices", [{}])[0]
+                            delta = choice.get("delta", {})
+
+                            reasoning = delta.get("reasoning_content") or delta.get("thought")
+                            if reasoning:
+                                yield {"type": "thought", "thought": reasoning}
+
+                            content = delta.get("content")
+                            if content:
+                                saw_token = True
+                                if "<think>" in content:
+                                    in_think_block = True
+                                    content = content.replace("<think>", "")
+                                if "</think>" in content:
+                                    in_think_block = False
+                                    content = content.replace("</think>", "")
+
+                                if in_think_block:
+                                    yield {"type": "thought", "thought": content}
+                                else:
+                                    yield {"type": "token", "token": content}
+                        except Exception:
+                            continue
+        except Exception as e:
+            logger.warning("Streaming failed at %s, falling back to batch: %s", url, e)
+            if not saw_token:
+                batch_resp = await self._call_openai_compatible(messages, tools_schema, base_url, api_key)
+                if batch_resp.thought:
+                    yield {"type": "thought", "thought": batch_resp.thought}
+                if batch_resp.text:
+                    yield {"type": "token", "token": batch_resp.text}
+
+    async def _stream_ollama(
+        self,
+        messages: List[Dict[str, Any]],
+        tools_schema: Optional[List[Dict[str, Any]]],
+    ):
+        base_url = self.settings.base_url.replace("/v1", "")
+        if "8001" in base_url:
+            base_url = app_config.llm_base_url
+
+        formatted_messages = self._sanitize_for_ollama(messages, keep_tools_structure=False)
+        payload: Dict[str, Any] = {
+            "model": self.settings.model,
+            "messages": formatted_messages,
+            "stream": True,
+            "options": {"temperature": 0.1},
+        }
+        in_think_block = False
+        saw_token = False
+
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                async with client.stream("POST", f"{base_url}/api/chat", json=payload) as resp:
+                    resp.raise_for_status()
+                    async for line in resp.aiter_lines():
+                        if not line:
+                            continue
+                        try:
+                            data = json.loads(line)
+                            content = data.get("message", {}).get("content", "")
+                            if content:
+                                saw_token = True
+                                if "<think>" in content:
+                                    in_think_block = True
+                                    content = content.replace("<think>", "")
+                                if "</think>" in content:
+                                    in_think_block = False
+                                    content = content.replace("</think>", "")
+
+                                if in_think_block:
+                                    yield {"type": "thought", "thought": content}
+                                else:
+                                    yield {"type": "token", "token": content}
+                        except Exception:
+                            continue
+        except Exception as e:
+            logger.warning("Ollama streaming error, falling back to batch: %s", e)
+            if not saw_token:
+                batch_resp = await self._call_ollama(messages, tools_schema)
+                if batch_resp.thought:
+                    yield {"type": "thought", "thought": batch_resp.thought}
+                if batch_resp.text:
+                    yield {"type": "token", "token": batch_resp.text}
+
     async def generate_response(
         self,
         history: List[Dict[str, Any]],
