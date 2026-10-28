@@ -146,8 +146,14 @@ backups/
 voice_profiles/
 
 # Local data files
-#data/profile_dir/*.tex
-data/profile_dir/*
+data/agent_memory/
+data/docker_storage/
+data/mongo_fallback/
+data/profile_dir/
+data/project_backups/
+data/vector_db/
+data/*.json
+data/*.db
 
 .metadata
 .env
