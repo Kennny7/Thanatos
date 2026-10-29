@@ -1,10 +1,12 @@
 """
 Multi-Agent Coordinator & Communicator for Thanatos:
-- Orchestrates Alfred Vance, Amelia Sterling, and Velma Sinclair.
+- Orchestrates Alfred Vance, The Prodigy, Amelia Sterling, and Velma Sinclair.
 - Instant TTFT Token Streaming (<200ms) for WhatsApp-style chat and low-latency Phone Call mode.
 - Non-blocking asynchronous memory extraction and multi-database persistence (PostgreSQL, MongoDB, Neo4j, Milvus).
 - Antigravity-style Dynamic Execution DAGs with parallel/sequential task boxes and background console logs for complex projects.
 - Checkpoint-based execution (replies immediately, executes checkpoint tasks, and continues stream).
+- RL-Driven Agent Selection via TopicRouter (replaces hardcoded keyword matching).
+- Feedback Engine integration for implicit/explicit reward signals and trait evolution.
 - Zero fake loading percentages or hardcoded symbols.
 """
 
@@ -24,15 +26,22 @@ from services.agents.subagents import DeveloperSubagent, CrawlerSubagent, DocWri
 from services.agents.project_manager import project_manager
 from services.tasks.dag_engine import dag_engine, DAGNode, DAGPlan
 from services.database.enterprise_database_service import enterprise_db
+from services.agents.topic_router import topic_router
+from services.agents.feedback_engine import feedback_engine
+from services.agents.dynamic_prompt_builder import prompt_builder
+from services.agents.agent_personas import ALL_PERSONAS, get_persona, LEGACY_ID_MAP
 
 logger = logging.getLogger(__name__)
 
 
 class AgentCoordinator:
     """
-    Coordinates interactions among Alfred, Amelia, Velma, and specialized subagents.
+    Coordinates interactions among Alfred, Prodigy, Amelia, Velma, and specialized subagents.
     Delivers concise, chat-style conversational responses with instant token streaming,
     and coordinates dynamic execution DAGs for complex tasks.
+
+    Now uses RL-driven topic routing instead of hardcoded keyword matching,
+    and feeds every interaction through the feedback engine for trait evolution.
     """
 
     def __init__(self, provider: Optional[UnifiedLLMProvider] = None) -> None:
@@ -40,6 +49,15 @@ class AgentCoordinator:
         self.developer = DeveloperSubagent(self.provider)
         self.crawler = CrawlerSubagent(self.provider)
         self.doc_writer = DocWriterSubagent(self.provider)
+
+    def _resolve_persona_display(self, agent_id: str) -> str:
+        """Get the display name for an agent ID."""
+        try:
+            persona = get_persona(agent_id)
+            return persona.name
+        except KeyError:
+            entry = roster.get_agent_index_entry(agent_id)
+            return entry.name if entry else agent_id
 
     async def execute_task_stream(
         self,
@@ -49,7 +67,18 @@ class AgentCoordinator:
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """Stream conversational responses and sub-agent collaborations with near-zero latency."""
         
-        # 1. Asynchronously extract memory facts in the background without stalling the response pipeline
+        # 1. Check for explicit feedback commands FIRST (before any agent routing)
+        feedback_result = feedback_engine.process_explicit_feedback(user_prompt)
+        if feedback_result and feedback_result.get("applied"):
+            agent_id = feedback_result.get("agent_id", "system")
+            display_name = self._resolve_persona_display(agent_id) if agent_id != "system" else "System"
+            changes = feedback_result.get("changes", [])
+            changes_summary = ", ".join([f"{c['trait']}: {c['old']:.2f}→{c['new']:.2f}" for c in changes[:5]])
+            msg = f"Feedback recorded. {'Trait shifts: ' + changes_summary if changes_summary else 'No significant trait changes.'}"
+            yield {"type": "assistant_chunk", "agent": display_name, "content": msg}
+            return
+
+        # 2. Asynchronously extract memory facts in the background
         try:
             asyncio.create_task(asyncio.to_thread(hybrid_memory.extract_and_remember, user_prompt))
         except Exception as e:
@@ -57,32 +86,46 @@ class AgentCoordinator:
 
         lower_prompt = user_prompt.lower()
 
-        # 2. Check for Project Workspace actions (e.g., 'revert', 'undo')
+        # 3. Check for Project Workspace actions (e.g., 'revert', 'undo')
         if any(w in lower_prompt for w in ["undo", "revert last change", "rollback"]):
             res = project_manager.undo_last_change()
             msg = res.get("message", "Undo completed.")
             yield {"type": "assistant_chunk", "agent": "Velma Sinclair", "content": f"{msg}"}
             return
 
+        # 4. Check for trait introspection commands
+        if any(w in lower_prompt for w in ["show traits", "personality stats", "trait vector", "trait status"]):
+            summaries = []
+            for aid in ALL_PERSONAS:
+                summaries.append(prompt_builder.get_trait_summary(aid))
+            yield {"type": "assistant_chunk", "agent": "System", "content": "\n\n".join(summaries)}
+            return
+
         project_match = re.search(r"(?:project|directory|folder)\s+([A-Za-z0-9_\-\.\/\\]+)", user_prompt, re.IGNORECASE)
         target_project = project_match.group(1) if project_match else None
 
-        # 3. Determine active persona
-        if any(w in lower_prompt for w in ["alfred", "butler", "social", "etiquette", "strategy", "networking", "dossier"]):
-            active_persona = "Alfred Vance"
-            role_hint = "Social Butler & Strategic Counselor"
-        elif any(w in lower_prompt for w in ["amelia", "secretary", "agenda", "schedule", "routine", "workout", "coffee"]):
-            active_persona = "Amelia Sterling"
-            role_hint = "Executive Secretary & Lifestyle Wingman"
-        elif any(w in lower_prompt for w in ["velma", "sinclair", "sinclar", "bookworm", "geek", "system", "performance", "docker", "server", "port", "disk", "hardware"]):
-            active_persona = "Velma Sinclair"
-            role_hint = "Lively Tech Geek & Systems Specialist"
-        else:
-            roster_entry = roster.get_agent_index_entry(roster.active_agent_id)
-            active_persona = roster_entry.persona_title if roster_entry else "Alfred Vance"
-            role_hint = roster_entry.role if roster_entry else "Personal Agent"
+        # 5. INTELLIGENT AGENT ROUTING via TopicRouter (replaces hardcoded keywords)
+        routing = topic_router.route(
+            user_text=user_prompt,
+            active_agent_override=roster.active_agent_id,
+        )
+        primary_agent_id = routing["primary_agent_id"]
+        secondary_agents = routing["secondary_agents"]
+        active_persona = self._resolve_persona_display(primary_agent_id)
+        logger.debug(
+            "TopicRouter: primary=%s, secondary=%s, reason=%s",
+            primary_agent_id, secondary_agents, routing["routing_reason"],
+        )
 
-        # 4. Handle Complex Engineering Tasks -> Antigravity DAG Execution Engine
+        # Resolve role hint
+        try:
+            persona = get_persona(primary_agent_id)
+            role_hint = persona.role
+        except KeyError:
+            entry = roster.get_agent_index_entry(primary_agent_id)
+            role_hint = entry.role if entry else "Personal Agent"
+
+        # 6. Handle Complex Engineering Tasks -> Antigravity DAG Execution Engine
         if dag_engine.is_complex_task(user_prompt):
             yield {
                 "type": "agent_status",
@@ -115,18 +158,18 @@ class AgentCoordinator:
             yield {"type": "assistant_chunk", "agent": active_persona, "content": f"\n{final_summary}"}
             
             # Post to bus and record in DB
-            agent_bus.post_message(active_persona, "User", final_summary)
+            agent_bus.post_with_auto_cc(active_persona, "User", final_summary, secondary_agents)
             enterprise_db.record_turn(session_id, user_prompt, final_summary, active_persona)
+            feedback_engine.record_interaction(primary_agent_id, user_prompt, final_summary)
             return
 
-        # 5. Checkpoint-based Subagent Collaborations (e.g. explicitly asking to crawl or code)
+        # 7. Checkpoint-based Subagent Collaborations
         is_crawler_task = any(w in lower_prompt for w in ["browse", "search web", "crawl", "look up online", "news"])
         is_dev_task = any(w in lower_prompt for w in ["code", "refactor", "bug", "write a function", "script", "develop"])
         is_doc_task = any(w in lower_prompt for w in ["write doc", "documentation", "readme", "user manual"])
 
         subagent_notes = ""
 
-        # Checkpoint 1: Immediate Conversational Acknowledgement if subagent work needed
         if is_crawler_task or is_dev_task or is_doc_task:
             ack_msg = f"On it. Pulling the required context..."
             yield {"type": "assistant_chunk", "agent": active_persona, "content": f"{ack_msg}\n"}
@@ -149,20 +192,32 @@ class AgentCoordinator:
             subagent_notes += f"\n[Doc Writer Subagent Report]: {doc_res['result'][:300]}"
             agent_bus.post_message("DocWriter", active_persona, doc_res["result"][:150])
 
-        # 6. Stream Instant Conversational Response (WhatsApp/Phone Call Style)
+        # 8. Build DYNAMIC system prompt via TraitEngine + PromptBuilder
         recent_dialogue = agent_bus.get_recent_dialogue(limit=4)
         chat_context = "\n".join([f"{m.sender}: {m.content}" for m in recent_dialogue]) if recent_dialogue else "None"
         growth_context = agent_bus.get_growth_summary()
 
-        system_instruction = (
-            f"You are {active_persona} ({role_hint}) in Thanatos.\n"
-            "Style Guide:\n"
+        # Get memory context
+        try:
+            memory_context = hybrid_memory.get_context(user_prompt)
+        except Exception:
+            memory_context = ""
+
+        # Build the parametric system prompt from live trait vector
+        system_instruction = prompt_builder.build_system_prompt(
+            agent_id=primary_agent_id,
+            extra_context=memory_context,
+            growth_summary=growth_context,
+            recent_dialogue=chat_context,
+        )
+
+        # Add style guide and subagent notes
+        system_instruction += (
+            "\n\n## Response Style Guide\n"
             "- Speak naturally, concisely, and directly like in a WhatsApp or Telegram message or real-time voice call.\n"
             "- Keep standard replies to 1-3 crisp, natural sentences unless user asks for detailed analysis.\n"
             "- Do NOT write long reports, excessive bullet points, or boilerplate essays unless explicitly requested.\n"
             "- NEVER output fake telemetry loops or repeated hardcoded status messages like [20%].\n"
-            f"- Growth Learnings: {growth_context}\n"
-            f"- Recent Agent Channel Messages: {chat_context}\n"
         )
 
         full_prompt = (
@@ -172,7 +227,7 @@ class AgentCoordinator:
             "Your concise chat response:"
         )
 
-        # Stream tokens in real time directly to client
+        # 9. Stream tokens in real time directly to client
         accumulated_response = ""
         try:
             async for chunk in self.provider.generate_stream(prompt=full_prompt):
@@ -191,11 +246,21 @@ class AgentCoordinator:
 
         final_clean = accumulated_response.strip()
 
-        # 7. Post response to agent bus and persist to PostgreSQL, MongoDB, Neo4j
+        # 10. Post response to agent bus with auto-CC and persist to databases
         if final_clean:
-            agent_bus.post_message(active_persona, "User", final_clean)
+            agent_bus.post_with_auto_cc(active_persona, "User", final_clean, secondary_agents)
             enterprise_db.record_turn(session_id, user_prompt, final_clean, active_persona)
+            feedback_engine.record_interaction(primary_agent_id, user_prompt, final_clean)
 
-        # Record growth learning if prompt contains a correction
+        # 11. Process implicit feedback from user's message
+        # (This evaluates the user's message as a response to the PREVIOUS interaction)
+        implicit_feedback = feedback_engine.analyze_implicit_feedback(user_prompt)
+        if implicit_feedback and implicit_feedback.get("applied"):
+            logger.debug(
+                "Implicit feedback applied: reward=%.2f, changes=%d",
+                implicit_feedback.get("reward", 0), implicit_feedback.get("changes_count", 0),
+            )
+
+        # 12. Record growth learning if prompt contains a correction
         if any(w in lower_prompt for w in ["don't", "stop doing", "remember to", "prefer", "instead of"]):
             agent_bus.record_agent_growth(active_persona, user_prompt[:120])
