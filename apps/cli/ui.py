@@ -37,20 +37,60 @@ def print_banner(app_name: str = "Thanatos AI", model_name: str = "Unknown", pro
     console.print(Panel(meta_info, box=ROUNDED, border_style="dim blue", padding=(0, 1)))
 
 
-def print_thought(thought_text: str) -> None:
-    """Render LLM reasoning / thinking step in an isolated terminal panel."""
+def clean_markdown_thought(text: str) -> str:
+    """Clean up common LLM thought markdown formatting quirks like malformed bold bullets `*   *Title:*`."""
+    if not text:
+        return ""
+    import re
+    # Fix nested asterisk patterns like `*   *Title:*` -> `- **Title:**`
+    cleaned = re.sub(r'^\s*\*\s+\*([^*]+?)\*(\:?)', r'- **\1**\2', text, flags=re.MULTILINE)
+    # Fix triple asterisks or broken bold markers like `***`
+    cleaned = re.sub(r'\*\*\*+', '**', cleaned)
+    return cleaned.strip()
+
+
+def print_thought(thought_text: str, agent_name: Optional[str] = None, collapsed: bool = True) -> None:
+    """Render LLM reasoning / thinking step in an isolated terminal panel with expand/collapse control."""
     if not thought_text or not thought_text.strip():
         return
+    cleaned = clean_markdown_thought(thought_text)
+    if not cleaned:
+        return
+
+    agent_tag = f" [{agent_name}]" if agent_name else ""
+    title = f"[bold magenta]• REASONING & PLANNING{agent_tag}[/bold magenta]"
+
     console.print()
-    thought_panel = Panel(
-        Markdown(thought_text.strip()),
-        title="[bold magenta]• REASONING & PLANNING[/bold magenta]",
-        title_align="left",
-        border_style="dim magenta",
-        box=ROUNDED,
-        padding=(0, 1),
-    )
-    console.print(thought_panel)
+    if collapsed:
+        # Show first 2 preview lines and summary indicator
+        lines = [line.strip() for line in cleaned.splitlines() if line.strip()]
+        preview_text = " ".join(lines[:2])
+        if len(preview_text) > 160:
+            preview_text = preview_text[:157] + "..."
+        line_count = len(lines)
+        summary = (
+            f"[dim italic]{preview_text}[/dim italic]\n"
+            f"[dim cyan](Collapsed: {line_count} lines. Use [/dim cyan][bold yellow]/thinking expand[/bold yellow][dim cyan] to show full or [/dim cyan][bold yellow]/thinking last[/bold yellow][dim cyan] to inspect)[/dim cyan]"
+        )
+        thought_panel = Panel(
+            summary,
+            title=title,
+            title_align="left",
+            border_style="dim magenta",
+            box=ROUNDED,
+            padding=(0, 1),
+        )
+        console.print(thought_panel)
+    else:
+        thought_panel = Panel(
+            Markdown(cleaned),
+            title=title,
+            title_align="left",
+            border_style="dim magenta",
+            box=ROUNDED,
+            padding=(0, 1),
+        )
+        console.print(thought_panel)
 
 
 def print_agent_breadcrumb(agent: str, status: str, state_tag: Optional[str] = None) -> None:
@@ -99,7 +139,7 @@ def print_help() -> None:
     table.add_row("/nodes", "[list | scan | add | exec | pull | sync]", "Manage distributed LAN compute mesh, UDP discovery, and remote inference offloading")
     table.add_row("/undo", "[file_path]", "Revert the last project file modification made by the agent")
     table.add_row("/tasks", "[list | view | cancel | clear]", "Inspect or cancel asynchronous background agent tasks")
-    table.add_row("/thinking", "[on | off]", "Toggle live model reasoning / thinking stream display")
+    table.add_row("/thinking", "[collapse | expand | on | off | last]", "Toggle thinking stream, collapse/expand mode, or view last reasoning")
     table.add_row("/preview", "[on | off]", "Toggle interactive human review gate before action execution")
     table.add_row("/vector-db", "", "Run diagnostics and verify vector database integrity")
     table.add_row("/clear", "", "Clear terminal screen and redraw system banner")
