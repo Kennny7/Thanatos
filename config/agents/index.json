@@ -5,8 +5,8 @@
     {
       "id": "site_engineer",
       "name": "Velma Sinclair",
-      "display_name": "Velma Sinclair (Site Reliability & Systems Engineer)",
-      "role": "Site Reliability & Systems Engineer",
+      "display_name": "Velma Sinclair (Lively Knowledge Geek & Systems Bookworm)",
+      "role": "Lively Knowledge Geek & Systems Bookworm",
       "persona_title": "Velma",
       "voice": "en-US-JennyNeural",
       "profile_path": "config/agents/site_engineer.json",
@@ -15,8 +15,8 @@
     {
       "id": "secretary",
       "name": "Amelia Sterling",
-      "display_name": "Amelia Sterling (Executive Secretary & Wingman)",
-      "role": "Executive Secretary & Lifestyle Wingman",
+      "display_name": "Amelia Sterling (Executive Secretary & Private Wingman)",
+      "role": "Executive Secretary & Private Wingman",
       "persona_title": "Amelia",
       "voice": "en-US-AriaNeural",
       "profile_path": "config/agents/secretary.json",
