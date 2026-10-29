@@ -38,12 +38,23 @@ def print_banner(app_name: str = "Thanatos AI", model_name: str = "Unknown", pro
 
 
 def clean_markdown_thought(text: str) -> str:
-    """Clean up common LLM thought markdown formatting quirks like malformed bold bullets `*   *Title:*`."""
+    """Clean up common LLM thought markdown formatting quirks like malformed bold bullets and personality preambles."""
     if not text:
         return ""
     import re
+
+    # Strip out any lingering persona recitations at the start of thought blocks:
+    # e.g., "Felix Ashworth (Technical Systems Architect). Extraordinarily intelligent child..."
+    # or "Alfred Vance (Head Butler & Household Manager)..."
+    cleaned = re.sub(
+        r"^(?:[A-Z][a-z]+ [A-Z][a-z]+|[A-Za-z]+)\s*\([^\)]+\)\.?\s*(?:[A-Z][^\.\n]+\.?)*\n*",
+        "",
+        text.strip(),
+        flags=re.MULTILINE,
+    )
+
     # Fix nested asterisk patterns like `*   *Title:*` -> `- **Title:**`
-    cleaned = re.sub(r'^\s*\*\s+\*([^*]+?)\*(\:?)', r'- **\1**\2', text, flags=re.MULTILINE)
+    cleaned = re.sub(r'^\s*\*\s+\*([^*]+?)\*(\:?)', r'- **\1**\2', cleaned, flags=re.MULTILINE)
     # Fix triple asterisks or broken bold markers like `***`
     cleaned = re.sub(r'\*\*\*+', '**', cleaned)
     return cleaned.strip()
