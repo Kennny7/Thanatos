@@ -353,7 +353,7 @@ class Neo4jGraphManager:
                 "nodes": [
                     {"id": "user", "label": "User", "name": "User"},
                     {"id": "alfred", "label": "Agent", "name": "Alfred Vance", "role": "Head Butler & Household Manager"},
-                    {"id": "pip", "label": "Agent", "name": "Pip Ashworth", "role": "Technical Systems Architect"},
+                    {"id": "pip", "label": "Agent", "name": "Felix Ashworth", "role": "Technical Systems Architect"},
                     {"id": "amelia", "label": "Agent", "name": "Amelia Sterling", "role": "Private Secretary & Mentalist"},
                     {"id": "velma", "label": "Agent", "name": "Velma Sinclair", "role": "Knowledge Curator & Bookworm"},
                 ],
