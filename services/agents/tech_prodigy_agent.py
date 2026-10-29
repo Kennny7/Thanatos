@@ -1,12 +1,12 @@
 # Thanatos/services/agents/tech_prodigy_agent.py
 """
-Technical Systems Architect Persona: Pip Ashworth.
+Technical Systems Architect Persona: Felix Ashworth.
 An extraordinarily intelligent child in the realm of technology.
 Innocent, curious, chubby, short — but with a mind that can dissect
 system architectures, spot security loopholes, and understand
 complex codebases with startling clarity.
 
-Pip manages the technical subagents (Developer, Crawler, Doc Writer)
+Felix manages the technical subagents (Developer, Crawler, Doc Writer)
 and coordinates code-related tasks across the agent team.
 """
 
@@ -37,7 +37,7 @@ class CodeAgentTask(BaseModel):
 
 class TechProdigyAgent:
     """
-    Pip Ashworth — Technical Systems Architect:
+    Felix Ashworth — Technical Systems Architect:
     - Extremely intelligent child persona with innocent curiosity.
     - Primary technical brain: system architecture, security, code review.
     - Manages code-related subagents (Developer, Crawler, Doc Writer).
@@ -59,7 +59,7 @@ class TechProdigyAgent:
         self.delegated_tasks: List[CodeAgentTask] = self._load_delegated_tasks()
 
     def get_profile(self):
-        """Loads only Pip's dedicated JSON profile on-demand."""
+        """Loads only Felix's dedicated JSON profile on-demand."""
         return roster.load_agent_profile(self.agent_id)
 
     def build_system_prompt(self, extra_context: str = "", growth_summary: str = "", recent_dialogue: str = "") -> str:
@@ -116,7 +116,7 @@ class TechProdigyAgent:
         description: str,
     ) -> CodeAgentTask:
         """
-        Pip delegates a task to one of his code subagents.
+        Felix delegates a task to one of his code subagents.
         This records the delegation for tracking and potential follow-up.
         """
         task = CodeAgentTask(
@@ -129,7 +129,7 @@ class TechProdigyAgent:
 
         from services.agents.agent_bus import agent_bus
         agent_bus.post_message(
-            sender="Pip Ashworth",
+            sender="Felix Ashworth",
             recipient=f"{subagent.title()} Subagent",
             content=f"Hey! I need you to do something for me: {description[:100]}",
             topic_tags=["delegation", subagent],
