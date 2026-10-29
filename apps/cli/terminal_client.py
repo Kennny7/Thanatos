@@ -56,6 +56,9 @@ class ThanatosCLI:
         self.provider = UnifiedLLMProvider(self.settings)
         self.coordinator = AgentCoordinator(self.provider)
         self.show_thinking = True
+        self.collapse_thinking = True
+        self.last_thought = ""
+        self.last_thought_agent = ""
         self.conversation_history: List[Dict[str, Any]] = []
 
         # Register background task notification callback
@@ -247,15 +250,30 @@ class ThanatosCLI:
                 console.print("[dim]Usage: /docker status | /docker start | /docker stop[/dim]")
 
         elif cmd == "/thinking":
-            if arg.lower() in ("on", "true", "1"):
+            sub = arg.lower().strip()
+            if sub in ("on", "true", "1"):
                 self.show_thinking = True
                 console.print("[bold green][✓] Model reasoning / thinking display enabled.[/bold green]")
-            elif arg.lower() in ("off", "false", "0"):
+            elif sub in ("off", "false", "0"):
                 self.show_thinking = False
                 console.print("[bold yellow][✓] Model thinking display hidden.[/bold yellow]")
+            elif sub in ("collapse", "collapsed"):
+                self.collapse_thinking = True
+                self.show_thinking = True
+                console.print("[bold green][✓] Thinking panel is now COLLAPSED by default (compact view).[/bold green]")
+            elif sub in ("expand", "expanded", "full"):
+                self.collapse_thinking = False
+                self.show_thinking = True
+                console.print("[bold green][✓] Thinking panel is now EXPANDED by default (full view).[/bold green]")
+            elif sub in ("last", "view"):
+                if self.last_thought:
+                    print_thought(self.last_thought, agent_name=self.last_thought_agent, collapsed=False)
+                else:
+                    console.print("[dim]No previous thinking block recorded in this session.[/dim]")
             else:
                 status = "ON" if self.show_thinking else "OFF"
-                console.print(f"[dim]Thinking display is currently [bold]{status}[/bold]. Usage: /thinking on|off[/dim]")
+                mode = "COLLAPSED" if self.collapse_thinking else "EXPANDED"
+                console.print(f"[dim]Thinking display: [bold]{status}[/bold] (Default view: [bold]{mode}[/bold]). Usage: /thinking [collapse | expand | on | off | last][/dim]")
 
         elif cmd == "/preview":
             if arg.lower() in ("on", "true", "1"):
@@ -558,22 +576,50 @@ class ThanatosCLI:
         full_response = ""
         current_agent = "Thanatos"
         has_started_reply = False
+        accumulated_thought = ""
+
+        def flush_thought():
+            nonlocal accumulated_thought
+            if accumulated_thought.strip() and self.show_thinking:
+                self.last_thought = accumulated_thought.strip()
+                self.last_thought_agent = current_agent
+                print_thought(
+                    accumulated_thought.strip(),
+                    agent_name=current_agent,
+                    collapsed=self.collapse_thinking,
+                )
+                accumulated_thought = ""
 
         async for chunk in self.coordinator.execute_task_stream(user_text, self.conversation_history):
             chunk_type = chunk.get("type")
+            chunk_agent = chunk.get("agent")
 
             if chunk_type in ("dag_init", "dag_update", "dag_finish"):
+                flush_thought()
                 print_dag_box(chunk["box"])
             elif chunk_type == "agent_status":
-                current_agent = chunk.get("agent", current_agent)
+                flush_thought()
+                if chunk_agent:
+                    current_agent = chunk_agent
                 print_agent_breadcrumb(
                     current_agent,
                     chunk.get("status", ""),
                 )
             elif chunk_type == "thought":
-                if self.show_thinking:
-                    print_thought(chunk.get("thought", ""))
+                if chunk_agent:
+                    current_agent = chunk_agent
+                thought_piece = chunk.get("thought", "")
+                if thought_piece:
+                    accumulated_thought += thought_piece
             elif chunk_type == "assistant_chunk":
+                flush_thought()
+                # If a different agent speaks, close current message block cleanly and start a new message line
+                if chunk_agent and chunk_agent != current_agent:
+                    if has_started_reply:
+                        console.print("\n")
+                        has_started_reply = False
+                    current_agent = chunk_agent
+
                 content = chunk.get("content", "")
                 if content:
                     full_response += content
@@ -581,6 +627,8 @@ class ThanatosCLI:
                         console.print(f"\n[bold cyan]❯ [{current_agent}]:[/bold cyan] ", end="")
                         has_started_reply = True
                     console.print(content, end="")
+
+        flush_thought()
 
         if has_started_reply:
             console.print("\n")
