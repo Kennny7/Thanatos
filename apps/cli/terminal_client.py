@@ -128,7 +128,10 @@ class ThanatosCLI:
                     normalized_cmd = "/" + user_input.lstrip("/\\")
                     await self._handle_command(normalized_cmd)
                 else:
-                    await self._handle_chat(user_input)
+                    try:
+                        await self._handle_chat(user_input)
+                    except (asyncio.CancelledError, KeyboardInterrupt):
+                        console.print("\n[bold yellow]Generation interrupted by user.[/bold yellow]\n")
 
             except (KeyboardInterrupt, EOFError):
                 console.print("\n[bold yellow]Session terminated.[/bold yellow]")
@@ -577,9 +580,13 @@ class ThanatosCLI:
         current_agent = "Thanatos"
         has_started_reply = False
         accumulated_thought = ""
+        live_thinking_active = False
 
         def flush_thought():
-            nonlocal accumulated_thought
+            nonlocal accumulated_thought, live_thinking_active
+            if live_thinking_active:
+                console.print("\r" + " " * 80 + "\r", end="")
+                live_thinking_active = False
             if accumulated_thought.strip() and self.show_thinking:
                 self.last_thought = accumulated_thought.strip()
                 self.last_thought_agent = current_agent
@@ -589,6 +596,10 @@ class ThanatosCLI:
                     collapsed=self.collapse_thinking,
                 )
                 accumulated_thought = ""
+
+        # Display immediate status indicator while waiting for first tokens
+        console.print("[dim cyan]Reasoning and preparing response...[/dim cyan]", end="\r")
+        live_thinking_active = True
 
         async for chunk in self.coordinator.execute_task_stream(user_text, self.conversation_history):
             chunk_type = chunk.get("type")
