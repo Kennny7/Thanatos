@@ -94,7 +94,7 @@ class VectorStore:
                     logger.info("Initialized %s at: %s", backend_label, milvus_server_uri if is_standalone else milvus_db_path)
                     return
             except Exception as e:
-                logger.warning("Milvus initialization bypassed (%s), trying ChromaDB...", e)
+                logger.debug("Milvus initialization bypassed (%s), trying ChromaDB...", e)
 
         # 2. Try ChromaDB
         if self.preferred_backend in ("chroma", "auto", "milvus"):
