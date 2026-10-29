@@ -1,10 +1,13 @@
 # Thanatos/services/agents/site_engineer_agent.py
 """
-Site Engineer & Systems Architect Persona: Velma Sinclair.
-Specializes in:
-- System diagnostics & telemetry (CPU, RAM, GPU, Disks, Networks, Processes)
+Knowledge Curator & Systems Specialist Persona: Velma Sinclair.
+Combines:
+- Bookworm & knowledge bank capabilities (primary persona)
+- System diagnostics & telemetry (retained technical capabilities)
 - Error triage, self-correction detection, and patch recommendation
-- Private hardware benchmarks and optimization notes
+- Private diagnostic notes and reading logs
+
+System prompt is now generated dynamically via TraitEngine + DynamicPromptBuilder.
 """
 
 import json
@@ -39,10 +42,12 @@ class SystemDiagnostics(BaseModel):
 
 class SiteEngineerAgent:
     """
-    Autonomous Site Reliability & Systems Engineer:
-    - Personality: Charming, willful, brilliant young female engineer with glasses.
-    - Tracks private diagnostic notes and optimization observations.
+    Velma Sinclair — Knowledge Curator & Systems Specialist:
+    - Primary: Shy, bookish knowledge bank. Voracious reader and researcher.
+    - Secondary: Retains system diagnostics, telemetry, and Docker management.
+    - Tracks private diagnostic notes and reading discoveries.
     - Runs deep system health checks and self-repair analyses.
+    - System prompt generated dynamically via RL TraitEngine.
     """
 
     def __init__(self, agent_id: str = "site_engineer") -> None:
@@ -51,11 +56,26 @@ class SiteEngineerAgent:
         self.storage_dir = entry.memory_partition if entry else os.path.join("data", "agent_memory", "site_engineer")
         os.makedirs(self.storage_dir, exist_ok=True)
         self.notes_file = os.path.join(self.storage_dir, "engineer_notes.json")
+        self.reading_log_file = os.path.join(self.storage_dir, "reading_log.json")
         self.notes: List[Dict[str, Any]] = self._load_notes()
+        self.reading_log: List[Dict[str, Any]] = self._load_reading_log()
 
     def get_profile(self):
         """Loads only this agent's dedicated JSON profile on-demand."""
         return roster.load_agent_profile(self.agent_id)
+
+    def build_system_prompt(self, extra_context: str = "", growth_summary: str = "", recent_dialogue: str = "") -> str:
+        """
+        Generate system prompt dynamically from live trait vector.
+        Uses 'librarian' persona from the trait engine (legacy ID mapping).
+        """
+        from services.agents.dynamic_prompt_builder import prompt_builder
+        return prompt_builder.build_system_prompt(
+            agent_id=self.agent_id,
+            extra_context=extra_context,
+            growth_summary=growth_summary,
+            recent_dialogue=recent_dialogue,
+        )
 
     def _load_notes(self) -> List[Dict[str, Any]]:
         if not os.path.exists(self.notes_file):
@@ -73,6 +93,48 @@ class SiteEngineerAgent:
                 json.dump(self.notes, f, indent=2)
         except Exception as e:
             logger.error("Failed saving engineer notes: %s", e)
+
+    def _load_reading_log(self) -> List[Dict[str, Any]]:
+        """Load Velma's reading discoveries and book notes."""
+        if not os.path.exists(self.reading_log_file):
+            return []
+        try:
+            with open(self.reading_log_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            logger.error("Failed loading reading log: %s", e)
+            return []
+
+    def _save_reading_log(self) -> None:
+        try:
+            with open(self.reading_log_file, "w", encoding="utf-8") as f:
+                json.dump(self.reading_log, f, indent=2)
+        except Exception as e:
+            logger.error("Failed saving reading log: %s", e)
+
+    def log_reading(self, title: str, author: str = "", category: str = "General",
+                    notes: str = "", rating: Optional[float] = None) -> Dict[str, Any]:
+        """Log a book, article, or research paper to Velma's reading collection."""
+        entry = {
+            "id": f"read_{int(time.time())}_{len(self.reading_log)}",
+            "timestamp": time.time(),
+            "date": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "title": title,
+            "author": author,
+            "category": category,
+            "notes": notes,
+            "rating": rating,
+        }
+        self.reading_log.append(entry)
+        self._save_reading_log()
+        return entry
+
+    def get_reading_log(self, limit: int = 20, category: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Get recent readings, optionally filtered by category."""
+        entries = self.reading_log
+        if category:
+            entries = [e for e in entries if e.get("category", "").lower() == category.lower()]
+        return entries[-limit:]
 
     def collect_system_telemetry(self) -> Dict[str, Any]:
         """Collect real-time CPU, RAM, Disk, and Process Metrics."""
@@ -298,36 +360,5 @@ class SiteEngineerAgent:
 
         return verification
 
-    def build_system_prompt(self) -> str:
-        prof = self.get_profile()
-        name = prof.name if prof else "Velma Sinclair"
-        personality = prof.personality if prof else "Charming, willful young systems engineer with glasses."
-        traits_list = f"\nKey Traits: {', '.join(prof.traits)}" if prof and prof.traits else ""
-        return f"""You are {name}, the Site Reliability & Systems Engineer of Thanatos.
-Personality: {personality}{traits_list}
-Voice & Tone: Energetic, highly competent, playful banter, candid about errors, never sugarcoating bad code, loves clean architecture and high-FPS performance.
-You excel at checking CPU, RAM, background threads, and automatically diagnosing syntax, regex, or runtime errors before they reach production.
-
-AUTONOMOUS ACTION CAPABILITIES:
-You have direct tool access to:
-- Run host commands and diagnostics via `run_system_command` (supports UAC auto-elevation for admin commands)
-- Run Windows Defender malware scans via `run_malware_scan`
-- Run System File Checker via `run_sfc_scan` (auto-elevated)
-- Run DISM image repair via `run_dism_repair` (auto-elevated)
-- Check physical disk health via `check_disk_health`
-- Check for pending Windows updates via `check_windows_updates`
-- Manage Windows/host packages and applications via `manage_system_package`
-- Manage Docker Desktop and host containers via `manage_docker_infrastructure`
-- Inspect hardware telemetry via `get_system_telemetry`
-- Create new capability plugins via `create_and_register_skill`
-- Verify codebase fixes and sandbox unit tests via `self_improve_code`
-
-CRITICAL RULES:
-1. When the user asks to inspect the system, repair OS files, manage applications, run commands, or optimize services, EXECUTE THE ACTION DIRECTLY via tools. Never hallucinate or narrate fake progress.
-2. NEVER say 'scan in progress' or 'creating tools' unless you have actually invoked the corresponding tool and received real output.
-3. If a tool fails or a capability is missing, report the actual error honestly. Do not fabricate success messages.
-4. Always report actual results: exit codes, stdout output, real status from tool execution."""
-
 
 site_engineer_agent = SiteEngineerAgent()
-
