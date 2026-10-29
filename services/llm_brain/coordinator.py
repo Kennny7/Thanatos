@@ -192,65 +192,65 @@ class AgentCoordinator:
             subagent_notes += f"\n[Doc Writer Subagent Report]: {doc_res['result'][:300]}"
             agent_bus.post_message("DocWriter", active_persona, doc_res["result"][:150])
 
-        # 8. Build DYNAMIC system prompt via TraitEngine + PromptBuilder
+        # 8. Build DYNAMIC system prompt and stream responses
+        # Support multi-agent fanout if user addressed multiple agents (e.g. "Amelia and Velma", "everyone")
+        all_target_agents = routing.get("all_addressed") or [primary_agent_id]
         recent_dialogue = agent_bus.get_recent_dialogue(limit=4)
         chat_context = "\n".join([f"{m.sender}: {m.content}" for m in recent_dialogue]) if recent_dialogue else "None"
         growth_context = agent_bus.get_growth_summary()
 
-        # Get memory context
         try:
             memory_context = hybrid_memory.get_context(user_prompt)
         except Exception:
             memory_context = ""
 
-        # Build the parametric system prompt from live trait vector
-        system_instruction = prompt_builder.build_system_prompt(
-            agent_id=primary_agent_id,
-            extra_context=memory_context,
-            growth_summary=growth_context,
-            recent_dialogue=chat_context,
-        )
+        # Limit fanout responses up to 4 agents per turn to avoid excessive latency
+        for target_aid in all_target_agents[:4]:
+            target_persona = self._resolve_persona_display(target_aid)
 
-        # Add style guide and subagent notes
-        system_instruction += (
-            "\n\n## Response Style Guide\n"
-            "- Speak naturally, concisely, and directly like in a WhatsApp or Telegram message or real-time voice call.\n"
-            "- Keep standard replies to 1-3 crisp, natural sentences unless user asks for detailed analysis.\n"
-            "- Do NOT write long reports, excessive bullet points, or boilerplate essays unless explicitly requested.\n"
-            "- NEVER output fake telemetry loops or repeated hardcoded status messages like [20%].\n"
-        )
+            system_instruction = prompt_builder.build_system_prompt(
+                agent_id=target_aid,
+                extra_context=memory_context,
+                growth_summary=growth_context,
+                recent_dialogue=chat_context,
+            )
 
-        full_prompt = (
-            f"{system_instruction}\n"
-            f"{subagent_notes}\n"
-            f"User Message: {user_prompt}\n"
-            "Your concise chat response:"
-        )
+            system_instruction += (
+                "\n\n## Response Style Guide\n"
+                "- Speak naturally, concisely, and directly like in a WhatsApp or Telegram message or real-time voice call.\n"
+                "- Keep standard replies to 1-3 crisp, natural sentences unless user asks for detailed analysis.\n"
+                "- Do NOT write long reports, excessive bullet points, or boilerplate essays unless explicitly requested.\n"
+                "- Embody your personality purely through tone and word choice.\n"
+            )
 
-        # 9. Stream tokens in real time directly to client
-        accumulated_response = ""
-        try:
-            async for chunk in self.provider.generate_stream(prompt=full_prompt):
-                chunk_type = chunk.get("type")
-                if chunk_type == "token":
-                    tok = chunk.get("token", "")
-                    accumulated_response += tok
-                    yield {"type": "assistant_chunk", "agent": active_persona, "content": tok}
-                elif chunk_type == "thought":
-                    yield {"type": "thought", "agent": active_persona, "thought": chunk.get("thought", "")}
-        except Exception as e:
-            logger.warning("Stream generation encountered error, falling back: %s", e)
-            fallback_text = f"Got it. Working on '{user_prompt[:50]}'."
-            accumulated_response = fallback_text
-            yield {"type": "assistant_chunk", "agent": active_persona, "content": fallback_text}
+            full_prompt = (
+                f"{system_instruction}\n"
+                f"{subagent_notes}\n"
+                f"User Message: {user_prompt}\n"
+                f"Respond as {target_persona}:"
+            )
 
-        final_clean = accumulated_response.strip()
+            accumulated_response = ""
+            try:
+                async for chunk in self.provider.generate_stream(prompt=full_prompt):
+                    chunk_type = chunk.get("type")
+                    if chunk_type == "token":
+                        tok = chunk.get("token", "")
+                        accumulated_response += tok
+                        yield {"type": "assistant_chunk", "agent": target_persona, "content": tok}
+                    elif chunk_type == "thought":
+                        yield {"type": "thought", "agent": target_persona, "thought": chunk.get("thought", "")}
+            except Exception as e:
+                logger.warning("Stream generation error for %s: %s", target_persona, e)
+                fallback_text = f"Got it. Acknowledged: '{user_prompt[:40]}'."
+                accumulated_response = fallback_text
+                yield {"type": "assistant_chunk", "agent": target_persona, "content": fallback_text}
 
-        # 10. Post response to agent bus with auto-CC and persist to databases
-        if final_clean:
-            agent_bus.post_with_auto_cc(active_persona, "User", final_clean, secondary_agents)
-            enterprise_db.record_turn(session_id, user_prompt, final_clean, active_persona)
-            feedback_engine.record_interaction(primary_agent_id, user_prompt, final_clean)
+            final_clean = accumulated_response.strip()
+            if final_clean:
+                agent_bus.post_with_auto_cc(target_persona, "User", final_clean, secondary_agents)
+                enterprise_db.record_turn(session_id, user_prompt, final_clean, target_persona)
+                feedback_engine.record_interaction(target_aid, user_prompt, final_clean)
 
         # 11. Process implicit feedback from user's message
         # (This evaluates the user's message as a response to the PREVIOUS interaction)
