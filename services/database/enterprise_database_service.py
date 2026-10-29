@@ -85,6 +85,35 @@ class PostgresManager:
                     timestamp REAL
                 )
             """)
+            # RL Agent Trait Evolution tables
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS agent_traits (
+                    agent_id TEXT PRIMARY KEY,
+                    traits_json TEXT NOT NULL,
+                    updated_at REAL
+                )
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS trait_evolution_log (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    agent_id TEXT,
+                    trait_name TEXT,
+                    old_value REAL,
+                    new_value REAL,
+                    reward REAL,
+                    trigger_type TEXT,
+                    trigger_detail TEXT,
+                    timestamp REAL
+                )
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS agent_topic_affinities (
+                    agent_id TEXT,
+                    topic TEXT,
+                    affinity REAL DEFAULT 0.5,
+                    PRIMARY KEY (agent_id, topic)
+                )
+            """)
             conn.commit()
 
     def _try_connect_postgres(self) -> bool:
@@ -120,6 +149,28 @@ class PostgresManager:
                         action VARCHAR(255),
                         details TEXT,
                         timestamp DOUBLE PRECISION
+                    );
+                    CREATE TABLE IF NOT EXISTS agent_traits (
+                        agent_id VARCHAR(64) PRIMARY KEY,
+                        traits_json TEXT NOT NULL,
+                        updated_at DOUBLE PRECISION
+                    );
+                    CREATE TABLE IF NOT EXISTS trait_evolution_log (
+                        id SERIAL PRIMARY KEY,
+                        agent_id VARCHAR(64),
+                        trait_name VARCHAR(64),
+                        old_value DOUBLE PRECISION,
+                        new_value DOUBLE PRECISION,
+                        reward DOUBLE PRECISION,
+                        trigger_type VARCHAR(32),
+                        trigger_detail TEXT,
+                        timestamp DOUBLE PRECISION
+                    );
+                    CREATE TABLE IF NOT EXISTS agent_topic_affinities (
+                        agent_id VARCHAR(64),
+                        topic VARCHAR(128),
+                        affinity DOUBLE PRECISION DEFAULT 0.5,
+                        PRIMARY KEY (agent_id, topic)
                     );
                 """)
             self._pg_conn = conn
@@ -301,14 +352,20 @@ class Neo4jGraphManager:
             default_graph = {
                 "nodes": [
                     {"id": "user", "label": "User", "name": "User"},
-                    {"id": "alfred", "label": "Agent", "name": "Alfred Vance", "role": "Butler"},
-                    {"id": "amelia", "label": "Agent", "name": "Amelia Sterling", "role": "Secretary"},
-                    {"id": "velma", "label": "Agent", "name": "Velma Sinclair", "role": "Site Reliability"},
+                    {"id": "alfred", "label": "Agent", "name": "Alfred Vance", "role": "Head Butler & Household Manager"},
+                    {"id": "pip", "label": "Agent", "name": "Pip Ashworth", "role": "Technical Systems Architect"},
+                    {"id": "amelia", "label": "Agent", "name": "Amelia Sterling", "role": "Private Secretary & Mentalist"},
+                    {"id": "velma", "label": "Agent", "name": "Velma Sinclair", "role": "Knowledge Curator & Bookworm"},
                 ],
                 "edges": [
-                    {"source": "alfred", "target": "user", "type": "ADVISES"},
-                    {"source": "amelia", "target": "user", "type": "ASSISTS"},
-                    {"source": "velma", "target": "user", "type": "MAINTAINS"},
+                    {"source": "alfred", "target": "user", "type": "MANAGES"},
+                    {"source": "pip", "target": "user", "type": "ENGINEERS"},
+                    {"source": "amelia", "target": "user", "type": "COUNSELS"},
+                    {"source": "velma", "target": "user", "type": "RESEARCHES"},
+                    {"source": "alfred", "target": "pip", "type": "OVERSEES"},
+                    {"source": "alfred", "target": "amelia", "type": "OVERSEES"},
+                    {"source": "alfred", "target": "velma", "type": "OVERSEES"},
+                    {"source": "pip", "target": "velma", "type": "COLLABORATES_WITH"},
                 ]
             }
             with open(self.fallback_file, "w", encoding="utf-8") as f:
