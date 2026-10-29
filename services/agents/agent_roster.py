@@ -7,6 +7,7 @@ Architecture:
 - Lazy-loads full personality & prompt context ONLY when that specific agent is invoked,
   preventing context bloat, token wastage, and unnecessary memory consumption.
 - Immutable agent_id decouples persistent memory stores from cosmetic name changes.
+- Integrates with TraitEngine for dynamic personality evolution (RL-driven).
 """
 
 import json
@@ -19,6 +20,11 @@ logger = logging.getLogger(__name__)
 
 AGENTS_DIR = os.path.join("config", "agents")
 INDEX_PATH = os.path.join(AGENTS_DIR, "index.json")
+
+# Legacy ID mappings for backward compatibility
+LEGACY_AGENT_IDS = {
+    "site_engineer": "librarian",
+}
 
 
 class AgentIndexEntry(BaseModel):
@@ -33,7 +39,7 @@ class AgentIndexEntry(BaseModel):
 
 
 class FullAgentProfile(BaseModel):
-    schema_version: str = "1.0"
+    schema_version: str = "2.0"
     id: str
     name: str
     full_name: Optional[str] = None
@@ -43,17 +49,20 @@ class FullAgentProfile(BaseModel):
     voice: str = "en-US-JennyNeural"
     avatar_style: str = ""
     personality: str = ""
+    appearance: Dict[str, Any] = Field(default_factory=dict)
     specialization: List[str] = Field(default_factory=list)
     traits: List[str] = Field(default_factory=list)
     preferences: Dict[str, Any] = Field(default_factory=dict)
     memory_partition: str
     shared_memory_access: bool = True
+    trait_engine_enabled: bool = True
 
 
 class AgentRoster:
     """
     Scalable Agent Registry that maintains a lightweight directory index
     and loads full individual agent profiles on-demand.
+    Now integrates with the RL TraitEngine for dynamic personality.
     """
 
     def __init__(self, index_file: str = INDEX_PATH, agents_dir: str = AGENTS_DIR) -> None:
@@ -83,35 +92,45 @@ class AgentRoster:
         # Fallback index initialization if index.json is absent
         self.active_agent_id = "auto"
         self.index = {
-            "site_engineer": AgentIndexEntry(
-                id="site_engineer",
-                name="Velma Sinclair",
-                display_name="Velma Sinclair (Site Reliability & Systems Engineer)",
-                role="Site Reliability & Systems Engineer",
-                persona_title="Velma",
-                voice="en-US-JennyNeural",
-                profile_path=os.path.join(self.agents_dir, "site_engineer.json"),
-                memory_partition="data/agent_memory/site_engineer",
+            "butler": AgentIndexEntry(
+                id="butler",
+                name="Alfred Vance",
+                display_name="Alfred Vance (Head Butler & Household Manager)",
+                role="Head Butler & Household Manager",
+                persona_title="Alfred",
+                voice="en-GB-RyanNeural",
+                profile_path=os.path.join(self.agents_dir, "butler.json"),
+                memory_partition="data/agent_memory/butler",
+            ),
+            "tech_prodigy": AgentIndexEntry(
+                id="tech_prodigy",
+                name="Pip Ashworth",
+                display_name="Pip Ashworth (Technical Systems Architect)",
+                role="Technical Systems Architect",
+                persona_title="Pip",
+                voice="en-US-GuyNeural",
+                profile_path=os.path.join(self.agents_dir, "tech_prodigy.json"),
+                memory_partition="data/agent_memory/tech_prodigy",
             ),
             "secretary": AgentIndexEntry(
                 id="secretary",
                 name="Amelia Sterling",
-                display_name="Amelia Sterling (Executive Secretary & Wingman)",
-                role="Executive Secretary & Lifestyle Wingman",
+                display_name="Amelia Sterling (Private Secretary & Mentalist)",
+                role="Private Secretary & Psychological Counselor",
                 persona_title="Amelia",
                 voice="en-US-AriaNeural",
                 profile_path=os.path.join(self.agents_dir, "secretary.json"),
                 memory_partition="data/agent_memory/secretary",
             ),
-            "butler": AgentIndexEntry(
-                id="butler",
-                name="Alfred Vance",
-                display_name="Alfred Vance (Autonomous Social Butler & Strategist)",
-                role="Autonomous Social Butler & Strategic Counselor",
-                persona_title="Alfred",
-                voice="en-GB-RyanNeural",
-                profile_path=os.path.join(self.agents_dir, "butler.json"),
-                memory_partition="data/agent_memory/butler",
+            "librarian": AgentIndexEntry(
+                id="librarian",
+                name="Velma Sinclair",
+                display_name="Velma Sinclair (Knowledge Curator & Bookworm)",
+                role="Knowledge Curator & Research Librarian",
+                persona_title="Velma",
+                voice="en-US-JennyNeural",
+                profile_path=os.path.join(self.agents_dir, "site_engineer.json"),
+                memory_partition="data/agent_memory/site_engineer",
             ),
         }
         self.save_index()
@@ -121,8 +140,9 @@ class AgentRoster:
         os.makedirs(os.path.dirname(os.path.abspath(self.index_file)), exist_ok=True)
         try:
             payload = {
-                "system_version": "2.0",
+                "system_version": "3.0",
                 "active_agent_id": self.active_agent_id,
+                "trait_engine_enabled": True,
                 "index": [entry.model_dump() for entry in self.index.values()],
             }
             with open(self.index_file, "w", encoding="utf-8") as f:
@@ -135,10 +155,17 @@ class AgentRoster:
         return list(self.index.values())
 
     def get_agent_index_entry(self, agent_id_or_name: str) -> Optional[AgentIndexEntry]:
-        """Quick lookup in lightweight index."""
+        """Quick lookup in lightweight index. Supports legacy ID resolution."""
         target = agent_id_or_name.lower().strip()
+
+        # Check legacy mapping
+        resolved = LEGACY_AGENT_IDS.get(target, target)
+
+        if resolved in self.index:
+            return self.index[resolved]
         if target in self.index:
             return self.index[target]
+
         for aid, entry in self.index.items():
             if target in (entry.name.lower(), entry.persona_title.lower(), entry.role.lower()):
                 return entry
@@ -221,6 +248,10 @@ class AgentRoster:
                 logger.error("Could not write updated profile to %s: %s", target_path, e)
 
         return True
+
+    def resolve_agent_id(self, agent_id: str) -> str:
+        """Resolve legacy agent IDs to current IDs."""
+        return LEGACY_AGENT_IDS.get(agent_id, agent_id)
 
 
 roster = AgentRoster()
