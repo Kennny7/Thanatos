@@ -95,14 +95,27 @@ class TopicRouter:
 
         return meaningful + bigrams
 
+    def _check_all_addressed(self, text: str) -> List[str]:
+        """Detect all agents directly addressed or mentioned in the user prompt."""
+        lower = text.lower().strip()
+        matched: List[str] = []
+
+        # Check for group addressing keywords
+        group_keywords = ["everyone", "all of you", "everybody", "team", "whole team", "you all"]
+        if any(g in lower for g in group_keywords):
+            return list(ALL_PERSONAS.keys())
+
+        for name, agent_id in self._name_map.items():
+            pattern = rf"\b{re.escape(name)}\b"
+            if re.search(pattern, lower):
+                if agent_id not in matched:
+                    matched.append(agent_id)
+        return matched
+
     def _check_direct_address(self, text: str) -> Optional[str]:
         """Check if the user is directly addressing a specific agent by name."""
-        lower = text.lower().strip()
-        for name, agent_id in self._name_map.items():
-            # Check if name appears at the start, after a comma, or as a standalone mention
-            if lower.startswith(name) or f" {name}" in lower or f", {name}" in lower:
-                return agent_id
-        return None
+        addressed = self._check_all_addressed(text)
+        return addressed[0] if addressed else None
 
     def route(
         self,
@@ -123,19 +136,24 @@ class TopicRouter:
                 - scores: All agent scores for debugging.
                 - routing_reason: Why this agent was chosen.
         """
-        # 1. Check for direct address (e.g., "Alfred, what should I have for lunch?")
-        direct_agent = self._check_direct_address(user_text)
-        if direct_agent:
+        # 1. Check for direct address (e.g., "Amelia, Velma, Felix, how are you doing")
+        addressed_agents = self._check_all_addressed(user_text)
+        if addressed_agents:
+            primary_agent = addressed_agents[0]
+            other_addressed = addressed_agents[1:]
             scores = self._compute_all_scores(user_text)
             secondary = [
+                aid for aid in other_addressed
+            ] + [
                 aid for aid, score in scores.items()
-                if aid != direct_agent and score >= SECONDARY_THRESHOLD
+                if aid not in addressed_agents and score >= SECONDARY_THRESHOLD
             ]
             return {
-                "primary_agent_id": direct_agent,
-                "secondary_agents": secondary[:2],
+                "primary_agent_id": primary_agent,
+                "secondary_agents": secondary,
+                "all_addressed": addressed_agents,
                 "scores": scores,
-                "routing_reason": f"Direct address detected for '{direct_agent}'",
+                "routing_reason": f"Direct address detected for {addressed_agents}",
             }
 
         # 2. Check for forced override
