@@ -51,8 +51,30 @@ class MilvusVectorStore:
             os.environ.setdefault("GLOG_minloglevel", "2")
 
             from pymilvus import MilvusClient
-            if not self.uri.startswith("http://") and not self.uri.startswith("https://"):
+            is_remote = self.uri.startswith("http://") or self.uri.startswith("https://")
+            if not is_remote:
                 os.makedirs(os.path.dirname(os.path.abspath(self.uri)), exist_ok=True)
+            else:
+                # Fast socket connectivity pre-check for remote server before attempting gRPC
+                import socket
+                from urllib.parse import urlparse
+                parsed = urlparse(self.uri)
+                host = parsed.hostname or "localhost"
+                port = parsed.port or 19530
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.settimeout(0.5)
+                    if s.connect_ex((host, port)) != 0:
+                        logger.debug("Remote Milvus standalone at %s:%s is unreachable (container stopped).", host, port)
+                        self._status = {
+                            "backend": "Milvus Vector Store",
+                            "status": "unavailable",
+                            "uri": self.uri,
+                            "collection": self.collection_name,
+                            "doc_count": 0,
+                            "error": f"Server unavailable at {host}:{port}",
+                        }
+                        return
+
             # Safe gRPC channel options preventing ENHANCE_YOUR_CALM / too_many_pings GOAWAY
             grpc_opts = {
                 "grpc.keepalive_time_ms": 300000,           # Ping at most every 5 minutes
@@ -97,7 +119,7 @@ class MilvusVectorStore:
             }
             logger.info("Milvus client initialized and loaded on %s (Collection: %s)", self.uri, self.collection_name)
         except Exception as e:
-            logger.warning("Milvus connection failed (%s). Milvus requires pymilvus or running server.", e)
+            logger.debug("Milvus connection failed (%s). Milvus requires pymilvus or running server.", e)
             self._status = {
                 "backend": "Milvus Vector Store",
                 "status": "unavailable",
