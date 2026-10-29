@@ -31,6 +31,7 @@ class ButlerAgent:
     - Maintains character dossiers and social dynamics from past interactions.
     - Evaluates social leverage, long-term strategic alignment, and interpersonal etiquette.
     - Operates with an isolated memory store to keep personal dossier intelligence segregated.
+    - System prompt now generated dynamically via TraitEngine + DynamicPromptBuilder.
     """
 
     def __init__(self, agent_id: str = "butler", storage_dir: Optional[str] = None) -> None:
@@ -45,16 +46,18 @@ class ButlerAgent:
         """Loads only Alfred's dedicated JSON profile on-demand."""
         return roster.load_agent_profile(self.agent_id)
 
-    def build_system_prompt(self) -> str:
-        prof = self.get_profile()
-        name = prof.name if prof else "Alfred Vance"
-        personality = prof.personality if prof else "Dignified, tactful British gentleman butler."
-        traits_list = f"\nKey Traits: {', '.join(prof.traits)}" if prof and prof.traits else ""
-        return f"""You are {name}, the Autonomous Social Butler & Strategic Counselor.
-Personality: {personality}{traits_list}
-Voice & Tone: Dignified, impeccably courteous, observant, worldly, and strategically calculated.
-You assist the user in managing personal networks, correspondence etiquette, and strategic partnerships.
-Provide measured and refined counsel."""
+    def build_system_prompt(self, extra_context: str = "", growth_summary: str = "", recent_dialogue: str = "") -> str:
+        """
+        Generate system prompt dynamically from live trait vector.
+        Replaces the old static prompt with RL-driven parametric generation.
+        """
+        from services.agents.dynamic_prompt_builder import prompt_builder
+        return prompt_builder.build_system_prompt(
+            agent_id=self.agent_id,
+            extra_context=extra_context,
+            growth_summary=growth_summary,
+            recent_dialogue=recent_dialogue,
+        )
 
     def _load_dossiers(self) -> Dict[str, ContactDossier]:
         if not os.path.exists(self.dossier_file):
