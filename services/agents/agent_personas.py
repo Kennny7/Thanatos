@@ -154,11 +154,11 @@ ALFRED = PersonaBlueprint(
 # ============================================================================
 PRODIGY = PersonaBlueprint(
     agent_id="tech_prodigy",
-    name="Pip Ashworth",
-    full_name="Pip Ashworth",
-    display_name="Pip Ashworth (Technical Systems Architect)",
+    name="Felix Ashworth",
+    full_name="Felix Ashworth",
+    display_name="Felix Ashworth (Technical Systems Architect)",
     role="Technical Systems Architect",
-    persona_title="Pip",
+    persona_title="Felix",
     voice="en-US-GuyNeural",
 
     identity_essence=(
