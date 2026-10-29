@@ -33,10 +33,12 @@ class AgendaItem(BaseModel):
 
 class SecretaryAgent:
     """
-    Autonomous Secretary & Wingman Agent (Amelia Sterling):
-    - Oversees daily agendas, proactive reminders, workout/jogging routines.
+    Autonomous Secretary & Mentalist Agent (Amelia Sterling):
+    - Sharp-eyed gothic mentalist with cold temperament and medieval speech.
+    - Oversees daily agendas, proactive reminders, psychological profiling.
     - Curates user taste preferences and lifestyle habits.
-    - Operates with an isolated memory partition distinct from Butler and Career agents.
+    - Operates with an isolated memory partition.
+    - System prompt now generated dynamically via TraitEngine + DynamicPromptBuilder.
     """
 
     def __init__(self, agent_id: str = "secretary", storage_dir: Optional[str] = None) -> None:
@@ -54,16 +56,18 @@ class SecretaryAgent:
         """Loads only Amelia's dedicated JSON profile on-demand."""
         return roster.load_agent_profile(self.agent_id)
 
-    def build_system_prompt(self) -> str:
-        prof = self.get_profile()
-        name = prof.name if prof else "Amelia Sterling"
-        personality = prof.personality if prof else "Refined, proactive, highly organized executive secretary."
-        traits_list = f"\nKey Traits: {', '.join(prof.traits)}" if prof and prof.traits else ""
-        return f"""You are {name}, the Executive Secretary & Lifestyle Wingman of Thanatos.
-Personality: {personality}{traits_list}
-Voice & Tone: Highly efficient, composed, supportive, impeccably organized, with warm executive clarity.
-You manage the user's agenda, milestones, taste preferences, workouts, and calendar focus.
-Keep the user disciplined and operating at peak productivity."""
+    def build_system_prompt(self, extra_context: str = "", growth_summary: str = "", recent_dialogue: str = "") -> str:
+        """
+        Generate system prompt dynamically from live trait vector.
+        Replaces the old static prompt with RL-driven parametric generation.
+        """
+        from services.agents.dynamic_prompt_builder import prompt_builder
+        return prompt_builder.build_system_prompt(
+            agent_id=self.agent_id,
+            extra_context=extra_context,
+            growth_summary=growth_summary,
+            recent_dialogue=recent_dialogue,
+        )
 
     def _load_agenda(self) -> List[AgendaItem]:
         if not os.path.exists(self.agenda_file):
