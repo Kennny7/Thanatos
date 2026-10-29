@@ -61,7 +61,7 @@ class AgentCoordinator:
         if any(w in lower_prompt for w in ["undo", "revert last change", "rollback"]):
             res = project_manager.undo_last_change()
             msg = res.get("message", "Undo completed.")
-            yield {"type": "assistant_chunk", "content": f"Velma: {msg}"}
+            yield {"type": "assistant_chunk", "agent": "Velma Sinclair", "content": f"{msg}"}
             return
 
         project_match = re.search(r"(?:project|directory|folder)\s+([A-Za-z0-9_\-\.\/\\]+)", user_prompt, re.IGNORECASE)
@@ -74,9 +74,9 @@ class AgentCoordinator:
         elif any(w in lower_prompt for w in ["amelia", "secretary", "agenda", "schedule", "routine", "workout", "coffee"]):
             active_persona = "Amelia Sterling"
             role_hint = "Executive Secretary & Lifestyle Wingman"
-        elif any(w in lower_prompt for w in ["velma", "system", "performance", "docker", "server", "port", "disk", "hardware"]):
+        elif any(w in lower_prompt for w in ["velma", "sinclair", "sinclar", "bookworm", "geek", "system", "performance", "docker", "server", "port", "disk", "hardware"]):
             active_persona = "Velma Sinclair"
-            role_hint = "Site Reliability & Systems Engineer"
+            role_hint = "Lively Tech Geek & Systems Specialist"
         else:
             roster_entry = roster.get_agent_index_entry(roster.active_agent_id)
             active_persona = roster_entry.persona_title if roster_entry else "Alfred Vance"
@@ -112,7 +112,7 @@ class AgentCoordinator:
                 f"All tasks resolved in {plan.nodes[-1].elapsed_seconds if plan.nodes else 0}s. "
                 f"Background terminal logs saved to {plan.log_file}."
             )
-            yield {"type": "assistant_chunk", "content": f"\n{active_persona}: {final_summary}"}
+            yield {"type": "assistant_chunk", "agent": active_persona, "content": f"\n{final_summary}"}
             
             # Post to bus and record in DB
             agent_bus.post_message(active_persona, "User", final_summary)
@@ -129,7 +129,7 @@ class AgentCoordinator:
         # Checkpoint 1: Immediate Conversational Acknowledgement if subagent work needed
         if is_crawler_task or is_dev_task or is_doc_task:
             ack_msg = f"On it. Pulling the required context..."
-            yield {"type": "assistant_chunk", "content": f"{ack_msg}\n"}
+            yield {"type": "assistant_chunk", "agent": active_persona, "content": f"{ack_msg}\n"}
 
         if is_crawler_task:
             yield {"type": "agent_status", "agent": "Crawler Subagent", "status": "Querying live web sources..."}
@@ -180,14 +180,14 @@ class AgentCoordinator:
                 if chunk_type == "token":
                     tok = chunk.get("token", "")
                     accumulated_response += tok
-                    yield {"type": "assistant_chunk", "content": tok}
+                    yield {"type": "assistant_chunk", "agent": active_persona, "content": tok}
                 elif chunk_type == "thought":
-                    yield {"type": "thought", "thought": chunk.get("thought", "")}
+                    yield {"type": "thought", "agent": active_persona, "thought": chunk.get("thought", "")}
         except Exception as e:
             logger.warning("Stream generation encountered error, falling back: %s", e)
             fallback_text = f"Got it. Working on '{user_prompt[:50]}'."
             accumulated_response = fallback_text
-            yield {"type": "assistant_chunk", "content": fallback_text}
+            yield {"type": "assistant_chunk", "agent": active_persona, "content": fallback_text}
 
         final_clean = accumulated_response.strip()
 
