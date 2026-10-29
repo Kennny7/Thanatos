@@ -1,36 +1,47 @@
 {
-  "system_version": "2.0",
+  "system_version": "3.0",
   "active_agent_id": "auto",
+  "trait_engine_enabled": true,
   "index": [
     {
-      "id": "site_engineer",
-      "name": "Velma Sinclair",
-      "display_name": "Velma Sinclair (Lively Knowledge Geek & Systems Bookworm)",
-      "role": "Lively Knowledge Geek & Systems Bookworm",
-      "persona_title": "Velma",
-      "voice": "en-US-JennyNeural",
-      "profile_path": "config/agents/site_engineer.json",
-      "memory_partition": "data/agent_memory/site_engineer"
+      "id": "butler",
+      "name": "Alfred Vance",
+      "display_name": "Alfred Vance (Head Butler & Household Manager)",
+      "role": "Head Butler & Household Manager",
+      "persona_title": "Alfred",
+      "voice": "en-GB-RyanNeural",
+      "profile_path": "config/agents/butler.json",
+      "memory_partition": "data/agent_memory/butler"
+    },
+    {
+      "id": "tech_prodigy",
+      "name": "Pip Ashworth",
+      "display_name": "Pip Ashworth (Technical Systems Architect)",
+      "role": "Technical Systems Architect",
+      "persona_title": "Pip",
+      "voice": "en-US-GuyNeural",
+      "profile_path": "config/agents/tech_prodigy.json",
+      "memory_partition": "data/agent_memory/tech_prodigy"
     },
     {
       "id": "secretary",
       "name": "Amelia Sterling",
-      "display_name": "Amelia Sterling (Executive Secretary & Private Wingman)",
-      "role": "Executive Secretary & Private Wingman",
+      "display_name": "Amelia Sterling (Private Secretary & Mentalist)",
+      "role": "Private Secretary & Psychological Counselor",
       "persona_title": "Amelia",
       "voice": "en-US-AriaNeural",
       "profile_path": "config/agents/secretary.json",
       "memory_partition": "data/agent_memory/secretary"
     },
     {
-      "id": "butler",
-      "name": "Alfred Vance",
-      "display_name": "Alfred Vance (Autonomous Social Butler & Strategist)",
-      "role": "Autonomous Social Butler & Strategic Counselor",
-      "persona_title": "Alfred",
-      "voice": "en-GB-RyanNeural",
-      "profile_path": "config/agents/butler.json",
-      "memory_partition": "data/agent_memory/butler"
+      "id": "librarian",
+      "name": "Velma Sinclair",
+      "display_name": "Velma Sinclair (Knowledge Curator & Bookworm)",
+      "role": "Knowledge Curator & Research Librarian",
+      "persona_title": "Velma",
+      "voice": "en-US-JennyNeural",
+      "profile_path": "config/agents/site_engineer.json",
+      "memory_partition": "data/agent_memory/site_engineer"
     }
   ]
 }
