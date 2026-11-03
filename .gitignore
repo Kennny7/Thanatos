@@ -154,7 +154,7 @@ data/project_backups/
 data/vector_db/
 data/*.json
 data/*.db
-test/memory_store/
+scratch/test_memory_store/
 
 .metadata
 .env
