@@ -1,4 +1,4 @@
-# **Thanatos**
+﻿# **Thanatos**
 
 ### *Autonomous Multi-Agent AI Assistant Engine with Voice Intelligence & RAG*
 
@@ -82,6 +82,29 @@ Explore the comprehensive technical documentation suite in the [`docs/`](./docs)
 | **Model Context Protocol (MCP)** | Exposing Thanatos OS tools to Claude Desktop, Cursor IDE, and MCP hosts. | [![Read MCP Guide](https://img.shields.io/badge/Open-MCP%20Guide-555555?style=flat-square)](./docs/mcp_server.md) |
 | **Future Vision: CCTV & Biometrics** | Architectural blueprint for RTSP video stream ingest, YOLO object tracking, and InsightFace recognition. | [![Read Roadmap](https://img.shields.io/badge/Open-Future%20Roadmap-007ACC?style=flat-square)](./docs/future_vision_roadmap.md) |
 | **Contributor Guide** | Coding conventions, PR guidelines, and running the test suite. | [![Read Guide](https://img.shields.io/badge/Open-Contributing-24292E?style=flat-square)](./docs/contributing.md) |
+
+---
+
+## Microservice Architecture & Service Catalog
+
+Thanatos is organized as a modular microservice architecture. Each service resides in its own isolated directory under `services/`, contains its own service-level documentation (`README.md`), and can be tested and run independently.
+
+### Microservice Catalog
+
+| Microservice | Location | Role & Targeted Use Case | Standalone Verification Command |
+| :--- | :--- | :--- | :--- |
+| **Agents** | [`services/agents`](./services/agents) | Autonomous agent personas, RL feedback, dynamic prompt builder, topic router | `uv run pytest tests/unit/test_enterprise_and_dag.py` |
+| **Background** | [`services/background`](./services/background) | Asynchronous task scheduling, background workers, and long-running daemons | `uv run python -c "from services.background.task_manager import BackgroundTaskManager; tm = BackgroundTaskManager()"` |
+| **Database** | [`services/database`](./services/database) | Relational (PostgreSQL), Document (MongoDB), and SQLite connection pools | `uv run pytest tests/unit/test_enterprise_and_dag.py -k enterprise` |
+| **LLM Brain** | [`services/llm_brain`](./services/llm_brain) | Reasoning coordinator, token streaming, function calling, unified LLM provider | `uv run pytest tests/unit/test_unified_provider.py tests/integration/test_planner.py` |
+| **Local LLM** | [`services/local_llm`](./services/local_llm) | Ollama client, OpenAI-compatible local adapter, and tool parameter sanitizers | `uv run pytest tests/unit/test_ollama_sanitization.py` |
+| **Memory** | [`services/memory`](./services/memory) | Milvus Lite, ChromaDB vector store, user profiling, and RAG retrieval | `uv run pytest tests/unit/test_enhancements.py -k "vector or auto_scaler"` |
+| **Mesh** | [`services/mesh`](./services/mesh) | LAN node discovery (UDP beacon), remote worker execution, compute distribution | `uv run pytest tests/unit/test_enhancements.py -k mesh_node_manager` |
+| **OS Automation** | [`services/os_automation`](./services/os_automation) | Host OS control, GUI mouse/keyboard automation, and process management | `uv run python -c "from services.os_automation.system_control import SystemController; sc = SystemController()"` |
+| **Speech** | [`services/speech`](./services/speech) | Voice STT/TTS pipeline, speaker biometric identification, and AEC echo cancellation | `uv run pytest tests/unit/test_speech_and_aec.py tests/unit/test_speaker_authorization.py` |
+| **Tasks** | [`services/tasks`](./services/tasks) | DAG topological execution engine and background terminal process supervisor | `uv run pytest tests/unit/test_enterprise_and_dag.py -k dag` |
+| **Vision** | [`services/vision`](./services/vision) | Camera presence detection and biometric facial verification | `uv run python -c "from services.vision.speaker_vision import SpeakerVision; sv = SpeakerVision()"` |
+| **Web** | [`services/web`](./services/web) | Internet search, scraper, and HTML/Markdown parsing engine | `uv run python -c "from services.web.search import WebSearchEngine; s = WebSearchEngine()"` |
 
 ---
 
