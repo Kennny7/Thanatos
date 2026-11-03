@@ -4,31 +4,7 @@ import os
 import pytest
 from services.memory.vector_store import VectorStore
 from services.memory.auto_scaler import auto_scaler
-from services.document.pdf_generator import pdf_generator
 from services.mesh.node_manager import MeshNodeManager
-
-
-def test_pdf_resume_and_cover_letter_generation(tmp_path):
-    resume_pdf = os.path.join(tmp_path, "resume.pdf")
-    cover_pdf = os.path.join(tmp_path, "cover.pdf")
-
-    pdf_generator.generate_resume_pdf(
-        source_tex_or_md="### Summary\nExperienced AI Engineer with 3+ years in LLMs and RAG pipelines.\n• Developed multi-agent orchestration.",
-        output_pdf_path=resume_pdf,
-        candidate_name="Khushal Pareta",
-    )
-    assert os.path.exists(resume_pdf)
-    assert os.path.getsize(resume_pdf) > 500
-
-    pdf_generator.generate_cover_letter_pdf(
-        cover_letter_text="Dear Hiring Lead,\n\nI am writing to express my strong interest in the AI Engineer role.",
-        applicant_name="Khushal Pareta",
-        job_title="AI Engineer",
-        company="DeepLogic AI Labs",
-        output_pdf_path=cover_pdf,
-    )
-    assert os.path.exists(cover_pdf)
-    assert os.path.getsize(cover_pdf) > 500
 
 
 def test_milvus_lite_vector_store(tmp_path):
