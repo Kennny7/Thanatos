@@ -140,7 +140,6 @@ def init_default_skills() -> None:
     registry.register_lazy("site_operations", lambda: __import__("plugins.system_skills.site_operations.site_operations_skill", fromlist=["SiteOperationsSkill"]).SiteOperationsSkill())
     registry.register_lazy("web_search", lambda: __import__("plugins.system_skills.web_search.web_search_skill", fromlist=["WebSearchSkill"]).WebSearchSkill())
     registry.register_lazy("self_improvement", lambda: __import__("plugins.system_skills.self_improvement.self_improvement_skill", fromlist=["SelfImprovementSkill"]).SelfImprovementSkill())
-    registry.register_lazy("novel_agent", lambda: __import__("plugins.system_skills.novel_agent.novel_skill", fromlist=["NovelAgentSkill"]).NovelAgentSkill())
     registry.register_lazy("dynamic_skill_factory", lambda: __import__("plugins.system_skills.dynamic_skill_factory.dynamic_skill_factory", fromlist=["DynamicSkillFactorySkill"]).DynamicSkillFactorySkill())
 
 

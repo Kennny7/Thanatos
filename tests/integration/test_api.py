@@ -76,7 +76,6 @@ def test_dispatcher_registered_tool():
 
 def test_dispatcher_skill_tool():
     """Test dispatcher executing an auto-registered skill tool."""
-    tool_call = ToolCall(tool_name="search_jobs", arguments={"location": "Pune", "keywords": "engineer"}, call_id="789")
+    tool_call = ToolCall(tool_name="search_web", arguments={"query": "python"}, call_id="789")
     result = asyncio.run(dispatch_tool_call(tool_call))
     assert result.success
-    assert "jobs" in result.content

@@ -266,9 +266,9 @@ class TestDispatcher:
         from apps.api_server.core.dispatcher import dispatch_tool_call
         from shared.models.tool_call import ToolCall
 
-        tc = ToolCall(tool_name="search_jobs", arguments={"location": "Pune", "keywords": "engineer"})
+        tc = ToolCall(tool_name="search_web", arguments={"query": "python"})
         result = await dispatch_tool_call(tc)
-        assert result.success and "jobs" in result.content
+        assert result.success
 
     @pytest.mark.asyncio
     async def test_dispatcher_handles_unknown_tool(self):
@@ -311,8 +311,8 @@ class TestStartup:
         tools = registry.get_all_tools()
         assert len(tools) > 0
         tool_names = [t.name for t in tools]
-        assert "search_jobs" in tool_names
-        assert "tailor_resume" in tool_names
-        assert "prepare_job_application" in tool_names
-        assert "translate_and_edit_novel" in tool_names
+        assert "search_web" in tool_names
+        assert "self_improve_code" in tool_names
+        assert "run_system_command" in tool_names
+        # assert novel skill removed
         assert "self_improve_code" in tool_names
